@@ -1,0 +1,117 @@
+# ========================================
+# 🧠 GLOBAL SETTINGS
+# ========================================
+# OS and IDE junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+*.pyo
+*.pyd
+
+# Env & secrets
+.env
+.env.*
+
+
+# ========================================
+# 🧩 REACT FRONTEND (client/)
+# ========================================
+client/node_modules/
+client/dist/
+client/build/
+client/.parcel-cache/
+client/.next/
+client/.vite/
+
+# Testing
+client/coverage/
+client/jest-test-results.json
+
+# React specific build output
+client/*.tsbuildinfo
+
+# Vite/React cache
+client/.cache/
+client/.turbo/
+
+# Lockfiles (if not used)
+# client/yarn.lock
+# client/pnpm-lock.yaml
+
+
+# ========================================
+# 🐍 DJANGO BACKEND (server/)
+# ========================================
+server/db.sqlite3
+server/media/
+server/staticfiles/
+server/static/
+server/__pycache__/
+server/*.sqlite3
+
+# Django migrations (optional to track)
+server/**/migrations/
+!server/**/migrations/__init__.py
+
+# Virtual environments
+venv/
+.env/
+*.env
+
+# Coverage and testing
+htmlcov/
+.coverage
+.tox/
+.nox/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py[cod]
+*.log
+
+# MyPy & others
+.mypy_cache/
+.pyre/
+.pytype/
+
+# Django logs
+server/*.log
+
+# ========================================
+# 🍃 OTHER TOOLS
+# ========================================
+# GitHub
+.github/
+
+# Docker
+docker-compose.override.yml
+*.pid
+
+# ========================================
+# ✅ OUTPUT
+# ========================================
+# You can remove tracked files with:
+# git rm -r --cached client/node_modules server/db.sqlite3
