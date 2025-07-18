@@ -1,0 +1,183 @@
+/* Import Icons */
+
+/* Font Imports */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Roboto:wght@400;500&family=Source+Sans+Pro:wght@600&display=swap');
+
+/* Color Palette Variables */
+:root {
+  --espresso-black: #3E2723;
+  --arabica-brown: #795548;
+  --parchment: #F5F5DC;
+  --mocha-beige: #D7BBA8;
+  --forest-green: #558B2F;
+
+  --font-main: 'Poppins', Arial, sans-serif;
+  --font-secondary: 'Roboto', Arial, sans-serif;
+  --font-accent: 'Source Sans Pro', Arial, sans-serif;
+}
+
+body {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  background: var(--parchment);
+  color: var(--espresso-black);
+  font-family: var(--font-secondary);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-main);
+  font-weight: 700;
+  color: var(--espresso-black);
+}
+
+.accent, label, .menu {
+  font-family: var(--font-accent);
+  color: var(--arabica-brown);
+}
+
+.Main {
+  width: 100vw;
+  height: 100vh;
+  background: var(--mocha-beige);
+}
+
+navbar{
+  background: var(--espresso-black);
+  color: var(--parchment);
+}
+
+/* dont pansin this */
+header{
+    display:flex;
+    padding: 2rem;
+    width: auto;
+    height: 2.5rem;
+    flex-direction: column;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-family: var(--font-main);
+    background: var(--espresso-black);
+    color: var(--parchment);
+}
+
+.sideNav{
+    display:flex;
+    width: 17rem;
+    height: 100vh;
+    flex-direction: column;
+    position: fixed;
+    gap: 0;
+    background: var(--arabica-brown);
+}
+
+.topSection {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2rem;
+    width: auto;
+    height: 3rem;
+    font-family: var(--font-secondary);
+    background: var(--espresso-black);
+    color: var(--parchment);
+    z-index: 3;
+}
+
+.userInfo {
+    z-index: 2;
+    width: auto; 
+    height: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 2rem;
+    font-family: var(--font-secondary);
+    background: var(--mocha-beige);
+    color: var(--parchment);
+}
+
+.Info {
+    width: auto; 
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-secondary);
+    background: var(--mocha-beige);
+    color: var(--parchment);
+}
+
+.Nav{
+    position: relative;
+    padding: 0 2rem;
+    transition: all 1s;
+    color: var(--parchment);
+    font-family: var(--font-secondary);
+}
+
+.navigationBtn{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0;
+}
+
+.midSection {
+    z-index: 1;
+    width: auto;
+    height: auto;
+    background: var(--arabica-brown);
+}
+
+.bottomSection {
+    position: absolute;
+    bottom: 0;
+    width: auto;
+    height: auto;
+    padding: 0 2rem;
+    background: var(--arabica-brown);
+}
+
+ul{
+    padding: 0;
+}
+
+ul li {
+    list-style-type:none;
+}
+
+ul li a { 
+    text-decoration: none;
+    color: var(--parchment);
+    padding: 0.5rem 0;
+    display: block;
+    padding: 10px 15px;
+}
+
+ul li img a:hover {
+    background: var(--forest-green);
+    color: var(--parchment);
+    border-radius: 10px;
+}
+
+ul li img a.active {
+    background: var(--forest-green);
+    color: var(--parchment);
+    border-radius: 10px;
+}
+
+.button, button {
+  background: var(--arabica-brown);
+  color: var(--parchment);
+  font-family: var(--font-main);
+  border: none;
+  border-radius: 4px;
+  padding: 0.5em 1em;
+  cursor: pointer;
+}
+
+.icon, .progress-bar {
+  color: var(--forest-green);
+}
+
