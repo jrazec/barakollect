@@ -1,3 +1,10 @@
+import { LuLayoutDashboard } from "react-icons/lu";
+import { MdOutlineFileUpload } from "react-icons/md";
+import { GrGallery } from "react-icons/gr";
+import { FaRegMap } from "react-icons/fa";
+import { IoMdNotificationsOutline } from "react-icons/io";
+import { CiLogout } from "react-icons/ci";
+
 const SideBar = () => {
     return (
         <div className="sideNav">
@@ -15,44 +22,58 @@ const SideBar = () => {
             <div className="midSection">
                 <div className="Nav">
                     <ul>
-                        <li className ="navigationBtn">
-                            <img src="/dashboard.png" alt="Dashboard Icon" className="icon" />
-                            <a href="/">Dashboard</a>
-                        </li>
+                        <li className="navigationBtn">
+                            <a href="/" className="navLink">
+                                <LuLayoutDashboard className="icon" />
+                                <span className="lblNav">Dashboard</span>
+                            </a>
+                            </li>
                         </ul>
                         <ul>
                             <li className ="navigationBtn">
-                                <img src="/upload.png" alt="Upload Icon" className="icon" />
-                                <a href="/">Upload Images</a>
+                                <a href="/" >
+                                <MdOutlineFileUpload className="icon" />
+                                <span className="lblNav">Upload Images</span>
+                                </a>
                             </li>
                         </ul>
                         <ul>
                             <li className="navigationBtn">
-                                <img src="/gallery.png" alt="Gallery Icon" className="icon" />
-                                <a href="/">Beans Gallery</a>
+                                <a href="/">
+                                 <GrGallery className="icon" />
+                                 <span className="lblNav">Beans Gallery</span>
+                                 </a>
                             </li>
                         </ul>
                         <ul>
                             <li className="navigationBtn">
-                                <img src="/map.png" alt="Map Icon" className="icon" />
-                                <a href="/">Farm Map</a>
+                                 <a href="/">
+                                <FaRegMap className="icon" />
+                                <span className="lblNav">Farm Map</span>
+                                </a>
                             </li>
                         </ul>
                         <ul>
                             <li className="navigationBtn">
-                                <img src="/notification.png" alt="Notification Icon" className="icon" /> 
-                                <a href="/">Notification</a>
+                                <a href="/">
+                                <IoMdNotificationsOutline className="icon" /> 
+                                <span className="lblNav">Notifications</span>
+                                </a>
                         </li>
                     </ul>
                 </div>
             </div>  
             <div className="bottomSection">
-                <ul>
-                     <li className="navigationBtn">
-                                <img src="/logout.png" alt="Logout Icon" className="icon" /> 
-                                <a href="/">Logout</a>
+                <div className="navBottomBtn">
+                    <ul>
+                        <li className="navigationBtn">
+                            <a href="/">
+                            <CiLogout className="icon" /> 
+                            <span className="lblNav">Logout</span>
+                            </a>
                         </li>
-                </ul>
+                    </ul>
+                </div>
             </div>  
         </div>
     )
