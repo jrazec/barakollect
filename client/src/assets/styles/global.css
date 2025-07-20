@@ -19,19 +19,22 @@
 body {
   box-sizing: border-box;
   margin: 0;
-  padding: 0;
+  padding-top: 5vh;
   background: var(--parchment);
   color: var(--espresso-black);
   font-family: var(--font-secondary);
+  
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-main);
   font-weight: 700;
-  color: var(--espresso-black);
+    max-width: 15rem;
+    width: 100%;
 }
 
 .accent, label, .menu {
+    overflow: hidden;
   font-family: var(--font-accent);
   color: var(--arabica-brown);
 }
@@ -42,36 +45,59 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--mocha-beige);
 }
 
+.bottomSection {
+    z-index:0;
+    position: absolute;
+    bottom:0rem;
+    padding: 0 2rem;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    height: auto;
+    overflow: hidden;
+}
 navbar{
   background: var(--espresso-black);
   color: var(--parchment);
 }
 
 /* dont pansin this */
-header{
-    display:flex;
-    padding: 2rem;
-    width: auto;
-    height: 2.5rem;
+header {
+    display: flex;
+    padding: 0.4rem 1rem;
+    width: 100%;
+    height: 7vh;
     flex-direction: column;
     justify-content: center;
-    font-size: 1.5rem;
     font-family: var(--font-main);
     background: var(--espresso-black);
     color: var(--parchment);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000; /* Ensure it's above other elements */
 }
 
-.sideNav{
-    display:flex;
+
+.sideNav {
+    display: flex;
     width: 17rem;
-    height: 100vh;
+    height: 93vh;
     flex-direction: column;
     position: fixed;
-    gap: 0;
+    top: 8vh; /* Starts below the header */
+    left: -100%; /* Hidden by default */
     background: var(--arabica-brown);
+    transition: all 1s;
+    z-index: 999;
 }
 
-.topSection {
+
+.sideNav.active {
+    left: 0;
+}
+
+/* .topSection {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -82,7 +108,7 @@ header{
     background: var(--espresso-black);
     color: var(--parchment);
     z-index: 3;
-}
+} */
 
 
 
@@ -93,7 +119,7 @@ header{
     display: flex;
     flex-direction: row;
     align-items: center;
-    padding: 0 2rem;
+    padding: 2rem;
     font-family: var(--font-secondary);
     background: var(--mocha-beige);
     color: var(--espresso-black);
@@ -147,23 +173,14 @@ header{
 }
 
 .bottomSection {
-    z-index:0;
-    position: absolute;
-    bottom:0rem;
-    padding: 0 2rem;
+    z-index: 0;
+    bottom:0;
     width: auto;
     height: auto;
+    background: var(--arabica-brown);
 }
 
-.navBottomBtn{
-    position: relative;
-    bottom: 0rem;
-    transition: all 1s;
-    color: var(--parchment);
-    font-family: var(--font-secondary);
-    width: auto;
-    height: auto;
-}
+
 
 ul{
     padding: 0;
@@ -183,7 +200,7 @@ ul li a {
 }
 
 ul li a:hover {
-    width: 15rem;
+    width: 10rem;
     background: var(--forest-green);
     color: var(--parchment);
     border-radius: 10px;
@@ -211,3 +228,8 @@ ul li a.active {
   color: var(--parchment);
 }
 
+
+header svg {
+    font-size: 1.5rem;
+    padding-left: 1rem;;
+}

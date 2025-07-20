@@ -4,13 +4,11 @@ import { GrGallery } from "react-icons/gr";
 import { FaRegMap } from "react-icons/fa";
 import { IoMdNotificationsOutline } from "react-icons/io";
 import { CiLogout } from "react-icons/ci";
+    
 
-const SideBar = () => {
+const SideBar = ({ show }) => {
     return (
-        <div className="sideNav">
-            <div className="topSection">
-                <img src="/logo.png" alt="BaraKollect Logo" />
-            </div>
+        <div className={ show ? "sideNav active" : "sideNav"}>
 
             <div className="userInfo">
                 <img src="/user.png" alt="User Avatar" className="userAvatar" />
@@ -64,17 +62,15 @@ const SideBar = () => {
                 </div>
             </div>  
             <div className="bottomSection">
-                <div className="navBottomBtn">
                     <ul>
                         <li className="navigationBtn">
                             <a href="/">
-                            <CiLogout className="icon" /> 
-                            <span className="lblNav">Logout</span>
+                                <CiLogout className="icon" />
+                                <span className="lblNav">Logout</span>
                             </a>
                         </li>
                     </ul>
-                </div>
-            </div>  
+            </div>
         </div>
     )
 }
