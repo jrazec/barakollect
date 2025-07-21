@@ -10,6 +10,9 @@ export default function ClientLayout() {
   ];
   return (
     <div className="flex flex-col h-screen">
+      <div className="flex-shrink-0">
+        <NavBar logo={logo} showSideBar={showSideBar} setShowSideBar={setShowSideBar} />
+      </div>
       <div className="flex flex-1 overflow-auto">
         <SideBar show={showSideBar} />
         <div className="flex-column text-white w-full h-full">
