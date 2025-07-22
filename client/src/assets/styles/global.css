@@ -1,4 +1,8 @@
-
+@import "tailwindcss";
+@theme {
+  --color-barako: #764e41; 
+  --color-barako-light: var(--mocha-beige);
+}
 
 
 h1, h2, h3, h4, h5, h6 {
@@ -295,4 +299,50 @@ ul li a.active {
 .navigationBtn.active *{
   color: var(--white);
     background-color: var(--espresso-black);
+}
+
+.formFloatingLbl {
+    position: relative;
+    margin-bottom: 1.25rem;
+}
+
+.formFloatingLbl input {
+    font-size: 1rem;
+    border: 1.5px solid #d1d5db;
+    border-radius: 0.4rem;
+    background: #f8fafc;
+    transition: border-color 0.2s;
+}
+
+.formFloatingLbl input:focus {
+    outline: none;
+    background: #fff;
+}
+
+.formFloatingLbl label {
+    position: absolute;
+    top: 0.85rem;
+    left: 0.75rem;
+    font-weight: 500;
+    font-size: 1rem;
+    color: #757575;
+    background: transparent;
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(.4,0,.2,1);
+    opacity: 0.85;
+}
+
+.formFloatingLbl input:focus + label,
+.formFloatingLbl input:not(:placeholder-shown) + label {
+    top: -0.7rem;
+    left: 0.6rem;
+    font-size: 0.85rem;
+    color: #1a2859;
+    background: #fff;
+    padding: 0 0.25rem;
+    opacity: 1;
+}
+
+.formFloatingLbl input:focus::placeholder {
+    color: transparent;
 }
