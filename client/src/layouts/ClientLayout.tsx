@@ -2,6 +2,7 @@ import { useState } from "react";
 import SideBar from '../components/SideBar'
 import NavBar from '../components/NavBar'
 import '../assets/styles/global.css'
+import { Outlet } from "react-router-dom";
 export default function ClientLayout() {
   const [showSideBar, setShowSideBar] = useState<boolean>(true);
   const logo: string[] = [
@@ -16,7 +17,7 @@ export default function ClientLayout() {
       <div className="flex flex-1 overflow-auto">
         <SideBar show={showSideBar} />
         <div className="flex-column text-white w-full h-full">
-          BODY
+          <Outlet />
         </div>
       </div>
     </div>
