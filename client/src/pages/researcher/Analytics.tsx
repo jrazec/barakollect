@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import DashboardHeader from './DashboardHeader';
-import AnalysisTabs from './AnalysisTabs';
+import TabComponent from '../../components/TabComponent';
 import AnalysisFooter from './AnalysisFooter';
 import AnalysisCharts from './AnalysisCharts';
 
@@ -25,8 +25,7 @@ const Analytics: React.FC = () => {
       />
 
       {/* Tabs Component */}
-      <AnalysisTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
+      <TabComponent activeTab={activeTab} onTabChange={setActiveTab} tabs={['Morphological', 'Distributions', 'Geographic', 'Comparison']}/>
 
       {/* Chart Section */}
       <AnalysisCharts activeTab={activeTab} />
