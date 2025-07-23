@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import PageContainer from './PageContainer';
-import UploadHeader from './UploadHeader';
-import UploadActionsRow from './UploadActionsRow';
-import UploadBodySection from './UploadBodySection';
+import PageContainer from '@/components/PageContainer';
+import UploadBodySection from '../pages/researcher/UploadBodySection';
+import PageHeader from '@/components/PageHeader';
+import TabComponent from '@/components/TabComponent';
 
 const UploadSamples: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Predict Image');
@@ -14,11 +14,11 @@ const UploadSamples: React.FC = () => {
   return (
     <PageContainer>
       <div className="w-full max-w-6xl bg-[var(--mocha-beige)] rounded-xl shadow p-6">
-        <UploadHeader
+        <PageHeader
           title="Upload Bean Images"
           subtitle="Upload coffee bean images for analysis and contribute to our research database"
         />
-        <UploadActionsRow activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabComponent activeTab={activeTab} onTabChange={setActiveTab} tabs={['Predict Image','Submit Image','Find Largest Bean']} />
         <UploadBodySection activeTab={activeTab} onFilesSelected={handleFiles} />
       </div>
     </PageContainer>
