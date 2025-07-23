@@ -1,128 +1,142 @@
+import CardComponent from '@/components/CardComponent';
+import DashboardHeader from '@/components/DashboardHeader';
+import { BarChartComponent, PieChartComponent, CorrelationGrid, ScatterChartComponent, LineChartComponent } from '@/components/ChartComponent';
+import StatCard from '@/components/StatCard';
+import type { CardAttributes, Stat } from '@/interfaces/global';
 import React from 'react';
 
-// Placeholder chart components
-const PieChart = () => (
-  <div className="flex items-center justify-center h-40">
-    <span className="text-stone-400">[Pie Chart]</span>
-  </div>
-);
-const LineChart = () => (
-  <div className="flex items-center justify-center h-40">
-    <span className="text-stone-400">[Line Chart]</span>
-  </div>
-);
-const BarChart = () => (
-  <div className="flex items-center justify-center h-40">
-    <span className="text-stone-400">[Bar Chart]</span>
-  </div>
-);
-const ScatterChart = () => (
-  <div className="flex items-center justify-center h-40">
-    <span className="text-stone-400">[Scatter Chart]</span>
-  </div>
-);
-const CorrelationGrid = () => (
-  <div className="flex items-center justify-center h-40">
-    <span className="text-stone-400">[Correlation Grid]</span>
-  </div>
-);
 
 const ResearcherDashboard: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-[var(--mocha-beige)] pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
-      {/* Header */}
-      <div className="bg-[var(--espresso-black)] rounded-lg px-6 py-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between shadow text-[var(--parchment)]">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold font-main">Researcher Dashboard</h1>
-          <p className="text-xs md:text-sm text-[var(--mocha-beige)] font-accent">Morphological analysis and data insights</p>
+  const chartCards: CardAttributes[] = [
+    {
+      title: "Size Distribution Analysis",
+      subtitle: "Box Plot: Size Distribution",
+      description: "",
+      content: <BarChartComponent />,
+    },
+    {
+      title: "Bean Distribution Analysis",
+      subtitle: "Bean Type Distribution",
+      description: (<>
+        <div className="flex justify-center gap-2 mt-2 text-xs text-stone-400">
+          <span>Libérica 65%</span>
+          <span>Excelsa 25%</span>
+          <span>Unclassified 10%</span>
         </div>
-        <div className="flex gap-2 mt-2 md:mt-0">
-          <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-3 py-1 rounded font-main text-xs shadow">Data Range</button>
-          <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-3 py-1 rounded font-main text-xs shadow">Filter by Farm</button>
-          <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-3 py-1 rounded font-main text-xs shadow">Bean Type</button>
+      </>),
+      content: <PieChartComponent />,
+    },
+    {
+      title: "Morphological Trends",
+      subtitle: "Size Distribution Analysis",
+      description: (<>
+        <div className="flex justify-center gap-2 mt-2 text-xs text-stone-400">
+          <span>Area</span>
+          <span>Perimeter</span>
+          <span>Export Data</span>
         </div>
-      </div>
+      </>),
+      content: <LineChartComponent />,
+    },
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-[var(--arabica-brown)] rounded-lg p-4 text-center shadow text-[var(--parchment)]">
-          <div className="text-xs font-accent mb-1">Total Samples</div>
-          <div className="text-2xl font-bold font-main">2847</div>
-          <div className="text-xs font-accent">from last month</div>
-        </div>
-        <div className="bg-[var(--arabica-brown)] rounded-lg p-4 text-center shadow text-[var(--parchment)]">
-          <div className="text-xs font-accent mb-1">Verified Samples</div>
-          <div className="text-2xl font-bold font-main">2103</div>
-          <div className="text-xs font-accent">from last month</div>
-        </div>
-        <div className="bg-[var(--arabica-brown)] rounded-lg p-4 text-center shadow text-[var(--parchment)]">
-          <div className="text-xs font-accent mb-1">Average Bean Size</div>
-          <div className="text-2xl font-bold font-main">17.8 mm</div>
-          <div className="text-xs font-accent">from last month</div>
-        </div>
-        <div className="bg-[var(--arabica-brown)] rounded-lg p-4 text-center shadow text-[var(--parchment)]">
-          <div className="text-xs font-accent mb-1">Classification Accuracy</div>
-          <div className="text-2xl font-bold font-main">92.4%</div>
-          <div className="text-xs font-accent">from last month</div>
-        </div>
-      </div>
+    // Mid
+    {
+      title: "Size Distribution",
+      subtitle: "Box Plot:Size Distribution",
+      content: <BarChartComponent />,
+    },
+    {
+      title: "Axis Correlation",
+      subtitle: "2D Scatter: Major vs Minor Axis",
+      content: <ScatterChartComponent />,
+    },
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="font-accent text-xs text-stone-500 mb-2">Bean Type Distribution</div>
-          <PieChart />
-          <div className="flex justify-center gap-2 mt-2 text-xs text-stone-400">
-            <span>Libérica 65%</span>
-            <span>Excelsa 25%</span>
-            <span>Unclassified 10%</span>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="font-accent text-xs text-stone-500 mb-2">Monthly Morphological Trends</div>
-          <LineChart />
-          <div className="flex justify-center gap-2 mt-2 text-xs text-stone-400">
-            <span>Area</span>
-            <span>Perimeter</span>
-            <span>Export Data</span>
-          </div>
-        </div>
-      </div>
+    // second to the last
+    {
+      title: "Farm Feature Analysis",
+      subtitle: "Feature Averages by Farm",
+      content: < BarChartComponent />,
+    },
+    {
+      title: "Feature Correlation Matrix",
+      subtitle: "Feature Correlation",
+      content: <CorrelationGrid />,
+    },
 
-      {/* Feature Distributions by Variety */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="font-accent text-xs text-stone-500 mb-2">Box Plot: Size Distribution</div>
-          <BarChart />
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="font-accent text-xs text-stone-500 mb-2">2D Scatter: Major vs Minor Axis</div>
-          <ScatterChart />
-        </div>
-      </div>
-
-      {/* Feature Averages and Correlation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="font-accent text-xs text-stone-500 mb-2">Feature Averages by Farm</div>
-          <BarChart />
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="font-accent text-xs text-stone-500 mb-2">Feature Correlation</div>
-          <CorrelationGrid />
-        </div>
-      </div>
-
-      {/* Feature Averages by Farm (Bubble) */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="font-accent text-xs text-stone-500 mb-2">Feature Averages by Farm</div>
-        <ScatterChart />
+    // LAST
+    {
+      title: "Farm Volume Analysis",
+      subtitle: "Feature Averages by Farm",
+      description: (<>
         <div className="flex justify-center gap-2 mt-2 text-xs text-stone-400">
           <span>High Volume</span>
           <span>Medium Volume</span>
           <span>Low Volume</span>
         </div>
+      </>),
+      content: <ScatterChartComponent />,
+    },
+
+
+  ]
+  const statCards: Stat[] = [
+    {
+      label: "Total Samples",
+      value: "2847",
+      subtext: "from last month"
+    },
+    {
+      label: "Verified Samples",
+      value: "2103",
+      subtext: "from last month"
+    },
+    {
+      label: "Average Bean Size",
+      value: "17.8 mm",
+      subtext: "from last month"
+    },
+    {
+      label: "Classification Accuracy",
+      value: "92.4%",
+      subtext: "from last month"
+    }
+  ];
+
+  return (
+
+    <div className="min-h-screen bg-[var(--mocha-beige)] pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
+      {/* Header */}
+      <DashboardHeader
+        title='Researcher Dashboard'
+        subtitle='Morphological analysis and data insights'
+        actions={
+          <>
+            <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-3 py-1 rounded font-main text-xs shadow">Data Range</button>
+            <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-3 py-1 rounded font-main text-xs shadow">Filter by Farm</button>
+            <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-3 py-1 rounded font-main text-xs shadow">Bean Type</button>
+          </>
+
+        }
+      />
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {statCards.length > 0 &&
+          statCards.map(card => {
+            return <StatCard label={card.label} value={card.value} subtext={card.subtext} />;
+          })
+        }
       </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {chartCards && chartCards.map((card) => {
+          return <CardComponent item={card} />
+        })
+        }
+      </div>
+
+
 
       {/* Footer Actions */}
       <div className="flex flex-wrap gap-2 justify-center ">

@@ -1,11 +1,7 @@
 import React from 'react';
 import StatCard from './StatCard';
+import type { Stat } from '@/interfaces/global';
 
-interface Stat {
-  label: string;
-  value: string;
-  subtext?: string;
-}
 
 interface StatsGridProps {
   stats: Stat[];

@@ -4,3 +4,10 @@ export interface CardAttributes {
     content: React.ReactNode,
     description?: React.ReactNode,
 };
+
+
+export interface Stat {
+  label: string;
+  value: string;
+  subtext?: string;
+}
