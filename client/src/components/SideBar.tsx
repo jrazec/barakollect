@@ -1,4 +1,5 @@
 import { BellIcon, ImageIcon, LayoutDashboard, LogOutIcon, MapPin, PersonStandingIcon, ScanFaceIcon, UploadIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 interface User {
     name: string,
     role: string
@@ -68,7 +69,7 @@ const SideBar = ({ show }: { show: boolean }) => {
                             {!show
                                 ?
                                 navigationItems.map((item, index) => (
-                                    <li className={`navigationBtn ${show ? "" : "collapsed"} ${item.active ? "active" : ""}`} key={index}
+                                    <Link to={`${item.route}`} className={`navigationBtn ${show ? "" : "collapsed"} ${item.active ? "active" : ""}`} key={index}
                                         onMouseOver={(e) => {
                                             const lblNav = e.currentTarget.querySelector(".lblNav") as HTMLElement;
                                             if (lblNav) lblNav.style.display = "block";
@@ -81,17 +82,17 @@ const SideBar = ({ show }: { show: boolean }) => {
                                             <span className="icon">{item.icon}</span>
                                             <span className={`lblNav ${show ? "" : "collapsed"}`}>{item.label}</span>
                                         </a>
-                                    </li>
+                                    </Link>
                                 ))
                                 :
                                 navigationItems.map((item, index) => (
-                                    <li className={`navigationBtn ${show ? "" : "collapsed"} ${item.active ? "active" : ""}`} key={index}
+                                    <Link to={`${item.route}`} className={`navigationBtn ${show ? "" : "collapsed"} ${item.active ? "active" : ""}`} key={index}
                                     >
                                         <a>
                                             <span className="icon">{item.icon}</span>
                                             <span className={`lblNav`} style={{display:"block"}}>{item.label}</span>
                                         </a>
-                                    </li>
+                                    </Link>
                                 ))}
                         </ul>
                     </div>

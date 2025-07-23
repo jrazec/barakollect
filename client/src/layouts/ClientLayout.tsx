@@ -2,6 +2,7 @@ import { useState } from "react";
 import SideBar from '../components/SideBar'
 import NavBar from '../components/NavBar'
 import '../assets/styles/global.css'
+import { Outlet } from "react-router-dom";
 import ResearcherDashboard from '../pages/researcher/ResearcherDashboard'
 import UploadSamples from "@/components/UploadSamples";
 import ValidationQueue from "@/pages/researcher/ValidationQueue";
@@ -22,8 +23,8 @@ export default function ClientLayout() {
       </div>
       <div className="flex flex-1 overflow-auto">
         <SideBar show={showSideBar} />
-        <div className="flex-column text-white w-full h-full overflow-y-scroll bg-[var(--mocha-beige)]">
-          <UploadSamples />
+        <div className="flex-column text-white w-full h-full">
+          <Outlet />
         </div>
       </div>
     </div>

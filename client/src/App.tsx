@@ -1,16 +1,11 @@
-import { useEffect, useState } from "react";
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
-import ClientLayout from "./layouts/ClientLayout";
+import AppRoute from "./routes/index";
 
 function App() {
 
   return (
-    <>
-      <ClientLayout />
-    </>
-  )
+    <AppRoute />
+  );
 }
 
 export default App
