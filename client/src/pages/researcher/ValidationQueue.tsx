@@ -1,7 +1,7 @@
 import React from 'react';
-import PageContainer from './PageContainer';
-import EmptyStateNotice from './EmptyStateNotice';
-import PageHeader from './PageHeader';
+import PageContainer from '../../components/PageContainer';
+import EmptyStateNotice from '../../components/EmptyStateNotice';
+import PageHeader from '../../components/PageHeader';
 
 const ValidationQueue: React.FC = () => {
   return (

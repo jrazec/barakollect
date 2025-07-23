@@ -6,7 +6,7 @@ const farms = [
   { id: 'C', name: 'Farm C', x: 320, y: 100, beans: 18, avgSize: 14.1, quality: 3.9 },
 ];
 
-const MapCard: React.FC = () => {
+const GeographicMapSection: React.FC = () => { // TO ADD THE FARMS DATA HERE IN THE PARAMETER
   return (
     <div className="bg-[var(--parchment)] rounded-lg shadow p-4 mb-4">
       <div className="flex items-center gap-2 mb-1">
@@ -18,40 +18,11 @@ const MapCard: React.FC = () => {
         </span>
       </div>
       <div className="relative w-full h-80 bg-white rounded-lg overflow-hidden border border-[var(--mocha-beige)]">
-        {/* SVG Map */}
-        <svg viewBox="0 0 500 300" className="absolute top-0 left-0 w-full h-full">
-          <polygon
-            points="50,50 450,50 400,250 100,250"
-            fill="#F5F5DC"
-            stroke="#795548"
-            strokeWidth="2"
-          />
-          <polygon
-            points="120,100 380,100 350,220 150,220"
-            fill="#EADFCB"
-            stroke="#795548"
-            strokeWidth="1"
-          />
-          {farms.map((farm) => (
-            <g key={farm.id}>
-              <circle cx={farm.x} cy={farm.y} r="24" fill="#D7BBA8" opacity="0.7" />
-              <circle cx={farm.x} cy={farm.y} r="12" fill="#795548" />
-              <text
-                x={farm.x}
-                y={farm.y + 5}
-                textAnchor="middle"
-                fontSize="16"
-                fill="#fff"
-                fontFamily="Poppins"
-              >
-                {farm.id}
-              </text>
-            </g>
-          ))}
-        </svg>
+        {/* API MAPS HERE */}
+       
 
-        {/* Popups */}
-        {farms.map((farm) => (
+        {/* Popups TO IMPLEMENT */}
+        {/* {farms.map((farm) => (
           <div key={farm.id} className="absolute" style={{ left: farm.x - 40, top: farm.y + 30 }}>
             <div className="bg-white rounded shadow p-2 text-xs font-accent text-[var(--espresso-black)] min-w-[120px]">
               <div className="font-bold">{farm.name}</div>
@@ -60,7 +31,7 @@ const MapCard: React.FC = () => {
               <div>Quality: {farm.quality}</div>
             </div>
           </div>
-        ))}
+        ))} */}
 
         {/* Controls */}
         <div className="absolute top-4 right-4 flex flex-col gap-2">
@@ -81,4 +52,4 @@ const MapCard: React.FC = () => {
   );
 };
 
-export default MapCard;
+export default GeographicMapSection;

@@ -1,16 +1,15 @@
 
 import React, { useState } from 'react';
-import DashboardHeader from './DashboardHeader';
-import AnalysisTabs from './AnalysisTabs';
-import AnalysisFooter from './AnalysisFooter';
-import AnalysisCharts from './AnalysisCharts';
+import DashboardHeader from '../../components/DashboardHeader';
+import TabComponent from '../../components/TabComponent';
+import AnalysisCharts from './sections/AnalysisCharts';
 
 
 const Analytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Morphological');
 
   return (
-    <div className="min-h-screen bg-[var(--mocha-beige)] pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
+    <div className="min-h-full bg-[var(--mocha-beige)] pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
       {/* Header */}
       <DashboardHeader
         title="Bean Visualization & Analysis"
@@ -25,14 +24,25 @@ const Analytics: React.FC = () => {
       />
 
       {/* Tabs Component */}
-      <AnalysisTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
+      <TabComponent activeTab={activeTab} onTabChange={setActiveTab} tabs={['Morphological', 'Distributions', 'Geographic', 'Comparison']}/>
 
       {/* Chart Section */}
       <AnalysisCharts activeTab={activeTab} />
 
-      {/* Footer Component */}
-      <AnalysisFooter />
+      {/* Footer  */}
+      <div className="flex flex-wrap gap-2 justify-between items-center mt-4">
+      <button className="border border-[var(--arabica-brown)] bg-white text-[var(--arabica-brown)] px-3 py-1 rounded font-main text-xs shadow flex items-center gap-1">
+        <span>&#128260;</span> Reset Filters
+      </button>
+      <div className="flex gap-2">
+        <button className="border border-[var(--arabica-brown)] bg-white text-[var(--arabica-brown)] px-3 py-1 rounded font-main text-xs shadow flex items-center gap-1">
+          <span>&#128190;</span> Export Data
+        </button>
+        <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-3 py-1 rounded font-main text-xs shadow">
+          Save Analysis
+        </button>
+      </div>
+    </div>
     </div>
   );
 };

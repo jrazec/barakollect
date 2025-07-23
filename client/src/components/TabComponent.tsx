@@ -1,13 +1,13 @@
 import React from 'react';
 
-interface AnalysisTabsProps {
+interface TabComponentProps {
     activeTab: string;
+    tabs: string[],
     onTabChange: (tab: string) => void;
 }
 
-const tabs = ['Morphological', 'Distributions', 'Geographic', 'Comparison'];
 
-const AnalysisTabs: React.FC<AnalysisTabsProps> = ({ activeTab, onTabChange }) => {
+const TabComponent: React.FC<TabComponentProps> = ({ activeTab, onTabChange,tabs }) => {
     return (
         <div className="flex w-full justify-center gap-2 bg-[var(--parchment)] rounded-lg shadow-sm p-2 mb-4 mt-4">
             {tabs.map((tab) => (
@@ -28,4 +28,4 @@ const AnalysisTabs: React.FC<AnalysisTabsProps> = ({ activeTab, onTabChange }) =
     );
 };
 
-export default AnalysisTabs;
+export default TabComponent;
