@@ -1,9 +1,9 @@
 import React from 'react';
-import PageContainer from './PageContainer';
-import MapCard from './MapCard';
-import ActionFooter from './ActionFooter';
+import PageContainer from '../../components/PageContainer';
+import GeographicMapSection from './sections/GeographicMapSection';
+import ActionFooter from './sections/ActionFooter';
 
-const GeographicView: React.FC = () => {
+const FarmMap: React.FC = () => {
   return (
     <PageContainer>
       <div className="w-full max-w-6xl bg-[var(--mocha-beige)] rounded-xl shadow p-6">
@@ -20,11 +20,11 @@ const GeographicView: React.FC = () => {
         </div>
 
         {/* Map and Footer */}
-        <MapCard />
+        <GeographicMapSection />
         <ActionFooter />
       </div>
     </PageContainer>
   );
 };
 
-export default GeographicView;
+export default FarmMap;
