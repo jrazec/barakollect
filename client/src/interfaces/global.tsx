@@ -12,6 +12,15 @@ export interface Stat {
   subtext?: string;
 }
 
+export interface NotifAttributes {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  type?: 'info' | 'warning' | 'error';
+}
+
 export interface User {
     name: string,
     role: string

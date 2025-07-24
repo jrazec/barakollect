@@ -9,6 +9,7 @@ import ValidationQueue from "@/pages/researcher/ValidationQueue";
 import FarmMap from "@/pages/researcher/FarmMap";
 import BeansGallery from "@/pages/researcher/BeansGallery";
 import Analytics from "@/pages/researcher/Analytics";
+import Notifications from "@/pages/farmer/Notifications";
 
 
 export default function AppRoute() {
@@ -23,7 +24,7 @@ export default function AppRoute() {
                 <Route path="validation" element={<ValidationQueue />} />
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="farm-map" element={<FarmMap />} />
-                <Route path="notifications" element={<Home />} />
+                <Route path="notifications" element={<Notifications />} />
             </Route>
             <Route path="*" element={<NotFound />} />
         </Routes>
