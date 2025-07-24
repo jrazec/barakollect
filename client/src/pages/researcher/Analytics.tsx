@@ -9,7 +9,7 @@ const Analytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Morphological');
 
   return (
-    <div className="min-h-full bg-[var(--mocha-beige)] pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
+    <div className="h-full bg-[var(--mocha-beige)] pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
       {/* Header */}
       <DashboardHeader
         title="Bean Visualization & Analysis"

@@ -16,7 +16,7 @@ export default function AppRoute() {
         <Routes>
             <Route path="/login" element={<Login />}>
             </Route>
-            <Route path="/" element={<ClientLayout />}>
+            <Route path="/researcher" element={<ClientLayout />}>
                 <Route path="dashboard" element={<ResearcherDashboard />} />
                 <Route path="upload-image" element={<UploadSamples />} />
                 <Route path="gallery" element={<BeansGallery />} />
