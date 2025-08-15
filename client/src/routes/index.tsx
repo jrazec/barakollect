@@ -10,6 +10,7 @@ import FarmMap from "@/pages/researcher/FarmMap";
 import BeansGallery from "@/pages/researcher/BeansGallery";
 import Analytics from "@/pages/researcher/Analytics";
 import Notifications from "@/pages/farmer/Notifications";
+import AdminLayout from "@/layouts/AdminLayout";
 
 
 export default function AppRoute() {
@@ -18,6 +19,24 @@ export default function AppRoute() {
             <Route path="/login" element={<Login />}>
             </Route>
             <Route path="/researcher" element={<ClientLayout />}>
+                <Route path="dashboard" element={<ResearcherDashboard />} />
+                <Route path="upload-image" element={<UploadSamples />} />
+                <Route path="gallery" element={<BeansGallery />} />
+                <Route path="validation" element={<ValidationQueue />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="farm-map" element={<FarmMap />} />
+                <Route path="notifications" element={<Notifications />} />
+            </Route>
+            <Route path="/farmer" element={<ClientLayout />}>
+                <Route path="dashboard" element={<ResearcherDashboard />} />
+                <Route path="upload-image" element={<UploadSamples />} />
+                <Route path="gallery" element={<BeansGallery />} />
+                <Route path="validation" element={<ValidationQueue />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="farm-map" element={<FarmMap />} />
+                <Route path="notifications" element={<Notifications />} />
+            </Route>
+            <Route path="/admin" element={<AdminLayout />}>
                 <Route path="dashboard" element={<ResearcherDashboard />} />
                 <Route path="upload-image" element={<UploadSamples />} />
                 <Route path="gallery" element={<BeansGallery />} />

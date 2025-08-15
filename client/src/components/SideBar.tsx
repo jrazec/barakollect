@@ -11,28 +11,28 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
             {
                 icon: (<LayoutDashboard />),
                 label: "Dashboard",
-                route: "/dashboard",
+                route: "/farmer/dashboard",
                 active: true,
             },
             {
                 icon: (<UploadIcon />),
                 label: "Upload Images",
-                route: "/upload-image"
+                route: "/farmer/upload-image"
             },
             {
                 icon: (<ImageIcon />),
                 label: "Beans Gallery",
-                route: "/gallery"
+                route: "/farmer/gallery"
             },
             {
                 icon: (<MapPin />),
                 label: "Farm Map",
-                route: "/farm-map"
+                route: "/farmer/farm-map"
             },
             {
                 icon: (<BellIcon />),
                 label: "Notifications",
-                route: "/notifications"
+                route: "/farmer/notifications"
             }
         ],
         researcher: [
@@ -73,28 +73,28 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
             {
                 icon: (<LayoutDashboard />),
                 label: "Dashboard",
-                route: "/dashboard",
+                route: "/admin/dashboard",
                 active: true,
             },
             {
                 icon: (<UploadIcon />),
                 label: "Upload Images",
-                route: "/upload-image"
+                route: "/admin/upload-image"
             },
             {
                 icon: (<ImageIcon />),
                 label: "Beans Gallery",
-                route: "/gallery"
+                route: "/admin/gallery"
             },
             {
                 icon: (<MapPin />),
                 label: "Farm Map",
-                route: "/farm-map"
+                route: "/admin/farm-map"
             },
             {
                 icon: (<BellIcon />),
                 label: "Notifications",
-                route: "/notifications"
+                route: "/admin/notifications"
             }
         ]
     };

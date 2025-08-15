@@ -22,7 +22,7 @@ export default function ClientLayout() {
       </div>
       <div className="flex flex-1 overflow-auto">
         {/* flex-column text-white w-full h-full overflow-y-scroll bg-[var(--mocha-beige)] */}
-        <SideBar show={showSideBar} role={"researcher"} user={user} />
+        <SideBar show={showSideBar} role={"farmer"} user={user} />
         <div className="flex-column text-white w-full h-full">
           <Outlet />
         </div>
