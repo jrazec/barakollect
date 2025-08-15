@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { supabase } from '../lib/supabaseClient';
 import '../assets/styles/global.css'
 
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
     const [formData, setFormData] = useState({
-        username: '',
+        email: '',
         password: ''
     });
 
@@ -17,10 +20,34 @@ export default function Login() {
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Handle login logic here
-        console.log('Login attempt:', formData);
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: formData.email,
+                password: formData.password,
+            });
+
+            if (error) {
+                setError(error.message);
+                return;
+            }
+
+            if (data.user) {
+                // Redirect to dashboard or home page
+                console.log('Login successful:', data.user);
+                // You can add navigation logic here
+                // navigate('/dashboard');
+            }
+        } catch (err) {
+            setError('An unexpected error occurred. Please try again.');
+            console.error('Login error:', err);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -39,21 +66,28 @@ export default function Login() {
 
                 {/* Login Form */}
                 <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-200">
+                    {/* Error Message */}
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-red-600 text-sm">{error}</p>
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* username Field */}
+                        {/* Email Field */}
                         <div className="formFloatingLbl">
                             <input
-                                type="text"
-                                id="username"
-                                name="username"
-                                value={formData.username}
+                                type="email"
+                                id="email"
+                                name="email"
+                                value={formData.email}
                                 onChange={handleInputChange}
                                 required
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-barako-light focus:border-barako-light transition-colors duration-200"
                                 placeholder=""
                             />
-                            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                                Username
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                                Email
                             </label>
                         </div>
 
@@ -108,9 +142,10 @@ export default function Login() {
                         {/* Login Button */}
                         <button
                             type="submit"
-                            className="w-full !bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-barako focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200"
+                            disabled={isLoading}
+                            className="w-full !bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-barako focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Log In
+                            {isLoading ? 'Signing in...' : 'Log In'}
                         </button>
                     </form>
 
