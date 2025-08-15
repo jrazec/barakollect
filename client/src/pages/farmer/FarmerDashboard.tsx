@@ -4,6 +4,8 @@ import CardComponent from "@/components/CardComponent";
 import { BarChartComponent, LineChartComponent } from "@/components/ChartComponent";
 import StatCard from "@/components/StatCard";
 import type React from "react";
+import logo1 from "@/assets/images/barakollect_logo.svg";
+import logo2 from "@/assets/images/logo.svg";
 
 const FarmerDashboard: React.FC = () => {
     const statCards: Stat[] = [
@@ -35,7 +37,7 @@ const FarmerDashboard: React.FC = () => {
             ),
             content: (
                 <div className="flex items-center justify-center h-60">
-                    <img src="/src/assets/images/logo.svg" alt="Largest Bean" className="w-32 h-32" />
+                    <img src={logo2} alt="Largest Bean" className="w-32 h-32" />
                 </div>
             )
         },
@@ -81,7 +83,7 @@ const FarmerDashboard: React.FC = () => {
                     <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-2 rounded">Find Largest Bean</button>
                 </div>
             }
-            image="/src/assets/images/logo.svg"
+            image={logo2}
         />
         {/* stat cards below header */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
