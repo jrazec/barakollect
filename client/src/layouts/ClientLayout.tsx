@@ -4,12 +4,14 @@ import NavBar from '../components/NavBar'
 import '../assets/styles/global.css'
 import { Outlet } from "react-router-dom";
 import type { User } from "@/interfaces/global";
+import logo1 from "@/assets/images/barakollect_logo.svg";
+import logo2 from "@/assets/images/logo.svg";
 
 export default function ClientLayout() {
   const [showSideBar, setShowSideBar] = useState<boolean>(true);
   const logo: string[] = [
-    "/src/assets/images/barakollect_logo.svg",
-    "/src/assets/images/logo.svg"
+    logo1,
+    logo2
   ];
   const user: User = {
     name: "Carlos",
@@ -22,7 +24,7 @@ export default function ClientLayout() {
       </div>
       <div className="flex flex-1 overflow-auto">
         {/* flex-column text-white w-full h-full overflow-y-scroll bg-[var(--mocha-beige)] */}
-        <SideBar show={showSideBar} role={"farmer"} user={user} />
+        <SideBar show={showSideBar} role={"researcher"} user={user} />
         <div className="flex-column text-white w-full h-full">
           <Outlet />
         </div>

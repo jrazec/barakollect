@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import '../assets/styles/global.css'
+import logo1 from "@/assets/images/barakollect_logo.svg";
+import logo2 from "@/assets/images/logo.svg";
 
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
@@ -30,7 +32,7 @@ export default function Login() {
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center mb-6">
                         <img 
-                            src="/src/assets/images/barakollect_logo.svg" 
+                            src={logo1} 
                             alt="BaraKollect Logo" 
                             className="h-16 w-auto"
                         />
