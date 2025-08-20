@@ -21,6 +21,7 @@ export default function Signup() {
         username: "",
     });
     const [loading, setLoading] = useState(false);
+    const [role, setRole] = useState<'researcher' | 'farmer'>("researcher");
 
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -42,12 +43,14 @@ export default function Signup() {
             }
 
             const uiid = signUpData.user.id;
+            const roleId = role === 'researcher' ? '2' : '3';
             const formBody = new URLSearchParams({
                 uiid,
                 first_name: profile.first_name,
                 last_name: profile.last_name,
                 location: profile.location,
                 username: profile.username,
+                role_id: roleId,
             }).toString();
 
             const resp = await fetch("http://localhost:8000/api/users/signup/", {
@@ -62,9 +65,9 @@ export default function Signup() {
                 return;
             }
 
-            // Expect backend to return role or we fallback to researcher
-            const role = (result.role || "researcher").toLowerCase();
-            window.location.href = `/${role}/dashboard`;
+            // Expect backend to return role or fallback to selected
+            const resolvedRole = (result.role || role).toLowerCase();
+            window.location.href = `/${resolvedRole}/dashboard`;
         } catch (err) {
             alert("Network error");
         } finally {
@@ -83,6 +86,10 @@ export default function Signup() {
 
                 <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-200">
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <h2 className="text-lg font-semibold">Create your account</h2>
+                            <p className="text-sm text-gray-600">Fill in your details and select your role.</p>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="formFloatingLbl">
                                 <input type="text" name="first_name" id="first_name" value={profile.first_name} onChange={handleProfileChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-barako-light focus:border-barako-light transition-colors duration-200" placeholder="" />
@@ -110,6 +117,20 @@ export default function Signup() {
                             <div className="formFloatingLbl">
                                 <input type="password" name="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-barako-light focus:border-barako-light transition-colors duration-200" placeholder="" />
                                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="text-sm font-medium text-gray-700 mb-2">Select your role</p>
+                            <div className="flex items-center gap-6">
+                                <label className="inline-flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="role" value="researcher" checked={role === 'researcher'} onChange={() => setRole('researcher')} />
+                                    <span>Researcher</span>
+                                </label>
+                                <label className="inline-flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="role" value="farmer" checked={role === 'farmer'} onChange={() => setRole('farmer')} />
+                                    <span>Farmer</span>
+                                </label>
                             </div>
                         </div>
 
