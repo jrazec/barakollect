@@ -20,7 +20,7 @@ export default function AppRoute() {
         <Routes>
             <Route path="/login" element={<Login />}>
             </Route>
-            <Route path="/researcher" element={<ClientLayout />}>
+            <Route path="/researcher" element={<ClientLayout /> }>
                 <Route path="dashboard" element={<ResearcherDashboard />} />
                 <Route path="upload-image" element={<UploadSamples />} />
                 <Route path="gallery" element={<BeansGallery />} />
@@ -29,14 +29,14 @@ export default function AppRoute() {
                 <Route path="farm-map" element={<FarmMap />} />
                 <Route path="notifications" element={<Notifications />} />
             </Route>
-            <Route path="/farmer" element={<ClientLayout />}>
+            <Route path="/farmer" element={<ClientLayout />}> 
                 <Route path="dashboard" element={<FarmerDashboard />} />
                 <Route path="upload-image" element={<UploadSamples />} />
                 <Route path="gallery" element={<FarmerBeansGallery />} />
                 <Route path="farm-map" element={<FarmMap />} />
                 <Route path="notifications" element={<Notifications />} />
             </Route>
-            <Route path="/admin" element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminLayout />}> 
                 {/* AdminDashboard */}
                 <Route path="dashboard" element={<ResearcherDashboard />} />
                 {/* User Management */}

@@ -3,12 +3,14 @@ import { EyeIcon, EyeOffIcon } from "lucide-react";
 import '../assets/styles/global.css'
 import logo1 from "@/assets/images/barakollect_logo.svg";
 import logo2 from "@/assets/images/logo.svg";
+import { supabase } from "@/lib/supabaseClient";
+import type { LoginFormType } from "@/interfaces/global";
 
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
-    const [formData, setFormData] = useState({
-        username: '',
-        password: ''
+    const [formData, setFormData] = useState<LoginFormType>({
+        email : "",
+        password : "",
     });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,10 +21,41 @@ export default function Login() {
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         // Handle login logic here
-        console.log('Login attempt:', formData);
+        const {data, error} = await supabase.auth.signInWithPassword(formData);
+        if(error) {
+            alert("Login Failed Zirr")
+        } else {
+           // Example fetch template for calling your Django backend after successful Supabase login
+           // (Replace the URL and payload as needed for your actual API)
+           try {
+               const response = await fetch("http://localhost:8000/api/users/login/", {
+                   method: "POST",
+                   headers: {
+                       "Content-Type": "application/x-www-form-urlencoded",
+                   },
+                   body: new URLSearchParams({
+                       uiid: data.user?.id || "",
+                   }).toString(),
+               });
+               const result = await response.json();
+               if (!response.ok) {
+                   alert(result.error || "Failed to fetch user data");
+               } else {
+                   const user = result.data && result.data[0];
+                   if (user && user["userrole__role__name"]) {
+                       const role = user["userrole__role__name"].toLowerCase();
+                       window.location.href = `/${role}/dashboard`;
+                   } else {
+                       alert("User role not found. Cannot redirect.");
+                   }
+               }
+           } catch (err) {
+               alert("Network error");
+           }
+        }
     };
 
     return (
@@ -42,20 +75,20 @@ export default function Login() {
                 {/* Login Form */}
                 <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-200">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* username Field */}
+                        {/* email Field */}
                         <div className="formFloatingLbl">
                             <input
                                 type="text"
-                                id="username"
-                                name="username"
-                                value={formData.username}
+                                id="email"
+                                name="email"
+                                value={formData.email}
                                 onChange={handleInputChange}
                                 required
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-barako-light focus:border-barako-light transition-colors duration-200"
                                 placeholder=""
                             />
-                            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                                Username
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                                Email
                             </label>
                         </div>
 
