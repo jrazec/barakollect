@@ -36,11 +36,12 @@ class Permission(models.Model):
 
 
 class UserRole(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, primary_key=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
 
     class Meta:
         db_table = "user_roles"
+        managed = False
         unique_together = ("user", "role")
 
 

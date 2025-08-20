@@ -43,7 +43,9 @@ def signup_user(request):
     location = request.POST.get("location")
     username = request.POST.get("username")
 
-    if not all([uiid, first_name, last_name, username]):
+    role_id = request.POST.get("role_id")
+
+    if not all([uiid, first_name, last_name, username, role_id]):
         return JsonResponse({"error": "Missing required fields"}, status=400)
 
     try:
@@ -67,7 +69,12 @@ def signup_user(request):
                 user.save()
 
             # Ensure the user has a default role (e.g., researcher)
-            role, _ = Role.objects.get_or_create(name="researcher")
+            # Use requested role id if exists, else fallback to researcher (id 2)
+            try:
+                role = Role.objects.get(id=int(role_id))
+            except Role.DoesNotExist:
+                role = Role.objects.get(name="researcher")
+
             UserRole.objects.get_or_create(user=user, role=role)
 
         return JsonResponse({"message": "Signup successful", "role": role.name})
