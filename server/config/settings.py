@@ -29,7 +29,7 @@ SUPABASE_ROLE_KEY= os.getenv("SUPABASE_ROLE_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ["barakollect.up.railway.app"]
+ALLOWED_HOSTS = []
 
 
 

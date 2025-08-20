@@ -2,8 +2,10 @@ import ClientLayout from "./../layouts/ClientLayout";
 import { Route, Routes } from "react-router-dom";
 import Home from "./../pages/Home";
 import Login from "./../pages/Login";
+import Signup from "@/pages/Signup";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "./../pages/NotFound";
-import ResearcherDashboard from '../pages/researcher/ResearcherDashboard'
+import ResearcherDashboard from "@/pages/researcher/ResearcherDashboard";
 import UploadSamples from "@/components/UploadSamples";
 import ValidationQueue from "@/pages/researcher/ValidationQueue";
 import FarmMap from "@/pages/researcher/FarmMap";
@@ -20,6 +22,8 @@ export default function AppRoute() {
         <Routes>
             <Route path="/login" element={<Login />}>
             </Route>
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/researcher" element={<ClientLayout /> }>
                 <Route path="dashboard" element={<ResearcherDashboard />} />
                 <Route path="upload-image" element={<UploadSamples />} />
