@@ -1,16 +1,16 @@
 import GalleryComponent from '@/components/GalleryComponent';
 import React from 'react';
-
+import logo2 from "@/assets/images/logo.svg";
 interface GallerySectionProps {
     activeTab: string;
 }
 // temporary placeholder images
 const placeholderImages = [
-    'src/assets/images/logo.svg',
-    'src/assets/images/logo.svg',
-    'src/assets/images/logo.svg',
-    'src/assets/images/logo.svg',
-    'src/assets/images/logo.svg',
+    logo2,
+    logo2,
+    logo2,
+    logo2,
+    logo2,
 ];
 
 const GallerySection: React.FC<GallerySectionProps> = ({ activeTab }) => {

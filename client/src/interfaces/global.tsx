@@ -1,3 +1,5 @@
+import type { SignInWithPasswordCredentials } from "@supabase/supabase-js";
+
 export interface CardAttributes {
     title: string,
     subtitle: string,
@@ -47,3 +49,8 @@ export type SidebarNavProps = {
   navigationItems:Record<string, NavItems[]>;
   role: string;
 };
+
+export type LoginFormType = {
+  email : string,
+  password: string
+}

@@ -2,19 +2,20 @@ import { useState } from "react";
 import SideBar from '../components/SideBar'
 import NavBar from '../components/NavBar'
 import '../assets/styles/global.css'
-import { Outlet } from "react-router-dom";
-import type { User } from "@/interfaces/global";
+import { Outlet, Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import logo1 from "@/assets/images/barakollect_logo.svg";
+import logo2 from "@/assets/images/logo.svg";
 
 export default function ClientLayout() {
   const [showSideBar, setShowSideBar] = useState<boolean>(true);
+  const { user, role, loading } = useAuth();
   const logo: string[] = [
-    "/src/assets/images/barakollect_logo.svg",
-    "/src/assets/images/logo.svg"
+    logo1,
+    logo2
   ];
-  const user: User = {
-    name: "Carlos",
-    role: "Farmer"
-  }
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
   return (
     <div className="flex flex-col h-screen">
       <div className="flex-shrink-0">
@@ -22,7 +23,7 @@ export default function ClientLayout() {
       </div>
       <div className="flex flex-1 overflow-auto">
         {/* flex-column text-white w-full h-full overflow-y-scroll bg-[var(--mocha-beige)] */}
-        <SideBar show={showSideBar} role={"farmer"} user={user} />
+        <SideBar show={showSideBar} role={role} user={user} />
         <div className="flex-column text-white w-full h-full">
           <Outlet />
         </div>

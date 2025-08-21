@@ -1,6 +1,7 @@
 import type { NavItems, User } from "@/interfaces/global";
-import { BellIcon, ChartBar, ImageIcon, LayoutDashboard, LogOutIcon, MapPin, ScanFaceIcon, UploadIcon } from "lucide-react";
+import { ActivityIcon, BellIcon, ChartBar, ImageIcon, LayoutDashboard, LogOutIcon, MapPin, Monitor, ScanFaceIcon, Settings, UploadIcon, User2Icon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User }) => {
@@ -77,29 +78,36 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 active: true,
             },
             {
-                icon: (<UploadIcon />),
-                label: "Upload Images",
-                route: "/admin/upload-image"
+                icon: (<User2Icon />),
+                label: "User Management",
+                route: "/admin/user-management"
             },
             {
-                icon: (<ImageIcon />),
-                label: "Beans Gallery",
-                route: "/admin/gallery"
+                icon: (<Monitor />),
+                label: "System Monitor",
+                route: "/admin/monitoring"
             },
             {
-                icon: (<MapPin />),
-                label: "Farm Map",
-                route: "/admin/farm-map"
+                icon: (<ActivityIcon />),
+                label: "Activity Logs",
+                route: "/admin/activity-logs"
             },
             {
                 icon: (<BellIcon />),
                 label: "Notifications",
                 route: "/admin/notifications"
+            },
+            {
+                icon: (<Settings />),
+                label: "Settings",
+                route: "/admin/settings"
             }
         ]
     };
 
 
+
+    const { signOut } = useAuth();
 
     return (
         <div className={`sideNav ${show ? "expanded" : "collapsed"}`}>
@@ -158,10 +166,10 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
             <div className="bottomSection">
                 <ul>
                     <li className={`navigationBtn ${show ? "" : "collapsed"}`}>
-                        <a href="/">
-                            <LogOutIcon />
+                        <button onClick={signOut} className="w-full text-left">
+                            <span className="icon"><LogOutIcon /></span>
                             {<span className={`lblNav ${show ? "" : "collapsed"}`}>Logout</span>}
-                        </a>
+                        </button>
                     </li>
                 </ul>
             </div>
