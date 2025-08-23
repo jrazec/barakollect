@@ -166,6 +166,148 @@ export class AdminService {
       throw error;
     }
   }
+
+  // User Management Methods
+  static async getUsers(): Promise<UserLog[]> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch('/api/admin/users');
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return tempUserLogs;
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+  }
+
+  static async createUser(userData: {
+    name: string;
+    email: string;
+    role: 'Farmer' | 'Researcher' | 'Admin';
+    location: string;
+    status: 'active' | 'inactive';
+  }): Promise<UserLog> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch('/api/admin/users', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(userData)
+      // });
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const newUser: UserLog = {
+        id: Date.now().toString(),
+        ...userData,
+        action: 'User created',
+        lastActive: 'Just now',
+        joinDate: new Date().toISOString().split('T')[0],
+        totalUploads: 0,
+        totalValidations: 0
+      };
+      console.log('User created:', newUser);
+      return newUser;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  }
+
+  static async updateUser(userId: string, userData: {
+    name: string;
+    email: string;
+    role: 'Farmer' | 'Researcher' | 'Admin';
+    location: string;
+    status: 'active' | 'inactive';
+  }): Promise<UserLog> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch(`/api/admin/users/${userId}`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(userData)
+      // });
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const updatedUser: UserLog = {
+        id: userId,
+        ...userData,
+        action: 'User updated',
+        lastActive: 'Just now',
+        joinDate: '2023-01-01', // This would come from the existing user
+        totalUploads: 0,
+        totalValidations: 0
+      };
+      console.log('User updated:', updatedUser);
+      return updatedUser;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+  }
+
+  static async deleteUser(userId: string): Promise<boolean> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch(`/api/admin/users/${userId}`, {
+      //   method: 'DELETE'
+      // });
+      // return response.ok;
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      console.log(`User deleted: ${userId}`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
+  }
+
+  static async searchUsers(query: string, filters?: {
+    role?: 'Farmer' | 'Researcher' | 'Admin';
+    location?: string;
+  }): Promise<UserLog[]> {
+    try {
+      // TODO: Replace with actual API call
+      // const params = new URLSearchParams();
+      // params.append('q', query);
+      // if (filters?.role) params.append('role', filters.role);
+      // if (filters?.location) params.append('location', filters.location);
+      // const response = await fetch(`/api/admin/users/search?${params}`);
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      let filteredUsers = tempUserLogs;
+      
+      // Apply search filter
+      if (query) {
+        filteredUsers = filteredUsers.filter(user =>
+          user.name.toLowerCase().includes(query.toLowerCase()) ||
+          user.email.toLowerCase().includes(query.toLowerCase())
+        );
+      }
+      
+      // Apply role filter
+      if (filters?.role) {
+        filteredUsers = filteredUsers.filter(user => user.role === filters.role);
+      }
+      
+      // Apply location filter (this would need to be added to the UserLog interface)
+      if (filters?.location) {
+        // For now, we'll skip location filtering since it's not in the UserLog interface
+        // In a real implementation, you'd filter by location
+      }
+      
+      return filteredUsers;
+    } catch (error) {
+      console.error('Error searching users:', error);
+      throw error;
+    }
+  }
 }
 
 export default AdminService;

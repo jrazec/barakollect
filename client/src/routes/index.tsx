@@ -16,6 +16,7 @@ import AdminLayout from "@/layouts/AdminLayout";
 import FarmerDashboard from "@/pages/farmer/FarmerDashboard";
 import FarmerBeansGallery from "@/pages/farmer/FarmerBeansGallery";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
+import UserManagement from "@/pages/admin/UserManagement";
 
 
 export default function AppRoute() {
@@ -45,7 +46,7 @@ export default function AppRoute() {
                 {/* AdminDashboard */}
                 <Route path="dashboard" element={<AdminDashboard />} />
                 {/* User Management */}
-                {/* <Route path="user-management" element={<UserManagement />} /> */}
+                <Route path="user-management" element={<UserManagement />} />
                 {/* System Monitor */}
                 {/* <Route path="monitoring" element={<SystemMonitoring />} /> */}
                 {/* Activity Logs */}
