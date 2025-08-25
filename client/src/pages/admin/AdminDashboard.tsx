@@ -56,7 +56,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
+      <div className="min-h-lvh bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
           <p className="text-gray-600 font-accent">Loading dashboard...</p>
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
+      <div className="min-h-lvh bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
         <div className="text-center max-w-md">
           <p className="text-red-600 font-accent mb-4">{error}</p>
           <button 
@@ -83,14 +83,14 @@ export default function AdminDashboard() {
 
   if (!adminStats || !systemStatus) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
+      <div className="min-h-lvh bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
         <p className="text-gray-600 font-accent">No data available</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div className="min-h-lvh bg-gray-50 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6 sm:mb-8">

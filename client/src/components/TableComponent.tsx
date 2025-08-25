@@ -2,7 +2,7 @@ import React from 'react';
 
 export interface TableColumn {
   key: string;
-  label: string;
+  label: React.ReactNode;
   render?: (value: any, row: any) => React.ReactNode;
   width?: string;
 }
@@ -12,13 +12,14 @@ export interface TableComponentProps {
   data: any[];
   onRowClick?: (row: any) => void;
   className?: string;
+  rowClassName?: (row: any) => string;
 }
 
 const TableComponent: React.FC<TableComponentProps> = ({
   columns,
   data,
-  onRowClick,
-  className = ""
+  className = "",
+  rowClassName
 }) => {
   return (
     <div className={`bg-[var(--parchment)] rounded-lg shadow overflow-hidden ${className}`}>
@@ -41,9 +42,8 @@ const TableComponent: React.FC<TableComponentProps> = ({
               <tr
                 key={index}
                 className={`border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 ${
-                  onRowClick ? 'cursor-pointer' : ''
+                  rowClassName ? rowClassName(row) : ''
                 }`}
-                onClick={() => onRowClick && onRowClick(row)}
               >
                 {columns.map((column) => (
                   <td

@@ -2,42 +2,48 @@ import React, { useState, useEffect } from 'react';
 import TableComponent from '@/components/TableComponent';
 import type { TableColumn } from '@/components/TableComponent';
 import AdminService from '@/services/adminService';
-import type { UserLog } from '@/interfaces/global';
+import type { UserManagementUser } from '@/interfaces/global';
 
-interface UserManagementUser extends Omit<UserLog, 'action' | 'lastActive' | 'totalUploads' | 'totalValidations'> {
-  location: string;
-}
 
-interface UserManagementProps {}
+
+interface UserManagementProps { }
 
 const UserManagement: React.FC<UserManagementProps> = () => {
   const [users, setUsers] = useState<UserManagementUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserManagementUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Search and filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'Farmer' | 'Researcher' | 'Admin'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'farmer' | 'researcher' | 'admin'>('all');
   const [locationFilter, setLocationFilter] = useState('all');
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(10);
-  
+
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserManagementUser | null>(null);
-  
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [deleteConfirmUsername, setDeleteConfirmUsername] = useState('');
+
   // Form data
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    role: 'Farmer' as 'Farmer' | 'Researcher' | 'Admin',
+    firstName: '',
+    lastName: '',
+    username: '',
+    role: 'farmer' as 'farmer' | 'researcher' | 'admin',
     location: '',
-    status: 'active' as 'active' | 'inactive'
+    is_active: true,
+    resetPassword: false,
+    email: '',
+    password: '',
   });
 
   // Fetch users data
@@ -46,18 +52,10 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       try {
         setLoading(true);
         // TODO: Replace with actual API call
-        const userLogs = await AdminService.getUserLogs();
-        const userManagementUsers: UserManagementUser[] = userLogs.map(user => ({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          status: user.status,
-          joinDate: user.joinDate,
-          location: getRandomLocation() // Temporary - replace with actual location data
-        }));
-        setUsers(userManagementUsers);
-        setFilteredUsers(userManagementUsers);
+        const users = await AdminService.getUsers();
+        setUsers(users);
+        setFilteredUsers(users);
+        console.log(users)
       } catch (err) {
         console.error('Error fetching users:', err);
         setError('Failed to load users. Please try again.');
@@ -69,11 +67,6 @@ const UserManagement: React.FC<UserManagementProps> = () => {
     fetchUsers();
   }, []);
 
-  // Temporary function to generate random locations
-  const getRandomLocation = () => {
-    const locations = ['Kenya', 'Brazil', 'Ethiopia', 'Colombia', 'Uganda', 'Philippines', 'Vietnam', 'Indonesia'];
-    return locations[Math.floor(Math.random() * locations.length)];
-  };
 
   // Filter users based on search and filters
   useEffect(() => {
@@ -82,7 +75,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
     // Search by name
     if (searchTerm) {
       filtered = filtered.filter(user =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase())
+        `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -109,24 +102,38 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
 
-  // Handle form submission
+  // // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (showAddModal) {
-        // Add new user
-        const newUser: UserManagementUser = {
-          id: Date.now().toString(),
-          ...formData,
-          joinDate: new Date().toISOString().split('T')[0]
-        };
-        setUsers([...users, newUser]);
+        await AdminService.createUser({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          username: formData.username,
+          role: formData.role,
+          location: formData.location,
+          is_active: formData.is_active,
+          email: formData.email
+        });
+
+        // Refresh the users list after creating a new user
+        const updatedUsers = await AdminService.getUsers();
+        setUsers(updatedUsers);
         setShowAddModal(false);
       } else if (showEditModal && selectedUser) {
         // Edit existing user
-        const updatedUsers = users.map(user =>
-          user.id === selectedUser.id ? { ...user, ...formData } : user
-        );
+        await AdminService.updateUser(selectedUser.id, {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          username: formData.username,
+          role: formData.role,
+          location: formData.location,
+          reset_password: formData.resetPassword
+        });
+
+        // Refresh user lists after editing
+        const updatedUsers = await AdminService.getUsers();
         setUsers(updatedUsers);
         setShowEditModal(false);
       }
@@ -137,15 +144,43 @@ const UserManagement: React.FC<UserManagementProps> = () => {
     }
   };
 
+  // Handle activate/deactivate
+  const handleActivateDeactivate = async () => {
+    if (!selectedUser) return;
+    console.log(selectedUser.id);
+    try {
+      if (selectedUser.is_deleted) {
+        await AdminService.activateUser(selectedUser.id);
+      } else {
+        await AdminService.deactivateUser(selectedUser.id);
+      }
+
+      // Update user in local state
+      const updatedUsers = users.map(user => 
+        user.id === selectedUser.id 
+          ? { ...user, is_deleted: !user.is_deleted }
+          : user
+      );
+      setUsers(updatedUsers);
+      setShowDeactivateModal(false);
+      setSelectedUser(null);
+    } catch (err) {
+      console.error('Error updating user status:', err);
+      setError('Failed to update user status. Please try again.');
+    }
+  };
+
   // Handle delete
   const handleDelete = async () => {
-    if (!selectedUser) return;
-    
+    if (!selectedUser || deleteConfirmUsername !== selectedUser.username) return;
+
     try {
+      await AdminService.deleteUser(selectedUser.id);
       const updatedUsers = users.filter(user => user.id !== selectedUser.id);
       setUsers(updatedUsers);
       setShowDeleteModal(false);
       setSelectedUser(null);
+      setDeleteConfirmUsername('');
     } catch (err) {
       console.error('Error deleting user:', err);
       setError('Failed to delete user. Please try again.');
@@ -155,11 +190,15 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   // Reset form
   const resetForm = () => {
     setFormData({
-      name: '',
-      email: '',
-      role: 'Farmer',
+      firstName: '',
+      lastName: '',
+      username: '',
+      role: 'farmer',
       location: '',
-      status: 'active'
+      is_active: true,
+      resetPassword: false,
+      email: '',
+      password: '',
     });
   };
 
@@ -167,26 +206,53 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   const openEditModal = (user: UserManagementUser) => {
     setSelectedUser(user);
     setFormData({
-      name: user.name,
-      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      username: user.username,
       role: user.role,
       location: user.location,
-      status: user.status
+      is_active: user.is_active,
+      resetPassword: false,
+      email: user.email,
+      password: ''
     });
     setShowEditModal(true);
+  };
+
+  // Open deactivate modal
+  const openDeactivateModal = (user: UserManagementUser) => {
+    setSelectedUser(user);
+    setShowDeactivateModal(true);
   };
 
   // Open delete modal
   const openDeleteModal = (user: UserManagementUser) => {
     setSelectedUser(user);
+    setDeleteConfirmUsername('');
     setShowDeleteModal(true);
+  };
+
+  // Open view modal
+  const openViewModal = (user: UserManagementUser) => {
+    setSelectedUser(user);
+    setShowViewModal(true);
   };
 
   // Table columns
   const columns: TableColumn[] = [
     {
-      key: 'name',
-      label: 'Name',
+      key: 'username',
+      label: 'Username',
+      width: 'w-1/4'
+    },
+    {
+      key: 'first_name',
+      label: 'First Name',
+      width: 'w-1/5'
+    },
+    {
+      key: 'last_name',
+      label: 'Last Name',
       width: 'w-1/5'
     },
     {
@@ -194,19 +260,13 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       label: 'Role',
       width: 'w-1/6',
       render: (value) => (
-        <span className={`inline-block px-2 py-1 rounded-full text-xs font-accent ${
-          value === 'Admin' ? 'bg-red-100 text-red-800' :
-          value === 'Researcher' ? 'bg-blue-100 text-blue-800' :
-          'bg-green-100 text-green-800'
-        }`}>
+        <span className={`inline-block px-2 py-1 rounded-full text-xs font-accent ${value === 'admin' ? 'bg-red-100 text-red-800' :
+          value === 'researcher' ? 'bg-blue-100 text-blue-800' :
+            'bg-green-100 text-green-800'
+          }`}>
           {value}
         </span>
       )
-    },
-    {
-      key: 'email',
-      label: 'Email',
-      width: 'w-1/4'
     },
     {
       key: 'location',
@@ -217,15 +277,33 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       key: 'viewMore',
       label: '',
       width: 'w-1/6',
-      render: () => (
-        <button className="text-[var(--arabica-brown)] hover:text-opacity-80 font-accent text-sm">
+      render: (_, row) => (
+        <button 
+          onClick={() => openViewModal(row)}
+          className="text-[var(--arabica-brown)] hover:text-opacity-80 font-accent text-sm"
+        >
           View More
         </button>
       )
     },
     {
       key: 'actions',
-      label: 'Actions',
+      label: (
+        <div className="flex items-center gap-2">
+          <span>Actions</span>
+          <button
+            onClick={() => setDeleteMode(!deleteMode)}
+            className={`px-2 py-1 rounded text-xs font-accent transition-colors ${
+              deleteMode 
+                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+            title={deleteMode ? 'Switch to Deactivate mode' : 'Switch to Delete mode'}
+          >
+            {deleteMode ? 'Delete' : 'Disable'}
+          </button>
+        </div>
+      ),
       width: 'w-1/6',
       render: (_, row) => (
         <div className="flex gap-2">
@@ -235,12 +313,25 @@ const UserManagement: React.FC<UserManagementProps> = () => {
           >
             Edit
           </button>
-          <button
-            onClick={() => openDeleteModal(row)}
-            className="text-red-600 hover:text-red-800 font-accent text-sm"
-          >
-            Delete
-          </button>
+          {deleteMode ? (
+            <button
+              onClick={() => openDeleteModal(row)}
+              className="text-red-600 hover:text-red-800 font-accent text-sm"
+            >
+              Delete
+            </button>
+          ) : (
+            <button
+              onClick={() => openDeactivateModal(row)}
+              className={`font-accent text-sm ${
+                row.is_deleted 
+                  ? 'text-green-600 hover:text-green-800' 
+                  : 'text-orange-600 hover:text-orange-800'
+              }`}
+            >
+              {row.is_deleted ? 'Activate' : 'Deactivate'}
+            </button>
+          )}
         </div>
       )
     }
@@ -262,7 +353,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
         <div className="text-center max-w-md">
           <p className="text-red-600 font-accent mb-4">{error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-[var(--arabica-brown)] text-[var(--parchment)] rounded-lg font-accent hover:bg-opacity-90 transition-colors"
           >
@@ -310,9 +401,9 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
               >
                 <option value="all">All Roles</option>
-                <option value="Farmer">Farmer</option>
-                <option value="Researcher">Researcher</option>
-                <option value="Admin">Admin</option>
+                <option value="farmer">Farmer</option>
+                <option value="researcher">Researcher</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
 
@@ -359,6 +450,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
             columns={columns}
             data={currentUsers}
             className="min-h-[400px]"
+            rowClassName={(row) => row.is_deleted ? 'bg-amber-900 bg-opacity-20' : ''}
           />
         </div>
 
@@ -373,21 +465,20 @@ const UserManagement: React.FC<UserManagementProps> = () => {
               >
                 Previous
               </button>
-              
+
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-2 border rounded-lg text-sm font-accent ${
-                    currentPage === page
-                      ? 'bg-[var(--arabica-brown)] text-[var(--parchment)] border-[var(--arabica-brown)]'
-                      : 'border-gray-300 hover:bg-gray-50'
-                  }`}
+                  className={`px-3 py-2 border rounded-lg text-sm font-accent ${currentPage === page
+                    ? 'bg-[var(--arabica-brown)] text-[var(--parchment)] border-[var(--arabica-brown)]'
+                    : 'border-gray-300 hover:bg-gray-50'
+                    }`}
                 >
                   {page}
                 </button>
               ))}
-              
+
               <button
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
@@ -418,20 +509,11 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                   ×
                 </button>
               </div>
-              
+
+              {/* TODO handle submiut here  */}
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-accent text-gray-600 mb-2">Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
+                {(showAddModal) && (
+                   <div>
                   <label className="block text-sm font-accent text-gray-600 mb-2">Email</label>
                   <input
                     type="email"
@@ -441,7 +523,39 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
                   />
                 </div>
-                
+                )}
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-2">First Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-2">Last Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-2">Username</label>
+                  <input
+                    type="username"
+                    required
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-accent text-gray-600 mb-2">Role</label>
                   <select
@@ -450,12 +564,12 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
                   >
-                    <option value="Farmer">Farmer</option>
-                    <option value="Researcher">Researcher</option>
-                    <option value="Admin">Admin</option>
+                    <option value="3">Farmer</option>
+                    <option value="2">Researcher</option>
+                    <option value="1">Admin</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-accent text-gray-600 mb-2">Location</label>
                   <input
@@ -466,20 +580,30 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
                   />
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-accent text-gray-600 mb-2">Status</label>
-                  <select
-                    required
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                
+                {showAddModal && (
+                  <div className="flex items-center gap-2">
+                    <label className="block text-sm font-accent text-gray-600">Set Password</label>
+                    <input
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
+                    />
+                  </div>
+                )}
+
+                {showEditModal && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.resetPassword}
+                      onChange={(e) => setFormData({ ...formData, resetPassword: e.target.checked })}
+                      className="h-4 w-4 text-[var(--arabica-brown)] border-gray-300 rounded focus:ring-[var(--arabica-brown)]"
+                    />
+                    <label className="text-sm font-accent text-gray-600">Reset Password on next login</label>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
@@ -504,13 +628,56 @@ const UserManagement: React.FC<UserManagementProps> = () => {
           </div>
         )}
 
+        {/* Deactivate/Activate User Modal */}
+        {showDeactivateModal && selectedUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--parchment)] rounded-lg p-6 max-w-md w-full">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-main font-bold text-[var(--espresso-black)]">
+                  {selectedUser.is_deleted ? 'Activate User' : 'Deactivate User'}
+                </h3>
+                <button
+                  onClick={() => setShowDeactivateModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <p className="text-gray-600 font-accent mb-6">
+                Are you sure you want to {selectedUser.is_deleted ? 'activate' : 'deactivate'} <strong>{selectedUser.first_name + " " + selectedUser.last_name}</strong>?
+                {!selectedUser.is_deleted && ' This will prevent them from accessing the system.'}
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleActivateDeactivate}
+                  className={`flex-1 px-4 py-2 rounded-lg font-accent transition-colors text-white ${
+                    selectedUser.is_deleted
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-orange-600 hover:bg-orange-700'
+                  }`}
+                >
+                  {selectedUser.is_deleted ? 'Activate' : 'Deactivate'}
+                </button>
+                <button
+                  onClick={() => setShowDeactivateModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-accent hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Delete Confirmation Modal */}
         {showDeleteModal && selectedUser && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-[var(--parchment)] rounded-lg p-6 max-w-md w-full">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-main font-bold text-[var(--espresso-black)]">
-                  Delete User
+                <h3 className="text-lg font-main font-bold text-red-600">
+                  ⚠️ Delete User Permanently
                 </h3>
                 <button
                   onClick={() => setShowDeleteModal(false)}
@@ -519,17 +686,45 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                   ×
                 </button>
               </div>
-              
-              <p className="text-gray-600 font-accent mb-6">
-                Are you sure you want to delete <strong>{selectedUser.name}</strong>? This action cannot be undone.
-              </p>
-              
+
+              <div className="mb-6">
+                <p className="text-gray-600 font-accent mb-4">
+                  <strong className="text-red-600">WARNING:</strong> You are about to permanently delete <strong>{selectedUser.first_name + " " + selectedUser.last_name}</strong>.
+                </p>
+                <p className="text-gray-600 font-accent mb-4">
+                  This action will delete ALL data associated with this user from the database, including:
+                </p>
+                <ul className="text-gray-600 font-accent mb-4 list-disc list-inside space-y-1">
+                  <li>User profile and account information</li>
+                  <li>All research data and submissions</li>
+                  <li>Historical records and logs</li>
+                  <li>Any associated files or documents</li>
+                </ul>
+                <p className="text-red-600 font-accent font-semibold mb-4">
+                  This action cannot be undone!
+                </p>
+                
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-2">
+                    Type the username "<strong>{selectedUser.username}</strong>" to confirm deletion:
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmUsername}
+                    onChange={(e) => setDeleteConfirmUsername(e.target.value)}
+                    placeholder={selectedUser.username}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
               <div className="flex gap-3">
                 <button
                   onClick={handleDelete}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-accent hover:bg-red-700 transition-colors"
+                  disabled={deleteConfirmUsername !== selectedUser.username}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-accent hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Delete
+                  Delete Permanently
                 </button>
                 <button
                   onClick={() => setShowDeleteModal(false)}
@@ -538,6 +733,122 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* View User Details Modal */}
+        {showViewModal && selectedUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--parchment)] rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-main font-bold text-[var(--espresso-black)]">
+                  User Details
+                </h3>
+                <button
+                  onClick={() => setShowViewModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-1">User ID</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-mono text-sm">
+                    {selectedUser.id}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-1">Role</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-accent ${
+                      selectedUser.role === 'admin' ? 'bg-red-100 text-red-800' :
+                      selectedUser.role === 'researcher' ? 'bg-blue-100 text-blue-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {selectedUser.role}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-1">First Name</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                    {selectedUser.first_name}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-1">Last Name</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                    {selectedUser.last_name}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-1">Username</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                    {selectedUser.username}
+                  </div>
+                </div>
+
+
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-1">Location</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                    {selectedUser.location}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-1">Account Status</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-accent ${
+                      selectedUser.is_deleted 
+                        ? 'bg-red-100 text-red-800' 
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {selectedUser.is_deleted ? 'Deactivated' : 'Active'}
+                    </span>
+                  </div>
+                </div>
+
+
+                {selectedUser.created_at && (
+                  <div>
+                    <label className="block text-sm font-accent text-gray-600 mb-1">Created At</label>
+                    <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                      {new Date(selectedUser.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {selectedUser.updated_at && (
+                  <div>
+                    <label className="block text-sm font-accent text-gray-600 mb-1">Last Updated</label>
+                    <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                      {new Date(selectedUser.updated_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              
             </div>
           </div>
         )}

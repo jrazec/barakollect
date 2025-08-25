@@ -105,3 +105,18 @@ export interface AdminStats {
   totalUploads: number;
   pendingValidations: number;
 }
+
+export interface UserManagementUser {
+  id: string,
+  first_name: string,
+  last_name: string,
+  is_active: boolean,
+  last_login: string,
+  username: string,
+  role: 'farmer' | 'researcher' | 'admin',
+  location: string,
+  email: string,
+  is_deleted?: boolean,
+  created_at?: string,
+  updated_at?: string,
+}

@@ -53,7 +53,7 @@ export default function Signup() {
                 role_id: roleId,
             }).toString();
 
-            const resp = await fetch("http://localhost:8000/api/users/signup/", {
+            const resp = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/signup/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: formBody,

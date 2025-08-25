@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 async function fetchAppUserRole(uiid: string): Promise<string> {
-  const response = await fetch("http://localhost:8000/api/users/login/", {
+  const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/login/`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ uiid }).toString(),

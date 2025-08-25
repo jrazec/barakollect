@@ -3,7 +3,8 @@ import type {
   UserActivity, 
   BeanSubmission, 
   UserLog, 
-  SystemStatus 
+  SystemStatus, 
+  UserManagementUser
 } from '@/interfaces/global';
 
 // Temporary data - replace with actual API calls
@@ -168,14 +169,12 @@ export class AdminService {
   }
 
   // User Management Methods
-  static async getUsers(): Promise<UserLog[]> {
+  static async getUsers(): Promise<UserManagementUser[]> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/admin/users');
-      // return await response.json();
-      
+      const res = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/get-users/`)
       await new Promise(resolve => setTimeout(resolve, 100));
-      return tempUserLogs;
+      const result = await res.json();
+      return result.data;
     } catch (error) {
       console.error('Error fetching users:', error);
       throw error;
@@ -183,33 +182,24 @@ export class AdminService {
   }
 
   static async createUser(userData: {
-    name: string;
+    first_name: string;
+    last_name: string;
+    username: string;
     email: string;
-    role: 'Farmer' | 'Researcher' | 'Admin';
+    role: string;
     location: string;
-    status: 'active' | 'inactive';
+    is_active: boolean;
   }): Promise<UserLog> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/admin/users', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(userData)
-      // });
-      // return await response.json();
-      
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/create-user/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
       await new Promise(resolve => setTimeout(resolve, 200));
-      const newUser: UserLog = {
-        id: Date.now().toString(),
-        ...userData,
-        action: 'User created',
-        lastActive: 'Just now',
-        joinDate: new Date().toISOString().split('T')[0],
-        totalUploads: 0,
-        totalValidations: 0
-      };
-      console.log('User created:', newUser);
-      return newUser;
+
+
+      return await response.json();
     } catch (error) {
       console.error('Error creating user:', error);
       throw error;
@@ -217,33 +207,24 @@ export class AdminService {
   }
 
   static async updateUser(userId: string, userData: {
-    name: string;
-    email: string;
-    role: 'Farmer' | 'Researcher' | 'Admin';
+    first_name: string;
+    last_name: string;
+    username: string;
+    role: string;
     location: string;
-    status: 'active' | 'inactive';
+    reset_password: boolean;
   }): Promise<UserLog> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/admin/users/${userId}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(userData)
-      // });
-      // return await response.json();
-      
+      const user = { ...userData, id: userId };
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/update-user/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user)
+      });
       await new Promise(resolve => setTimeout(resolve, 200));
-      const updatedUser: UserLog = {
-        id: userId,
-        ...userData,
-        action: 'User updated',
-        lastActive: 'Just now',
-        joinDate: '2023-01-01', // This would come from the existing user
-        totalUploads: 0,
-        totalValidations: 0
-      };
-      console.log('User updated:', updatedUser);
-      return updatedUser;
+
+
+      return await response.json();
     } catch (error) {
       console.error('Error updating user:', error);
       throw error;
@@ -252,20 +233,52 @@ export class AdminService {
 
   static async deleteUser(userId: string): Promise<boolean> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/admin/users/${userId}`, {
-      //   method: 'DELETE'
-      // });
-      // return response.ok;
+
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/delete-user/${userId}/`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+
+      });
       
       await new Promise(resolve => setTimeout(resolve, 200));
-      console.log(`User deleted: ${userId}`);
-      return true;
+      return response.ok;
     } catch (error) {
       console.error('Error deleting user:', error);
       throw error;
     }
   }
+
+  static async deactivateUser(userId: string): Promise<boolean> {
+    try {
+
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/deactivate-user/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      await new Promise(resolve => setTimeout(resolve, 200));
+      return response.ok;
+    } catch (error) {
+      console.error('Error deactivating user:', error);
+      throw error;
+    }
+  }
+
+  static async activateUser(userId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/activate-user/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      await new Promise(resolve => setTimeout(resolve, 200));
+      return response.ok;
+    } catch (error) {
+      console.error('Error activating user:', error);
+      throw error;
+    }
+  }
+
 
   static async searchUsers(query: string, filters?: {
     role?: 'Farmer' | 'Researcher' | 'Admin';
