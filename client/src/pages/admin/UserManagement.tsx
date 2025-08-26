@@ -280,27 +280,27 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       render: (_, row) => (
         <button 
           onClick={() => openViewModal(row)}
-          className="text-[var(--arabica-brown)] hover:text-opacity-80 font-accent text-sm"
+          className="button-secondary hover:text-opacity-80 font-accent text-sm"
         >
-          View More
+          View
         </button>
       )
     },
     {
       key: 'actions',
       label: (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between pr-2">
           <span>Actions</span>
           <button
             onClick={() => setDeleteMode(!deleteMode)}
             className={`px-2 py-1 rounded text-xs font-accent transition-colors ${
               deleteMode 
-                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? '!bg-red-500 text-red-700 hover:bg-red-200' 
+                : '!bg-gray-500 text-gray-700 hover:bg-gray-200'
             }`}
             title={deleteMode ? 'Switch to Deactivate mode' : 'Switch to Delete mode'}
           >
-            {deleteMode ? 'Delete' : 'Disable'}
+            {deleteMode ? 'Delete Mode' : 'Disable Mode'}
           </button>
         </div>
       ),
@@ -316,14 +316,14 @@ const UserManagement: React.FC<UserManagementProps> = () => {
           {deleteMode ? (
             <button
               onClick={() => openDeleteModal(row)}
-              className="text-red-600 hover:text-red-800 font-accent text-sm"
+              className="text-red-600 hover:text-red-800 font-accent text-sm min-w-30"
             >
               Delete
             </button>
           ) : (
             <button
               onClick={() => openDeactivateModal(row)}
-              className={`font-accent text-sm ${
+              className={`font-accent text-sm min-w-30 ${
                 row.is_deleted 
                   ? 'text-green-600 hover:text-green-800' 
                   : 'text-orange-600 hover:text-orange-800'
@@ -450,7 +450,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
             columns={columns}
             data={currentUsers}
             className="min-h-[400px]"
-            rowClassName={(row) => row.is_deleted ? 'bg-amber-900 bg-opacity-20' : ''}
+            rowClassName={(row) => row.is_deleted ? 'bg-[var(--fadin-gray)]' : ''}
           />
         </div>
 

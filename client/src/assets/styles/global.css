@@ -8,7 +8,7 @@
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-main);
   font-weight: 700;
-  max-width: 15rem;
+  /* max-width: 15rem; */
   width: 100%;
 }
 
@@ -251,6 +251,13 @@ ul li a.active {
   border-radius: 4px;
   padding: 0.5em 1em;
   cursor: pointer;
+}
+
+/* !text-[var(--arabica-brown)] !border-2 !border-[var(--arabica-brown)] !bg-transparent */
+.button-secondary {
+  color: var(--arabica-brown);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--arabica-brown);
 }
 
 /* Other Elements */

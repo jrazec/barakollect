@@ -154,7 +154,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* User Logs and System Status */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
           {/* User Logs */}
           <div className="bg-[var(--parchment)] rounded-lg shadow p-4 sm:p-6 min-h-[500px]">
             <UserLogsComponent data={userLogs} />
