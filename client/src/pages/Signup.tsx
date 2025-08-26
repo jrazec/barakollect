@@ -35,6 +35,9 @@ export default function Signup() {
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
+                options: {
+                    emailRedirectTo: `${import.meta.env.VITE_APP_URL}/${role}/login/`, // redirect after email confirmation
+                },
             });
             if (signUpError || !signUpData.user) {
                 alert(signUpError?.message || "Unable to sign up");

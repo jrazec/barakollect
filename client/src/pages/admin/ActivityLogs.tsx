@@ -12,18 +12,10 @@ import {
   FileText,
   Clock
 } from 'lucide-react';
+import AdminService from '@/services/adminService';
+import {type ActivityLog} from '@/interfaces/global';
 
-interface ActivityLog {
-  id: number;
-  timestamp: string;
-  user: string;
-  userType: 'researcher' | 'admin' | 'farmer' | 'system';
-  action: string;
-  resource: string;
-  status: 'success' | 'failed' | 'warning';
-  ipAddress: string;
-  details: string;
-}
+
 
 interface Filters {
   search: string;
@@ -33,64 +25,9 @@ interface Filters {
 }
 
 // Temporary data service
-const getActivityLogs = (filters: Partial<Filters> = {}): ActivityLog[] => {
-  const logs: ActivityLog[] = [
-    {
-      id: 1,
-      timestamp: '2024-01-15 14:30:25',
-      user: 'john.doe@email.com',
-      userType: 'researcher',
-      action: 'Image Upload',
-      resource: 'sample_001.jpg',
-      status: 'success',
-      ipAddress: '192.168.1.100',
-      details: 'Uploaded bean sample image for classification'
-    },
-    {
-      id: 2,
-      timestamp: '2024-01-15 14:28:15',
-      user: 'admin@barakollect.com',
-      userType: 'admin',
-      action: 'User Creation',
-      resource: 'user_456',
-      status: 'success',
-      ipAddress: '10.0.0.5',
-      details: 'Created new farmer account'
-    },
-    {
-      id: 3,
-      timestamp: '2024-01-15 14:25:10',
-      user: 'jane.farmer@email.com',
-      userType: 'farmer',
-      action: 'Login Attempt',
-      resource: 'authentication',
-      status: 'failed',
-      ipAddress: '203.0.113.45',
-      details: 'Failed login attempt - invalid password'
-    },
-    {
-      id: 4,
-      timestamp: '2024-01-15 14:20:05',
-      user: 'researcher@email.com',
-      userType: 'researcher',
-      action: 'Data Export',
-      resource: 'validation_results.csv',
-      status: 'success',
-      ipAddress: '192.168.1.102',
-      details: 'Exported validation results dataset'
-    },
-    {
-      id: 5,
-      timestamp: '2024-01-15 14:15:30',
-      user: 'system',
-      userType: 'system',
-      action: 'Database Backup',
-      resource: 'backup_20240115.sql',
-      status: 'success',
-      ipAddress: 'localhost',
-      details: 'Automated daily database backup completed'
-    }
-  ];
+const getActivityLogs = async (filters: Partial<Filters> = {}): Promise<ActivityLog[]> => {
+    
+  const logs: ActivityLog[] = await AdminService.getActivityLogs();
 
   return logs.filter(log => {
     if (filters.userType && filters.userType !== 'all' && log.userType !== filters.userType) return false;
@@ -113,8 +50,11 @@ export default function ActivityLogs() {
   const logsPerPage = 10;
 
   useEffect(() => {
-    const filteredLogs = getActivityLogs(filters);
-    setLogs(filteredLogs);
+    const fetchLogs = async () => {
+      const filteredLogs = await getActivityLogs(filters);
+      setLogs(filteredLogs);
+    };
+    fetchLogs();
   }, [filters]);
 
   const getStatusBadge = (status: string) => {
@@ -138,7 +78,7 @@ export default function ActivityLogs() {
 
   const exportLogs = () => {
     const csvContent = [
-      ['Timestamp', 'User', 'User Type', 'Action', 'Resource', 'Status', 'IP Address', 'Details'],
+      ['Timestamp', 'User', 'User Type', 'Action', 'Resource', 'Status', 'Details'],
       ...logs.map(log => [
         log.timestamp,
         log.user,
@@ -146,7 +86,6 @@ export default function ActivityLogs() {
         log.action,
         log.resource,
         log.status,
-        log.ipAddress,
         log.details
       ])
     ].map(row => row.join(',')).join('\n');
@@ -198,11 +137,6 @@ export default function ActivityLogs() {
       key: 'status',
       label: 'Status',
       render: (value) => getStatusBadge(value)
-    },
-    {
-      key: 'ipAddress',
-      label: 'IP Address',
-      render: (value) => <span className="font-mono text-sm">{value}</span>
     },
     {
       key: 'details',

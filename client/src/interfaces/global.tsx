@@ -120,3 +120,16 @@ export interface UserManagementUser {
   created_at?: string,
   updated_at?: string,
 }
+
+
+export interface ActivityLog {
+  id: number;
+  timestamp: string;
+  user: string;
+  userType: 'researcher' | 'admin' | 'farmer' | 'system';
+  action: string;
+  resource: string;
+  status: 'success' | 'failed' | 'warning';
+  ipAddress: string;
+  details: string;
+}

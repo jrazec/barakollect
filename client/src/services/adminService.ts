@@ -4,7 +4,8 @@ import type {
   BeanSubmission, 
   UserLog, 
   SystemStatus, 
-  UserManagementUser
+  UserManagementUser,
+  ActivityLog
 } from '@/interfaces/global';
 
 // Temporary data - replace with actual API calls
@@ -318,6 +319,21 @@ export class AdminService {
       return filteredUsers;
     } catch (error) {
       console.error('Error searching users:', error);
+      throw error;
+    }
+  }
+
+  // Activity logs
+  static async getActivityLogs(): Promise<ActivityLog[]> {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/activity/logs/`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
       throw error;
     }
   }

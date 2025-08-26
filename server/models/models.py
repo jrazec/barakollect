@@ -57,10 +57,25 @@ class RolePermission(models.Model):
 
 # ==================+ACTIVITY & NOTIFICATIONS+==================
 class ActivityLog(models.Model):
+    ACTION_CHOICES = [
+        ('CREATE', 'Create'),
+        ('UPDATE', 'Update'),
+        ('DELETE', 'Delete'),
+        ('LOGIN', 'Login'),
+        ('LOGOUT', 'Logout'),
+        ('VIEW', 'View'),
+        ('DOWNLOAD', 'Download'),
+        ('UPLOAD', 'Upload'),
+        ('ACTIVATE', 'Activate'),
+        ('DEACTIVATE', 'Deactivate'),
+        ('EXPORT', 'Export'),
+        ('IMPORT', 'Import'),
+    ]
+
     id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     description = models.TextField()
-    action = models.CharField(max_length=150)
+    action = models.CharField(max_length=150, choices=ACTION_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

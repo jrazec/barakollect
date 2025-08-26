@@ -4,52 +4,45 @@ import EmptyStateNotice from '@/components/EmptyStateNotice';
 import type { NotifAttributes } from '@/interfaces/global';
 import NotifComponent from '@/components/NotifComponent';
 import { BellIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 
 const FarmerBeansGallery: React.FC = () => {
     //test contenttt
-    const notifCard: NotifAttributes[] = [
-        {
-            id: '1',
-            title: 'New Bean Sample Uploaded',
-            message: 'A new bean sample has been uploaded for validation.',
-            timestamp: new Date().toISOString(),
-            read: false,
-            type: 'info',
-        },
-        {
-            id: '2',
-            title: 'Validation Complete',
-            message: 'Your bean sample has been successfully validated.',
-            timestamp: new Date().toISOString(),
-            read: true,
-            type: 'info',
-        },
-        {
-            id: '3',
-            title: 'System Maintenance Scheduled',
-            message: 'The system will undergo maintenance on Saturday, 10 AM - 12 PM.',
-            timestamp: new Date().toISOString(),
-            read: false,
-            type: 'warning',
-        },
-        {
-            id: '4',
-            title: 'New Feature Available',
-            message: 'Check out the new analytics dashboard for better insights.',
-            timestamp: new Date().toISOString(),
-            read: true,
-            type: 'info',
-        },
-        {
-            id: '5',
-            title: 'Error in Bean Submission',
-            message: 'There was an error processing your last bean submission. Please try again.',
-            timestamp: new Date().toISOString(),
-            read: false,
-            type: 'error',
-        },
-    ];
+   
+    const [notifs, setNotifs] = useState<NotifAttributes[]>([]);
+
+
+    const getNotifications = async (): Promise<NotifAttributes[]> => {
+        const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/notifications/get-list/`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch notifications');
+        }
+        const data = await response.json();
+        return data.map((notif: any) => ({
+            id: notif.id,
+            title: notif.title || 'Notification',
+            message: notif.message,
+            timestamp: notif.created_at,
+            read: notif.is_read || false,
+            type: notif.type || 'info', // Defaulting to 'info', adjust as necessary
+        }));   
+    }
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                const notifications = await getNotifications();
+                setNotifs(notifications);
+            } catch (error) {
+                console.error('Failed to fetch notifications:', error);
+            }
+        };
+
+        fetchNotifications();
+    }, []);
+
+
+    const notifCard: NotifAttributes[] = notifs
 
     //test if no notifs, "no notifications" should show here
     // const notifCard: NotifAttributes[] = []

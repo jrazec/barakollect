@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'apps.farms',
     'apps.analytics',
     'apps.notifications',
+    'apps.activitylogs',
     'models',
     'services'
 ]
