@@ -15,6 +15,11 @@ import Notifications from "@/pages/farmer/Notifications";
 import AdminLayout from "@/layouts/AdminLayout";
 import FarmerDashboard from "@/pages/farmer/FarmerDashboard";
 import FarmerBeansGallery from "@/pages/farmer/FarmerBeansGallery";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import UserManagement from "@/pages/admin/UserManagement";
+import SystemMonitoring from "@/pages/admin/SystemMonitoring";
+import ActivityLogs from "@/pages/admin/ActivityLogs";
+import Settings from "@/pages/admin/Settings";
 
 
 export default function AppRoute() {
@@ -41,18 +46,12 @@ export default function AppRoute() {
                 <Route path="notifications" element={<Notifications />} />
             </Route>
             <Route path="/admin" element={<AdminLayout />}> 
-                {/* AdminDashboard */}
-                <Route path="dashboard" element={<ResearcherDashboard />} />
-                {/* User Management */}
-                <Route path="user-management" element={<UploadSamples />} />
-                {/* System Monitor */}
-                <Route path="monitoring" element={<BeansGallery />} />
-                {/* Activity Logs */}
-                <Route path="activity-logs" element={<ValidationQueue />} />
-                {/* Notifications */}
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="user-management" element={<UserManagement />} />
+                <Route path="monitoring" element={<SystemMonitoring />} />
+                <Route path="activity-logs" element={<ActivityLogs />} />
                 <Route path="notifications" element={<Notifications />} />
-                {/* Settings */}
-                <Route path="settings" element={<Notifications />} />
+                <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
         </Routes>

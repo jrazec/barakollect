@@ -19,5 +19,7 @@ from django.urls import path,include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-        path('api/users/', include('apps.users.urls')),  # <- add this
+    path('api/users/', include('apps.users.urls')),  # <- add this
+    path('api/activity/', include('apps.activitylogs.urls')),
+    path('api/notifications/', include('apps.notifications.urls')),
 ]

@@ -25,6 +25,9 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 SUPABASE_URL= os.getenv("SUPABASE_URL")
 SUPABASE_ROLE_KEY= os.getenv("SUPABASE_ROLE_KEY")
+SUPABASE_KEY= os.getenv("SUPABASE_KEY")
+
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
@@ -51,7 +54,9 @@ INSTALLED_APPS = [
     'apps.farms',
     'apps.analytics',
     'apps.notifications',
-    'models'
+    'apps.activitylogs',
+    'models',
+    'services'
 ]
 
 MIDDLEWARE = [
@@ -78,9 +83,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # JWT Auth setup
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    'DEFAULT_AUTHENTICATION_CLASSES': []
 }
 
 ROOT_URLCONF = 'config.urls'

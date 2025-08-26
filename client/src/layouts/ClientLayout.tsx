@@ -21,10 +21,10 @@ export default function ClientLayout() {
       <div className="flex-shrink-0">
         <NavBar logo={logo} showSideBar={showSideBar} setShowSideBar={setShowSideBar} />
       </div>
-      <div className="flex flex-1 overflow-auto">
+      <div className="flex flex-1">
         {/* flex-column text-white w-full h-full overflow-y-scroll bg-[var(--mocha-beige)] */}
         <SideBar show={showSideBar} role={role} user={user} />
-        <div className="flex-column text-white w-full h-full">
+        <div className="flex-column text-black w-full h-full">
           <Outlet />
         </div>
       </div>

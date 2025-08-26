@@ -33,7 +33,7 @@ export default function Login() {
                 const { data } = await supabase.auth.getSession();
                 const uiid = data.session?.user?.id;
                 if (!uiid) return;
-                const response = await fetch("http://localhost:8000/api/users/login/", {
+                const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/login/`, {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                     body: new URLSearchParams({ uiid }).toString(),
@@ -59,7 +59,7 @@ export default function Login() {
            // Example fetch template for calling your Django backend after successful Supabase login
            // (Replace the URL and payload as needed for your actual API)
            try {
-               const response = await fetch("http://localhost:8000/api/users/login/", {
+               const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/login/`, {
                    method: "POST",
                    headers: {
                        "Content-Type": "application/x-www-form-urlencoded",
