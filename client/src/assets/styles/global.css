@@ -9,7 +9,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-main);
   font-weight: 700;
   /* max-width: 15rem; */
-  width: 100%;
+  /* width: 100%; */
 }
 
 .accent, label, .menu {

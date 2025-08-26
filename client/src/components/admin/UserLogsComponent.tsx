@@ -145,8 +145,8 @@ const UserLogsComponent: React.FC<UserLogsComponentProps> = ({ data }) => {
       label: '',
       width: 'w-1/6',
       render: () => (
-        <button className="text-[var(--arabica-brown)] hover:text-opacity-80 font-accent text-sm">
-          View More
+        <button className="button-secondary text-[var(--arabica-brown)] hover:text-opacity-80 font-accent text-sm">
+          View
         </button>
       )
     }

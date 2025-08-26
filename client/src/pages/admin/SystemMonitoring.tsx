@@ -121,7 +121,7 @@ export default function SystemMonitoring() {
   );
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6  bg-gray-50">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight text-[var(--espresso-black)]">System Monitoring</h1>
         <div className="text-sm text-gray-600">
