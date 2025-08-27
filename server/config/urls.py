@@ -22,4 +22,5 @@ urlpatterns = [
     path('api/users/', include('apps.users.urls')),  # <- add this
     path('api/activity/', include('apps.activitylogs.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
+    path('api/beans/', include('apps.beans.urls')),  # <- add this
 ]
