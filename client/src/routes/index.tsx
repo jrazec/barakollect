@@ -2,8 +2,10 @@ import ClientLayout from "./../layouts/ClientLayout";
 import { Route, Routes } from "react-router-dom";
 import Home from "./../pages/Home";
 import Login from "./../pages/Login";
+import Signup from "@/pages/Signup";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "./../pages/NotFound";
-import ResearcherDashboard from '../pages/researcher/ResearcherDashboard'
+import ResearcherDashboard from "@/pages/researcher/ResearcherDashboard";
 import UploadSamples from "@/components/UploadSamples";
 import ValidationQueue from "@/pages/researcher/ValidationQueue";
 import FarmMap from "@/pages/researcher/FarmMap";
@@ -13,6 +15,11 @@ import Notifications from "@/pages/farmer/Notifications";
 import AdminLayout from "@/layouts/AdminLayout";
 import FarmerDashboard from "@/pages/farmer/FarmerDashboard";
 import FarmerBeansGallery from "@/pages/farmer/FarmerBeansGallery";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import UserManagement from "@/pages/admin/UserManagement";
+import SystemMonitoring from "@/pages/admin/SystemMonitoring";
+import ActivityLogs from "@/pages/admin/ActivityLogs";
+import Settings from "@/pages/admin/Settings";
 
 
 export default function AppRoute() {
@@ -20,7 +27,9 @@ export default function AppRoute() {
         <Routes>
             <Route path="/login" element={<Login />}>
             </Route>
-            <Route path="/researcher" element={<ClientLayout />}>
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/researcher" element={<ClientLayout /> }>
                 <Route path="dashboard" element={<ResearcherDashboard />} />
                 <Route path="upload-image" element={<UploadSamples />} />
                 <Route path="gallery" element={<BeansGallery />} />
@@ -29,26 +38,20 @@ export default function AppRoute() {
                 <Route path="farm-map" element={<FarmMap />} />
                 <Route path="notifications" element={<Notifications />} />
             </Route>
-            <Route path="/farmer" element={<ClientLayout />}>
+            <Route path="/farmer" element={<ClientLayout />}> 
                 <Route path="dashboard" element={<FarmerDashboard />} />
                 <Route path="upload-image" element={<UploadSamples />} />
                 <Route path="gallery" element={<FarmerBeansGallery />} />
                 <Route path="farm-map" element={<FarmMap />} />
                 <Route path="notifications" element={<Notifications />} />
             </Route>
-            <Route path="/admin" element={<AdminLayout />}>
-                {/* AdminDashboard */}
-                <Route path="dashboard" element={<ResearcherDashboard />} />
-                {/* User Management */}
-                <Route path="user-management" element={<UploadSamples />} />
-                {/* System Monitor */}
-                <Route path="monitoring" element={<BeansGallery />} />
-                {/* Activity Logs */}
-                <Route path="activity-logs" element={<ValidationQueue />} />
-                {/* Notifications */}
+            <Route path="/admin" element={<AdminLayout />}> 
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="user-management" element={<UserManagement />} />
+                <Route path="monitoring" element={<SystemMonitoring />} />
+                <Route path="activity-logs" element={<ActivityLogs />} />
                 <Route path="notifications" element={<Notifications />} />
-                {/* Settings */}
-                <Route path="settings" element={<Notifications />} />
+                <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
         </Routes>

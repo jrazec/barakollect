@@ -1,6 +1,7 @@
 import type { NavItems, User } from "@/interfaces/global";
 import { ActivityIcon, BellIcon, ChartBar, ImageIcon, LayoutDashboard, LogOutIcon, MapPin, Monitor, ScanFaceIcon, Settings, UploadIcon, User2Icon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User }) => {
@@ -106,6 +107,8 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
 
 
 
+    const { signOut } = useAuth();
+
     return (
         <div className={`sideNav ${show ? "expanded" : "collapsed"}`}>
 
@@ -163,10 +166,10 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
             <div className="bottomSection">
                 <ul>
                     <li className={`navigationBtn ${show ? "" : "collapsed"}`}>
-                        <a href="/">
-                            <LogOutIcon />
+                        <button onClick={signOut} className="w-full text-left">
+                            <span className="icon"><LogOutIcon /></span>
                             {<span className={`lblNav ${show ? "" : "collapsed"}`}>Logout</span>}
-                        </a>
+                        </button>
                     </li>
                 </ul>
             </div>
