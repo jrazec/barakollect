@@ -32,7 +32,7 @@ SUPABASE_KEY= os.getenv("SUPABASE_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*", "barakollect-production.up.railway.app", "barakollect.vercel.app"]
 
 
 
@@ -118,7 +118,8 @@ DATABASES = {
         "HOST": os.getenv("DB_HOST"),
         "PORT": os.getenv("DB_PORT"),
         "OPTIONS": {
-            "options": "-c search_path=public"  # <— makes sure Django looks at Supabase's public schema
+            "sslmode": "require",  # must enable SSL for Supabase
+            "options": "-c search_path=public"
         }
     }
 }
