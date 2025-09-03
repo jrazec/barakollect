@@ -4,7 +4,18 @@ from django.http import JsonResponse
 from django.utils import timezone
 import uuid
 from services.supabase_service import supabase
-from models.models import User,Image,UserImage
+from models.models import User,UserImage
+from models.models import Image as ImageBucket
+
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from .bean_feature_extract import BeanFeatureExtractor
+import cv2
+import numpy as np
+from PIL import Image
+import os
+from django.conf import settings
 
 
 # Create your views here.
@@ -51,7 +62,7 @@ def upload_beans(request):
 @api_view(['GET'])
 def get_user_beans(request, user_id):
     # Logic for retrieving beans
-    user_images = Image.objects.filter(userimage__user_id=user_id).values("image_url", "upload_date", "id")
+    user_images = ImageBucket.objects.filter(userimage__user_id=user_id).values("image_url", "upload_date", "id")
     beans = supabase.storage.from_("Beans").list(f"uploads/{user_id}/")
 
     urls = []
@@ -62,3 +73,45 @@ def get_user_beans(request, user_id):
         urls.append(signed["signedURL"])
 
     return JsonResponse({"images": urls})
+
+
+
+extractor = BeanFeatureExtractor()
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def process_bean(request):
+    try:
+        file_obj = request.data['image']
+    except KeyError:
+        return Response({"error": "No image provided"}, status=400)
+
+    # Convert uploaded image → OpenCV format
+    img = Image.open(file_obj)
+    img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
+    # Run bean feature extraction
+    black_bg, mask, gray = extractor.preprocess_image(img)
+    features, bbox = extractor.extract_features(mask, gray)
+
+    if features is None:
+        return Response({"error": "No bean detected"}, status=400)
+
+    # Draw bounding box
+    debug_img = extractor.draw_bbox(img, bbox)
+
+    # Encode to base64 for frontend
+    _, buffer = cv2.imencode('.png', debug_img)
+    filename = f"{uuid.uuid4()}.png"
+    folder = os.path.join(settings.MEDIA_ROOT, "processed")
+    os.makedirs(folder, exist_ok=True)  # ensure folder exists
+
+    filepath = os.path.join(folder, filename)
+    cv2.imwrite(filepath, debug_img)
+
+    img_str = settings.MEDIA_URL + "processed/" + filename
+
+    return Response({
+        "features": features,
+        "processed_image": img_str
+    })
