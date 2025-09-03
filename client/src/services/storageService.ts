@@ -5,10 +5,12 @@ export interface UploadImageRequest {
 }
 
 export interface UploadImageResponse {
-    success: boolean;
-    message: string;
+    success?: boolean; // Made optional since prediction endpoint doesn't return this
+    message?: string;
     data?: any;
     images?: string[];
+    features?: any;
+    processed_image?: string;
 }
 
 class StorageService {
@@ -24,7 +26,7 @@ class StorageService {
             }
             
             if (data.images && data.images.length > 0) {
-                data.images.forEach((image, index) => {
+                data.images.forEach((image) => {
                     formData.append('images', image);
                 });
             }
@@ -55,12 +57,12 @@ class StorageService {
             }
             
             if (data.images && data.images.length > 0) {
-                data.images.forEach((image, index) => {
+                data.images.forEach((image) => {
                     formData.append('images', image);
                 });
             }
 
-            const response = await fetch(`${this.baseURL}/upload/`, {
+            const response = await fetch(`${this.baseURL}/process/`, {
                 method: 'POST',
                 body: formData,
             });
@@ -86,7 +88,7 @@ class StorageService {
             }
             
             if (data.images && data.images.length > 0) {
-                data.images.forEach((image, index) => {
+                data.images.forEach((image) => {
                     formData.append('images', image);
                 });
             }

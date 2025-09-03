@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { storageService } from '../../services/storageService';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
+import PredictionResultModal from '../../components/PredictionResultModal';
+import PredictionLoadingModal from '../../components/PredictionLoadingModal';
 import CameraCapture from '../../components/CameraCapture';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 
 interface UploadBodySectionProps {
@@ -10,13 +11,19 @@ interface UploadBodySectionProps {
   onFilesSelected: (files: FileList) => void;
 }
 
-const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFilesSelected }) => {
+const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFilesSelected: _ }) => {
   const [uploadMode, setUploadMode] = useState<'camera' | 'file'>('file');
   const [capturedImages, setCapturedImages] = useState<File[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPredicting, setIsPredicting] = useState(false);
+  const [showPredictionResult, setShowPredictionResult] = useState(false);
+  const [predictionData, setPredictionData] = useState<{
+    features: any;
+    processed_image: string;
+  } | null>(null);
 
   const handleFileSelect = (files: FileList) => {
     const newFiles = Array.from(files).slice(0, 5 - selectedFiles.length);
@@ -57,31 +64,65 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
 
       let response;
       if (activeTab === 'Predict Image') {
+        // Show prediction loading modal
+        setIsPredicting(true);
+        setShowPreviewModal(false);
+        
         response = await storageService.predictImage({
           user_id,
           ...(imagesToUpload.length === 1 ? { image: imagesToUpload[0] } : { images: imagesToUpload })
         });
+        
+        setIsPredicting(false);
+        
+        // Handle prediction response - check if we have the required data
+        if (response && response.features && response.processed_image) {
+          console.log('Prediction response:', response);
+          console.log('Features:', response.features);
+          console.log('Processed image path:', response.processed_image);
+          
+          setPredictionData({
+            features: response.features,
+            processed_image: response.processed_image
+          });
+          setShowPredictionResult(true);
+          
+          // Reset state and clear preview images
+          setCapturedImages([]);
+          setSelectedFiles([]);
+          
+          // Clear the file input as well
+          const fileInput = document.getElementById(`upload-input-${activeTab}`) as HTMLInputElement;
+          if (fileInput) {
+            fileInput.value = '';
+          }
+        } else {
+          console.error('Prediction response:', response);
+          console.error('Missing fields - features:', response?.features, 'processed_image:', response?.processed_image);
+          alert('Prediction failed or no results returned');
+        }
       } else if (activeTab === 'Submit Image') {
         response = await storageService.submitImage({
           user_id,
           ...(imagesToUpload.length === 1 ? { image: imagesToUpload[0] } : { images: imagesToUpload })
         });
-      }
-
-      if (response?.success) {
-        alert('Images uploaded successfully!');
-        // Reset state and clear preview images
-        setCapturedImages([]);
-        setSelectedFiles([]);
-        setShowPreviewModal(false);
         
-        // Clear the file input as well
-        const fileInput = document.getElementById(`upload-input-${activeTab}`) as HTMLInputElement;
-        if (fileInput) {
-          fileInput.value = '';
+        if (response?.success) {
+          alert('Images uploaded successfully!');
+          // Reset state and clear preview images
+          setCapturedImages([]);
+          setSelectedFiles([]);
+          setShowPreviewModal(false);
+          
+          // Clear the file input as well
+          const fileInput = document.getElementById(`upload-input-${activeTab}`) as HTMLInputElement;
+          if (fileInput) {
+            fileInput.value = '';
+          }
         }
       }
     } catch (error: any) {
+      setIsPredicting(false);
       alert(`Upload failed: ${error.message}`);
     } finally {
       setIsUploading(false);
@@ -217,6 +258,17 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
           onConfirm={handleConfirmUpload}
           onRemoveImage={removeImage}
           isLoading={isUploading}
+        />
+
+        {/* Prediction Loading Modal */}
+        <PredictionLoadingModal isOpen={isPredicting} />
+
+        {/* Prediction Result Modal */}
+        <PredictionResultModal
+          isOpen={showPredictionResult}
+          onClose={() => setShowPredictionResult(false)}
+          processedImage={predictionData?.processed_image || ''}
+          features={predictionData?.features || {}}
         />
       </div>
     );
