@@ -34,17 +34,30 @@ type GalleryComponentProps = {
     type: 'simple' | 'predicted' | 'submitted';
     isLoading?: boolean;
     onDeleteImage?: (id: string) => void;
+    customViewMode?: 'grid' | 'list';
+    showViewToggle?: boolean;
+    maxHeight?: string;
 };
 
 const GalleryComponent: React.FC<GalleryComponentProps> = ({ 
     images, 
     type, 
     isLoading = false,
-    onDeleteImage 
+    onDeleteImage,
+    customViewMode,
+    showViewToggle = true,
+    maxHeight = '400px'
 }) => {
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>(customViewMode || 'grid');
     const [selectedImage, setSelectedImage] = useState<PredictedImage | SubmittedImage | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Update viewMode when customViewMode changes
+    React.useEffect(() => {
+        if (customViewMode) {
+            setViewMode(customViewMode);
+        }
+    }, [customViewMode]);
 
     const handleImageClick = (image: any, index: number) => {
         console.log('Image clicked:', image, 'Type:', type); // Debug log
@@ -97,7 +110,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
 
     if (isLoading) {
         return (
-            <div className="w-full border border-gray-300 p-3 box-border bg-gray-50 max-h-[400px] overflow-y-auto">
+            <div className={`w-full border border-gray-300 p-3 box-border bg-gray-50 overflow-y-auto`} style={{ maxHeight }}>
                 <div className="flex items-center justify-center h-32">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                     <span className="ml-2 text-gray-600">Loading images...</span>
@@ -108,7 +121,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
 
     if (!images || images.length === 0) {
         return (
-            <div className="w-full border border-gray-300 p-3 box-border bg-gray-50 max-h-[400px] overflow-y-auto">
+            <div className={`w-full border border-gray-300 p-3 box-border bg-gray-50 overflow-y-auto`} style={{ maxHeight }}>
                 <EmptyStateNotice message="No images found." />
             </div>
         );
@@ -119,31 +132,33 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
             {/* Header with view toggle */}
             <div className="flex justify-between items-center p-3 border-b border-gray-200">
                 <span className="text-sm text-gray-600">{images.length} images</span>
-                <div className="flex space-x-2">
-                    <button
-                        onClick={() => setViewMode('grid')}
-                        className={`p-2 rounded ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-                    >
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-                        </svg>
-                    </button>
-                    <button
-                        onClick={() => setViewMode('list')}
-                        className={`p-2 rounded ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-                    >
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 12a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 16a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"></path>
-                        </svg>
-                    </button>
-                </div>
+                {showViewToggle && (
+                    <div className="flex space-x-2">
+                        <button
+                            onClick={() => setViewMode('grid')}
+                            className={`p-2 rounded ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                            </svg>
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`p-2 rounded ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 12a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 16a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Content */}
-            <div className="max-h-[400px] overflow-y-auto p-3">
+            <div className="overflow-y-auto p-3" style={{ maxHeight: `calc(${maxHeight} - 60px)` }}>
                 {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-2 gap-3">
-                        {images.map((image, idx) => {
+                    <div className={`grid gap-3 ${customViewMode ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                        {images.slice(0, customViewMode ? 4 : images.length).map((image, idx) => {
                             const src = typeof image === 'string' ? image : image.src;
                             const isClickable = type !== 'simple';
                             
@@ -156,7 +171,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                                     <img
                                         src={src}
                                         alt={`Gallery item ${idx + 1}`}
-                                        className="w-full h-[180px] object-cover rounded-lg shadow hover:shadow-lg transition-shadow"
+                                        className={`w-full object-cover rounded-lg shadow hover:shadow-lg transition-shadow ${customViewMode ? 'h-[120px]' : 'h-[180px]'}`}
                                         onError={(e) => {
                                             console.log('Image failed to load:', src);
                                             (e.target as HTMLImageElement).style.backgroundColor = '#f3f4f6';
@@ -174,10 +189,15 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                                 </div>
                             );
                         })}
+                        {customViewMode && images.length > 4 && (
+                            <div className="col-span-2 text-center py-2 text-sm text-gray-500">
+                                +{images.length - 4} more images (click folder to view all)
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-2">
-                        {images.map((image, idx) => {
+                        {images.slice(0, customViewMode ? 5 : images.length).map((image, idx) => {
                             const src = typeof image === 'string' ? image : image.src;
                             const isClickable = type !== 'simple';
                             const name = `Image ${idx + 1}`;
@@ -212,6 +232,11 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                                 </div>
                             );
                         })}
+                        {customViewMode && images.length > 5 && (
+                            <div className="text-center py-2 text-sm text-gray-500">
+                                +{images.length - 5} more images (click folder to view all)
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

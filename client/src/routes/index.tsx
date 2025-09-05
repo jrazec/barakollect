@@ -20,11 +20,13 @@ import UserManagement from "@/pages/admin/UserManagement";
 import SystemMonitoring from "@/pages/admin/SystemMonitoring";
 import ActivityLogs from "@/pages/admin/ActivityLogs";
 import Settings from "@/pages/admin/Settings";
+import AdminBeansGallery from "../components/AdminBeansGallery";
 
 
 export default function AppRoute() {
     return (
         <Routes>
+            <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />}>
             </Route>
             <Route path="/signup" element={<Signup />} />
@@ -50,6 +52,7 @@ export default function AppRoute() {
                 <Route path="user-management" element={<UserManagement />} />
                 <Route path="monitoring" element={<SystemMonitoring />} />
                 <Route path="activity-logs" element={<ActivityLogs />} />
+                <Route path="gallery" element={<AdminBeansGallery />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="settings" element={<Settings />} />
             </Route>

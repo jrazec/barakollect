@@ -5,7 +5,10 @@ import type {
   UserLog, 
   SystemStatus, 
   UserManagementUser,
-  ActivityLog
+  ActivityLog,
+  AdminPredictedImage,
+  AdminImageFilters,
+  PaginationData
 } from '@/interfaces/global';
 
 // Temporary data - replace with actual API calls
@@ -55,6 +58,154 @@ const tempSystemStatus: SystemStatus = {
   storageUsed: '2.4 TB',
   storageTotal: '5.0 TB'
 };
+
+// Temporary admin image data
+const tempAdminImages: AdminPredictedImage[] = [
+  {
+    id: '1',
+    src: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400',
+    userId: '1',
+    userName: 'John Smith',
+    userRole: 'farmer',
+    locationId: 'farm1',
+    locationName: 'Kenya Coffee Farm',
+    submissionDate: '2024-01-15',
+    validated: 'verified',
+    predictions: {
+      area: 1520.5,
+      perimeter: 125.3,
+      major_axis_length: 45.2,
+      minor_axis_length: 32.1,
+      extent: 0.75,
+      eccentricity: 0.68,
+      convex_area: 1530.2,
+      solidity: 0.95,
+      mean_intensity: 128.5,
+      equivalent_diameter: 43.7,
+      bean_type: 'Arabica'
+    }
+  },
+  {
+    id: '2',
+    src: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400',
+    userId: '2',
+    userName: 'Maria Garcia',
+    userRole: 'farmer',
+    locationId: 'farm2',
+    locationName: 'Brazil Plantation',
+    submissionDate: '2024-01-16',
+    validated: 'pending',
+    predictions: {
+      area: 1480.2,
+      perimeter: 120.8,
+      major_axis_length: 42.8,
+      minor_axis_length: 30.5,
+      extent: 0.72,
+      eccentricity: 0.65,
+      convex_area: 1495.1,
+      solidity: 0.93,
+      mean_intensity: 125.2,
+      equivalent_diameter: 41.3,
+      bean_type: 'Robusta'
+    }
+  },
+  {
+    id: '3',
+    src: 'https://images.unsplash.com/photo-1610632380989-680fe40816c6?w=400',
+    userId: '2',
+    userName: 'Dr. Sarah Johnson',
+    userRole: 'researcher',
+    locationId: 'farm3',
+    locationName: 'Ethiopia Highlands',
+    submissionDate: '2024-01-17',
+    validated: 'verified',
+    predictions: {
+      area: 1620.8,
+      perimeter: 130.2,
+      major_axis_length: 48.1,
+      minor_axis_length: 34.2,
+      extent: 0.78,
+      eccentricity: 0.71,
+      convex_area: 1635.5,
+      solidity: 0.97,
+      mean_intensity: 132.1,
+      equivalent_diameter: 45.8,
+      bean_type: 'Arabica'
+    }
+  },
+  {
+    id: '4',
+    src: 'https://images.unsplash.com/photo-1504753793650-d4a2b783c15e?w=400',
+    userId: '3',
+    userName: 'Ahmed Hassan',
+    userRole: 'farmer',
+    locationId: 'farm4',
+    locationName: 'Colombian Highlands',
+    submissionDate: '2024-01-18',
+    validated: 'pending',
+    predictions: {
+      area: 1380.5,
+      perimeter: 115.6,
+      major_axis_length: 39.8,
+      minor_axis_length: 28.5,
+      extent: 0.69,
+      eccentricity: 0.62,
+      convex_area: 1395.2,
+      solidity: 0.91,
+      mean_intensity: 122.8,
+      equivalent_diameter: 38.9,
+      bean_type: 'Liberica'
+    }
+  },
+  {
+    id: '5',
+    src: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400',
+    userId: '4',
+    userName: 'Carlos Rodriguez',
+    userRole: 'farmer',
+    locationId: 'farm1',
+    locationName: 'Kenya Coffee Farm',
+    submissionDate: '2024-01-19',
+    validated: 'verified',
+    predictions: {
+      area: 1555.3,
+      perimeter: 127.8,
+      major_axis_length: 46.5,
+      minor_axis_length: 33.1,
+      extent: 0.76,
+      eccentricity: 0.69,
+      convex_area: 1568.9,
+      solidity: 0.96,
+      mean_intensity: 130.2,
+      equivalent_diameter: 44.3,
+      bean_type: 'Arabica'
+    }
+  },
+  {
+    id: '6',
+    src: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400',
+    userId: '5',
+    userName: 'Fatima Al-Zahra',
+    userRole: 'researcher',
+    locationId: 'farm5',
+    locationName: 'Uganda Cooperative',
+    submissionDate: '2024-01-20',
+    validated: 'pending',
+    predictions: {
+      area: 1420.7,
+      perimeter: 118.4,
+      major_axis_length: 41.2,
+      minor_axis_length: 29.8,
+      extent: 0.71,
+      eccentricity: 0.64,
+      convex_area: 1438.1,
+      solidity: 0.92,
+      mean_intensity: 124.6,
+      equivalent_diameter: 40.1,
+      bean_type: 'Robusta'
+    }
+  }
+];
 
 // Admin Dashboard Service
 export class AdminService {
@@ -334,6 +485,145 @@ export class AdminService {
       return await response.json();
     } catch (error) {
       console.error('Error fetching activity logs:', error);
+      throw error;
+    }
+  }
+
+  // Admin Image Management Methods
+  static async getImagesByStatus(
+    status?: 'verified' | 'pending', 
+    filters?: AdminImageFilters,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{ images: AdminPredictedImage[]; pagination: PaginationData }> {
+    try {
+      // TODO: Replace with actual API call
+      // const params = new URLSearchParams();
+      // if (status) params.append('status', status);
+      // if (filters?.farm) params.append('farm', filters.farm);
+      // if (filters?.role) params.append('role', filters.role);
+      // params.append('page', page.toString());
+      // params.append('limit', limit.toString());
+      // const response = await fetch(`/api/admin/images?${params}`);
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      let filteredImages = [...tempAdminImages];
+      
+      // Apply status filter
+      if (status) {
+        filteredImages = filteredImages.filter(img => img.validated === status);
+      }
+      
+      // Apply farm filter
+      if (filters?.farm) {
+        filteredImages = filteredImages.filter(img => img.locationName === filters.farm);
+      }
+      
+      // Apply role filter
+      if (filters?.role) {
+        filteredImages = filteredImages.filter(img => img.userRole === filters.role);
+      }
+      
+      // Apply pagination
+      const totalItems = filteredImages.length;
+      const totalPages = Math.ceil(totalItems / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedImages = filteredImages.slice(startIndex, endIndex);
+      
+      return {
+        images: paginatedImages,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems,
+          itemsPerPage: limit
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching images by status:', error);
+      throw error;
+    }
+  }
+
+  static async deleteImage(id: string): Promise<boolean> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch(`/api/admin/images/${id}`, {
+      //   method: 'DELETE',
+      //   headers: { 'Content-Type': 'application/json' },
+      // });
+      // return response.ok;
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      console.log(`Image ${id} deleted`);
+      
+      // Remove from temp data for simulation
+      const index = tempAdminImages.findIndex(img => img.id === id);
+      if (index > -1) {
+        tempAdminImages.splice(index, 1);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      throw error;
+    }
+  }
+
+  static async editImage(id: string, data: Partial<AdminPredictedImage>): Promise<AdminPredictedImage> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch(`/api/admin/images/${id}`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(data)
+      // });
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Update temp data for simulation
+      const index = tempAdminImages.findIndex(img => img.id === id);
+      if (index > -1) {
+        tempAdminImages[index] = { ...tempAdminImages[index], ...data };
+        return tempAdminImages[index];
+      }
+      
+      throw new Error('Image not found');
+    } catch (error) {
+      console.error('Error editing image:', error);
+      throw error;
+    }
+  }
+
+  static async getImageById(id: string): Promise<AdminPredictedImage | null> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch(`/api/admin/images/${id}`);
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return tempAdminImages.find(img => img.id === id) || null;
+    } catch (error) {
+      console.error('Error fetching image by ID:', error);
+      throw error;
+    }
+  }
+
+  static async getUniqueLocations(): Promise<string[]> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch('/api/admin/locations');
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const locations = [...new Set(tempAdminImages.map(img => img.locationName))];
+      return locations;
+    } catch (error) {
+      console.error('Error fetching unique locations:', error);
       throw error;
     }
   }
