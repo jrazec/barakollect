@@ -3,10 +3,11 @@ import PageContainer from '@/components/PageContainer';
 import UploadBodySection from '../pages/researcher/UploadBodySection';
 import PageHeader from '@/components/PageHeader';
 import TabComponent from '@/components/TabComponent';
+import { useAuth } from '@/contexts/AuthContext';
 
 const UploadSamples: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Predict Image');
-
+  const {user} = useAuth();
   const handleFiles = (files: FileList) => {
     console.log('Selected files:', files);
   };
