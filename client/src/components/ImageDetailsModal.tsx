@@ -274,10 +274,29 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                                         <span className="text-sm font-medium text-gray-600 capitalize">
                                             {key.replace(/_/g, ' ')}
                                         </span>
-                                        <p className="text-lg font-semibold text-gray-900">
-                                            {typeof value === 'number' ? value.toFixed(4) : value}
-                                            {key.includes('area') ? ' px²' : key.includes('length') || key.includes('perimeter') || key.includes('diameter') ? ' px' : ''}
-                                        </p>
+                                        {editMode && type === 'admin' ? (
+                                            <input
+                                                type="number"
+                                                step="0.0001"
+                                                value={editedData.predictions?.[key] || value}
+                                                onChange={(e) => {
+                                                    const newValue = parseFloat(e.target.value) || 0;
+                                                    setEditedData((prev: any) => ({
+                                                        ...prev,
+                                                        predictions: {
+                                                            ...prev.predictions,
+                                                            [key]: newValue
+                                                        }
+                                                    }));
+                                                }}
+                                                className="w-full mt-1 border border-gray-300 rounded px-2 py-1 text-sm"
+                                            />
+                                        ) : (
+                                            <p className="text-lg font-semibold text-gray-900">
+                                                {typeof value === 'number' ? value.toFixed(4) : value}
+                                                {key.includes('area') ? ' px²' : key.includes('length') || key.includes('perimeter') || key.includes('diameter') ? ' px' : ''}
+                                            </p>
+                                        )}
                                     </div>
                                 ))}
                             </div>

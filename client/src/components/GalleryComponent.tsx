@@ -31,7 +31,7 @@ type SubmittedImage = {
 
 type GalleryComponentProps = {
     images: (string | PredictedImage | SubmittedImage)[];
-    type: 'simple' | 'predicted' | 'submitted';
+    type: 'simple' | 'predicted' | 'submitted' | 'admin';
     isLoading?: boolean;
     onDeleteImage?: (id: string) => void;
     customViewMode?: 'grid' | 'list';
@@ -63,9 +63,10 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
         console.log('Image clicked:', image, 'Type:', type); // Debug log
         if (type === 'simple') return;
         
-        if (type === 'predicted' || type === 'submitted') {
+        if (type === 'predicted' || type === 'submitted' || type === 'admin') {
             // For simple string images, create a mock object for demo
             if (typeof image === 'string') {
+                // TODO: Replace with Service call to fetch image details
                 const mockImage = type === 'predicted' ? {
                     src: image,
                     predictions: {
@@ -250,7 +251,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                         setSelectedImage(null);
                     }}
                     image={selectedImage}
-                    type={type as 'predicted' | 'submitted'}
+                    type={type as 'predicted' | 'submitted' | 'admin'}
                     onDelete={type === 'submitted' ? handleDelete : undefined}
                 />
             )}

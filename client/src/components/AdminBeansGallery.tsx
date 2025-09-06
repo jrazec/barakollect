@@ -4,21 +4,21 @@ import type { AdminPredictedImage, AdminImageFilters, PaginationData } from '@/i
 import ImageDetailsModal from './ImageDetailsModal';
 import GalleryComponent from './GalleryComponent';
 
-type ViewMode = 'table' | 'folder';
 type FolderViewMode = 'grid' | 'list';
+type SortOrder = 'asc' | 'desc';
 
 const AdminBeansGallery: React.FC = () => {
-    const [viewMode, setViewMode] = useState<ViewMode>('table');
     const [folderViewMode, setFolderViewMode] = useState<FolderViewMode>('grid');
     const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
     const [statusFilter, setStatusFilter] = useState<'verified' | 'pending' | 'all'>('all');
     const [filters, setFilters] = useState<AdminImageFilters>({});
     const [images, setImages] = useState<AdminPredictedImage[]>([]);
+    const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
     const [pagination, setPagination] = useState<PaginationData>({
         currentPage: 1,
         totalPages: 1,
         totalItems: 0,
-        itemsPerPage: 10
+        itemsPerPage: 100
     });
     const [locations, setLocations] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -69,18 +69,6 @@ const AdminBeansGallery: React.FC = () => {
         setPagination(prev => ({ ...prev, currentPage: 1 }));
     };
 
-    const handleImageClick = (image: AdminPredictedImage) => {
-        setSelectedImage(image);
-        setIsModalOpen(true);
-        setIsEditing(false);
-    };
-
-    const handleEdit = (image: AdminPredictedImage) => {
-        setSelectedImage(image);
-        setIsModalOpen(true);
-        setIsEditing(true);
-    };
-
     const handleDelete = async (id: string) => {
         if (window.confirm('Are you sure you want to delete this image?')) {
             try {
@@ -106,20 +94,46 @@ const AdminBeansGallery: React.FC = () => {
         }
     };
 
-    // Group images by user for grid/list view
-    const groupedImages = images.reduce((groups, image) => {
-        const key = `${image.userId}-${image.userName}`;
-        if (!groups[key]) {
-            groups[key] = {
-                userId: image.userId,
-                userName: image.userName,
-                userRole: image.userRole,
-                images: []
-            };
-        }
-        groups[key].images.push(image);
-        return groups;
-    }, {} as Record<string, { userId: string; userName: string; userRole: string; images: AdminPredictedImage[] }>);
+    // Group images by user for grid/list view with sorting
+    const groupedImages = React.useMemo(() => {
+        return images.reduce((groups, image) => {
+            const key = `${image.userId}-${image.userName}`;
+            if (!groups[key]) {
+                groups[key] = {
+                    userId: image.userId,
+                    userName: image.userName,
+                    userRole: image.userRole,
+                    images: []
+                };
+            }
+            groups[key].images.push(image);
+            return groups;
+        }, {} as Record<string, { userId: string; userName: string; userRole: string; images: AdminPredictedImage[] }>);
+    }, [images]);
+
+    // Sort grouped images by upload count with stable sorting
+    const sortedGroupedImages = React.useMemo(() => {
+        return Object.values(groupedImages).sort((a, b) => {
+            const countA = a.images.length;
+            const countB = b.images.length;
+            
+            // Primary sort by count
+            const countDiff = sortOrder === 'asc' ? countA - countB : countB - countA;
+            
+            // Secondary sort by userName for stability when counts are equal
+            if (countDiff === 0) {
+                return a.userName.localeCompare(b.userName);
+            }
+            
+            return countDiff;
+        });
+    }, [groupedImages, sortOrder]);
+
+    const toggleSortOrder = () => {
+        setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+        // Reset open folders when sort order changes to prevent confusion
+        setOpenFolders(new Set());
+    };
 
     const toggleFolder = (folderId: string) => {
         setOpenFolders(prev => {
@@ -189,53 +203,51 @@ const AdminBeansGallery: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* View Mode Toggle */}
+                    {/* Sort by Upload Count */}
                     <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-gray-700">View:</span>
-                        <div className="flex border border-gray-300 rounded-md overflow-hidden">
-                            <button
-                                onClick={() => setViewMode('table')}
-                                className={`px-3 py-1 text-sm ${viewMode === 'table' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                        <span className="text-sm font-medium text-gray-700">Sort by Upload Count:</span>
+                        <button
+                            onClick={toggleSortOrder}
+                            className="flex items-center space-x-1 px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-100 transition-colors"
+                        >
+                            <span>{sortOrder === 'desc' ? 'Most to Least' : 'Least to Most'}</span>
+                            <svg 
+                                className={`w-4 h-4 transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
                             >
-                                Table
-                            </button>
-                            <button
-                                onClick={() => setViewMode('folder')}
-                                className={`px-3 py-1 text-sm border-l border-gray-300 ${viewMode === 'folder' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                            >
-                                Folder
-                            </button>
-                        </div>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* Folder View Mode Toggle - Only show when in folder view */}
-            {viewMode === 'folder' && (
-                <div className="mb-4 flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-700">Folder View:</span>
-                    <div className="flex border border-gray-300 rounded-md overflow-hidden">
-                        <button
-                            onClick={() => setFolderViewMode('grid')}
-                            className={`px-3 py-1 text-sm ${folderViewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                        >
-                            <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-                            </svg>
-                            Grid
-                        </button>
-                        <button
-                            onClick={() => setFolderViewMode('list')}
-                            className={`px-3 py-1 text-sm border-l border-gray-300 ${folderViewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                        >
-                            <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 12a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 16a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"></path>
-                            </svg>
-                            List
-                        </button>
-                    </div>
+            {/* Folder View Mode Toggle */}
+            <div className="mb-4 flex items-center space-x-2">
+                <span className="text-sm font-medium text-gray-700">View Mode:</span>
+                <div className="flex border border-gray-300 rounded-md overflow-hidden">
+                    <button
+                        onClick={() => setFolderViewMode('grid')}
+                        className={`px-3 py-1 text-sm ${folderViewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                    >
+                        <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                        </svg>
+                        Grid
+                    </button>
+                    <button
+                        onClick={() => setFolderViewMode('list')}
+                        className={`px-3 py-1 text-sm border-l border-gray-300 ${folderViewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                    >
+                        <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 12a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 16a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"></path>
+                        </svg>
+                        List
+                    </button>
                 </div>
-            )}
+            </div>
 
             {/* Loading State */}
             {isLoading && (
@@ -248,144 +260,77 @@ const AdminBeansGallery: React.FC = () => {
             {/* Content */}
             {!isLoading && (
                 <>
-                    {/* Table View */}
-                    {viewMode === 'table' && (
-                        <div className="overflow-x-auto bg-white rounded-lg shadow">
-                            <table className="min-w-full">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bean Type</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {images.map((image) => (
-                                        <tr key={image.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900">{image.userName}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                    image.userRole === 'farmer' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                                                }`}>
-                                                    {image.userRole.charAt(0).toUpperCase() + image.userRole.slice(1)}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-900">{image.predictions.bean_type}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                    image.validated === 'verified' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                                }`}>
-                                                    {image.validated.charAt(0).toUpperCase() + image.validated.slice(1)}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {image.locationName}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        onClick={() => handleImageClick(image)}
-                                                        className="text-blue-600 hover:text-blue-900"
-                                                    >
-                                                        View More
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleEdit(image)}
-                                                        className="text-green-600 hover:text-green-900"
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(image.id)}
-                                                        className="text-red-600 hover:text-red-900"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-
                     {/* Folder View - Toggleable folders per user */}
-                    {viewMode === 'folder' && (
-                        <div className="space-y-4">
-                            {Object.values(groupedImages).map((userGroup) => {
-                                const folderId = `${userGroup.userId}-${userGroup.userName}`;
-                                const isOpen = openFolders.has(folderId);
-                                
-                                return (
-                                    <div key={userGroup.userId} className="bg-white rounded-lg shadow border border-gray-200">
-                                        {/* User Folder Header - Clickable */}
-                                        <div 
-                                            className="p-4 bg-gray-50 rounded-t-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                                            onClick={() => toggleFolder(folderId)}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center space-x-3">
-                                                    <svg 
-                                                        className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} 
-                                                        fill="currentColor" 
-                                                        viewBox="0 0 20 20"
-                                                    >
-                                                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
-                                                    </svg>
-                                                    <svg className="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
-                                                    </svg>
-                                                    <div>
-                                                        <h3 className="text-lg font-medium text-gray-900">{userGroup.userName}</h3>
-                                                        <p className="text-sm text-gray-500">
-                                                            {userGroup.userRole.charAt(0).toUpperCase() + userGroup.userRole.slice(1)} • {userGroup.images.length} images
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="text-sm text-gray-400">
-                                                    {isOpen ? 'Click to collapse' : 'Click to expand'}
+                    <div className="space-y-4">
+                        {sortedGroupedImages.map((userGroup) => {
+                            const folderId = `${userGroup.userId}-${userGroup.userName}`;
+                            const isOpen = openFolders.has(folderId);
+                            
+                            return (
+                                <div key={folderId} className="bg-white rounded-lg shadow border border-gray-200">
+                                    {/* User Folder Header - Clickable */}
+                                    <div 
+                                        className="p-4 bg-gray-50 rounded-t-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                                        onClick={() => toggleFolder(folderId)}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <svg 
+                                                    className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} 
+                                                    fill="currentColor" 
+                                                    viewBox="0 0 20 20"
+                                                >
+                                                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
+                                                </svg>
+                                                <svg className="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
+                                                </svg>
+                                                <div>
+                                                    <h3 className="text-lg font-medium text-gray-900">{userGroup.userName}</h3>
+                                                    <p className="text-sm text-gray-500">
+                                                        {userGroup.userRole.charAt(0).toUpperCase() + userGroup.userRole.slice(1)} • {userGroup.images.length} images
+                                                    </p>
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        {/* User's Images - Collapsible with animation */}
-                                        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                            isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                        }`}>
-                                            {isOpen && (
-                                                <div className="p-4 border-t border-gray-200">
-                                                    <div className="h-80 overflow-y-auto">
-                                                        <GalleryComponent
-                                                            images={userGroup.images.map(img => ({
-                                                                id: img.id,
-                                                                src: img.src,
-                                                                bean_type: img.predictions.bean_type,
-                                                                is_validated: img.validated === 'verified',
-                                                                location: img.locationName
-                                                            }))}
-                                                            type="submitted"
-                                                            onDeleteImage={handleDelete}
-                                                            customViewMode={folderViewMode}
-                                                            showViewToggle={false}
-                                                            maxHeight="320px"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
+                                            <div className="text-sm text-gray-400">
+                                                {isOpen ? 'Click to collapse' : 'Click to expand'}
+                                            </div>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    )}
+
+                                    {/* User's Images - Collapsible with animation */}
+                                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                        isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                    }`}>
+                                        {isOpen && (
+                                            <div className="p-4 border-t border-gray-200">
+                                                <div className="h-80 overflow-y-auto">
+                                                    <GalleryComponent
+                                                        images={userGroup.images.map(img => ({
+                                                            id: img.id,
+                                                            src: img.src,
+                                                            bean_type: img.predictions.bean_type,
+                                                            is_validated: img.validated === 'verified',
+                                                            location: img.locationName,
+                                                            predictions: img.predictions,
+                                                            userName: img.userName,
+                                                            userRole: img.userRole,
+                                                            submissionDate: img.submissionDate
+                                                        }))}
+                                                        type="admin"
+                                                        onDeleteImage={handleDelete}
+                                                        customViewMode={folderViewMode}
+                                                        showViewToggle={false}
+                                                        maxHeight="320px"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
 
                     {/* Pagination */}
                     {pagination.totalPages > 1 && (

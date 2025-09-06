@@ -21,6 +21,7 @@ import SystemMonitoring from "@/pages/admin/SystemMonitoring";
 import ActivityLogs from "@/pages/admin/ActivityLogs";
 import Settings from "@/pages/admin/Settings";
 import AdminBeansGallery from "../components/AdminBeansGallery";
+import AdminBeansMetadata from "@/components/AdminBeansMetadata";
 
 
 export default function AppRoute() {
@@ -55,6 +56,7 @@ export default function AppRoute() {
                 <Route path="gallery" element={<AdminBeansGallery />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="metadata" element={<AdminBeansMetadata />} />
             </Route>
             <Route path="*" element={<NotFound />} />
         </Routes>
