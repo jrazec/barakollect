@@ -133,3 +133,42 @@ export interface ActivityLog {
   ipAddress: string;
   details: string;
 }
+
+// Admin Beans Gallery Interfaces
+export interface AdminPredictedImage {
+  id: string;
+  src: string;
+  userId: string;
+  userName: string;
+  userRole: 'farmer' | 'researcher';
+  locationId: string;
+  locationName: string;
+  submissionDate: string;
+  validated: 'verified' | 'pending';
+  predictions: {
+    area: number;
+    perimeter: number;
+    major_axis_length: number;
+    minor_axis_length: number;
+    extent: number;
+    eccentricity: number;
+    convex_area: number;
+    solidity: number;
+    mean_intensity: number;
+    equivalent_diameter: number;
+    bean_type: string;
+  };
+}
+
+export interface AdminImageFilters {
+  farm?: string;
+  role?: 'farmer' | 'researcher';
+  status?: 'verified' | 'pending';
+}
+
+export interface PaginationData {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+}

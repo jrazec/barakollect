@@ -1,64 +1,279 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { storageService } from '../../services/storageService';
+import ImagePreviewModal from '../../components/ImagePreviewModal';
+import PredictionResultModal from '../../components/PredictionResultModal';
+import PredictionLoadingModal from '../../components/PredictionLoadingModal';
+import CameraCapture from '../../components/CameraCapture';
+import { supabase } from '../../lib/supabaseClient';
 
 interface UploadBodySectionProps {
   activeTab: string;
   onFilesSelected: (files: FileList) => void;
 }
 
-const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFilesSelected }) => {
-if (activeTab === 'Predict Image') {
-    return (
-        <div className="w-full">
-            <div
-                className="w-full min-h-[10rem] bg-white border border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center cursor-pointer mb-2"
-                onDragOver={e => e.preventDefault()}
-                onDrop={e => {
-                    e.preventDefault();
-                    if (e.dataTransfer.files.length) onFilesSelected(e.dataTransfer.files);
-                }}
-                onClick={() => document.getElementById('upload-input-predict')?.click()}
-            >
-                <input
-                    id="upload-input-predict"
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    multiple
-                    onChange={e => e.target.files && onFilesSelected(e.target.files)}
-                />
-                <span className="text-3xl text-[var(--espresso-black)] mb-2">&#8682;</span>
-                <span className="text-xs text-[var(--espresso-black)] font-accent">Drop your image here or click to browse</span>
-            </div>
-        </div>
-    );
-}
+const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFilesSelected: _ }) => {
+  const [uploadMode, setUploadMode] = useState<'camera' | 'file'>('file');
+  const [capturedImages, setCapturedImages] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isPredicting, setIsPredicting] = useState(false);
+  const [showPredictionResult, setShowPredictionResult] = useState(false);
+  const [predictionData, setPredictionData] = useState<{
+    features: any;
+    processed_image: string;
+  } | null>(null);
 
-if (activeTab === 'Submit Image') {
+  const handleFileSelect = (files: FileList) => {
+    const newFiles = Array.from(files).slice(0, 5 - selectedFiles.length);
+    const updatedFiles = [...selectedFiles, ...newFiles].slice(0, 5);
+    setSelectedFiles(updatedFiles);
+    
+    // Auto-trigger modal when 5 images are reached
+    if (updatedFiles.length === 5) {
+      setShowPreviewModal(true);
+    }
+  };
+
+  const handleCameraCapture = (file: File) => {
+    if (capturedImages.length < 5) {
+      const updatedImages = [...capturedImages, file];
+      setCapturedImages(updatedImages);
+      
+      // Auto-trigger modal when 5 images are reached
+      if (updatedImages.length === 5) {
+        setShowPreviewModal(true);
+      }
+    }
+  };
+
+  const handleConfirmUpload = async () => {
+    const imagesToUpload = uploadMode === 'camera' ? capturedImages : selectedFiles;
+    if (imagesToUpload.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const user_id = data.session?.user?.id;
+
+      if (!user_id) {
+        alert('User not authenticated');
+        return;
+      }
+
+      let response;
+      if (activeTab === 'Predict Image') {
+        // Show prediction loading modal
+        setIsPredicting(true);
+        setShowPreviewModal(false);
+        
+        response = await storageService.predictImage({
+          user_id,
+          ...(imagesToUpload.length === 1 ? { image: imagesToUpload[0] } : { images: imagesToUpload })
+        });
+        
+        setIsPredicting(false);
+        
+        // Handle prediction response - check if we have the required data
+        if (response && response.features && response.processed_image) {
+          console.log('Prediction response:', response);
+          console.log('Features:', response.features);
+          console.log('Processed image path:', response.processed_image);
+          
+          setPredictionData({
+            features: response.features,
+            processed_image: response.processed_image
+          });
+          setShowPredictionResult(true);
+          
+          // Reset state and clear preview images
+          setCapturedImages([]);
+          setSelectedFiles([]);
+          
+          // Clear the file input as well
+          const fileInput = document.getElementById(`upload-input-${activeTab}`) as HTMLInputElement;
+          if (fileInput) {
+            fileInput.value = '';
+          }
+        } else {
+          console.error('Prediction response:', response);
+          console.error('Missing fields - features:', response?.features, 'processed_image:', response?.processed_image);
+          alert('Prediction failed or no results returned');
+        }
+      } else if (activeTab === 'Submit Image') {
+        response = await storageService.submitImage({
+          user_id,
+          ...(imagesToUpload.length === 1 ? { image: imagesToUpload[0] } : { images: imagesToUpload })
+        });
+        
+        if (response?.success) {
+          alert('Images uploaded successfully!');
+          // Reset state and clear preview images
+          setCapturedImages([]);
+          setSelectedFiles([]);
+          setShowPreviewModal(false);
+          
+          // Clear the file input as well
+          const fileInput = document.getElementById(`upload-input-${activeTab}`) as HTMLInputElement;
+          if (fileInput) {
+            fileInput.value = '';
+          }
+        }
+      }
+    } catch (error: any) {
+      setIsPredicting(false);
+      alert(`Upload failed: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    if (uploadMode === 'camera') {
+      setCapturedImages(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const currentImages = uploadMode === 'camera' ? capturedImages : selectedFiles;
+
+  if (activeTab === 'Predict Image' || activeTab === 'Submit Image') {
     return (
-        <div className="w-full">
-            <div
-                className="w-full min-h-[10rem] bg-white border border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center cursor-pointer mb-2"
-                onDragOver={e => e.preventDefault()}
-                onDrop={e => {
-                    e.preventDefault();
-                    if (e.dataTransfer.files.length) onFilesSelected(e.dataTransfer.files);
-                }}
-                onClick={() => document.getElementById('upload-input-submit')?.click()}
-            >
-                <input
-                    id="upload-input-submit"
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    multiple
-                    onChange={e => e.target.files && onFilesSelected(e.target.files)}
-                />
-                <span className="text-3xl text-[var(--espresso-black)] mb-2">&#8682;</span>
-                <span className="text-xs text-[var(--espresso-black)] font-accent">Drop your image here or click to browse!</span>
-            </div>
+      <div className="w-full">
+        {/* Toggle Buttons */}
+        <div className="flex mb-4 bg-gray-100 rounded p-1">
+          <button
+            onClick={() => setUploadMode('file')}
+            className={`flex-1 py-2 px-4 rounded text-sm font-medium transition-colors ${
+              uploadMode === 'file'
+                ? 'bg-white text-[var(--espresso-black)] shadow'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            📁 Select Files
+          </button>
+          <button
+            onClick={() => setUploadMode('camera')}
+            className={`flex-1 py-2 px-4 rounded text-sm font-medium transition-colors ${
+              uploadMode === 'camera'
+                ? 'bg-white text-[var(--espresso-black)] shadow'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            📷 Take Photos
+          </button>
         </div>
+
+        {/* File Upload Mode */}
+        {uploadMode === 'file' && (
+          <div className="w-full">
+            <div
+              className="w-full min-h-[10rem] bg-white border border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center cursor-pointer mb-2"
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => {
+                e.preventDefault();
+                if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files);
+              }}
+              onClick={() => document.getElementById(`upload-input-${activeTab}`)?.click()}
+            >
+              <input
+                id={`upload-input-${activeTab}`}
+                type="file"
+                className="hidden"
+                accept="image/*"
+                multiple
+                onChange={e => e.target.files && handleFileSelect(e.target.files)}
+              />
+              <span className="text-3xl text-[var(--espresso-black)] mb-2">&#8682;</span>
+              <span className="text-xs text-[var(--espresso-black)] font-accent">
+                Drop your images here or click to browse (Max 5 images) - {selectedFiles.length}/5 selected
+              </span>
+            </div>
+            {selectedFiles.length > 0 && (
+              <div className="mb-2">
+                <div className="text-sm text-gray-600 mb-2">
+                  Selected: {selectedFiles.map(f => f.name).join(', ')}
+                </div>
+                <button
+                  onClick={() => setShowPreviewModal(true)}
+                  className="w-full bg-[var(--espresso-black)] text-white py-2 rounded font-medium"
+                >
+                  Preview & Send {selectedFiles.length} Image{selectedFiles.length > 1 ? 's' : ''}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Camera Mode */}
+        {uploadMode === 'camera' && (
+          <div className="w-full">
+            <div className="w-full min-h-[10rem] bg-white border border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center mb-2">
+              <span className="text-4xl text-[var(--espresso-black)] mb-2">📷</span>
+              <span className="text-xs text-[var(--espresso-black)] font-accent mb-3">
+                Take up to 5 photos with your camera
+              </span>
+              <button
+                onClick={() => setShowCamera(true)}
+                className="bg-[var(--espresso-black)] text-white px-4 py-2 rounded font-medium"
+                disabled={capturedImages.length >= 5}
+              >
+                {capturedImages.length >= 5 ? 'Max Photos Reached' : `Open Camera (${capturedImages.length}/5)`}
+              </button>
+            </div>
+            
+            {capturedImages.length > 0 && (
+              <div className="mb-2">
+                <div className="text-sm text-gray-600 mb-2">
+                  Captured {capturedImages.length} photo{capturedImages.length > 1 ? 's' : ''}
+                </div>
+                <button
+                  onClick={() => setShowPreviewModal(true)}
+                  className="w-full bg-[var(--espresso-black)] text-white py-2 rounded font-medium"
+                >
+                  Preview & Send {capturedImages.length} Photo{capturedImages.length > 1 ? 's' : ''}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Camera Component */}
+        {showCamera && (
+          <CameraCapture
+            onCapture={handleCameraCapture}
+            maxPhotos={5}
+            currentCount={capturedImages.length}
+            onClose={() => setShowCamera(false)}
+          />
+        )}
+
+        {/* Preview Modal */}
+        <ImagePreviewModal
+          isOpen={showPreviewModal}
+          images={currentImages}
+          onClose={() => setShowPreviewModal(false)}
+          onConfirm={handleConfirmUpload}
+          onRemoveImage={removeImage}
+          isLoading={isUploading}
+        />
+
+        {/* Prediction Loading Modal */}
+        <PredictionLoadingModal isOpen={isPredicting} />
+
+        {/* Prediction Result Modal */}
+        <PredictionResultModal
+          isOpen={showPredictionResult}
+          onClose={() => setShowPredictionResult(false)}
+          processedImage={predictionData?.processed_image || ''}
+          features={predictionData?.features || {}}
+        />
+      </div>
     );
-}
+  }
+
   if (activeTab === 'Find Largest Bean') {
     return (
       <div className="w-full">
