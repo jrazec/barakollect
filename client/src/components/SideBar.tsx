@@ -1,5 +1,5 @@
 import type { NavItems, User } from "@/interfaces/global";
-import { ActivityIcon, BellIcon, ChartBar, DatabaseIcon, ImageIcon, LayoutDashboard, LogOutIcon, MapPin, Monitor, ScanFaceIcon, Settings, UploadIcon, User2Icon } from "lucide-react";
+import { ActivityIcon, BellIcon, ChartBar, DatabaseIcon, ImageIcon, LayoutDashboard, LogOutIcon, MapPin, Monitor, ScanFaceIcon, Settings, UploadIcon, User2Icon, PenTool } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -58,6 +58,11 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 icon: (<ImageIcon />),
                 label: "Beans Gallery",
                 route: "/researcher/gallery"
+            },
+            {
+                icon: (<PenTool />),
+                label: "Annotations",
+                route: "/researcher/annotations"
             },
             {
                 icon: (<MapPin />),

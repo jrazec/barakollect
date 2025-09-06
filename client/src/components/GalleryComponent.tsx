@@ -27,6 +27,23 @@ type SubmittedImage = {
     bean_type: string;
     is_validated: boolean;
     location: string;
+    allegedVariety?: string;
+    userName?: string;
+    userRole?: string;
+    submissionDate?: string;
+    predictions?: {
+        area: number;
+        perimeter: number;
+        major_axis_length: number;
+        minor_axis_length: number;
+        extent: number;
+        eccentricity: number;
+        convex_area: number;
+        solidity: number;
+        mean_intensity: number;
+        equivalent_diameter: number;
+        bean_type: string;
+    };
 };
 
 type GalleryComponentProps = {

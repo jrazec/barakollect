@@ -168,8 +168,8 @@ const AdminBeansGallery: React.FC = () => {
                                 className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="all">All</option>
-                                <option value="verified">Verified</option>
-                                <option value="pending">Pending</option>
+                                <option value="verified">Validated</option>
+                                <option value="pending">Not Yet Validated</option>
                             </select>
                         </div>
 

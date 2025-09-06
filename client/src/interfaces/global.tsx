@@ -145,6 +145,7 @@ export interface AdminPredictedImage {
   locationName: string;
   submissionDate: string;
   validated: 'verified' | 'pending';
+  allegedVariety?: string;
   predictions: {
     area: number;
     perimeter: number;
@@ -171,4 +172,70 @@ export interface PaginationData {
   totalPages: number;
   totalItems: number;
   itemsPerPage: number;
+}
+
+// New interfaces for bean validation features
+export interface BeanImage {
+  id: string;
+  src: string;
+  userId: string;
+  userName: string;
+  userRole: 'farmer' | 'researcher';
+  locationId: string;
+  locationName: string;
+  submissionDate: string;
+  validated: boolean;
+  allegedVariety?: string;
+  predictions: {
+    area: number;
+    perimeter: number;
+    major_axis_length: number;
+    minor_axis_length: number;
+    extent: number;
+    eccentricity: number;
+    convex_area: number;
+    solidity: number;
+    mean_intensity: number;
+    equivalent_diameter: number;
+    bean_type: string;
+  };
+}
+
+export interface FarmFolder {
+  id: string;
+  name: string;
+  ownerId: string;
+  ownerName: string;
+  hasAccess: boolean;
+  isLocked: boolean;
+  imageCount: number;
+  validatedCount: number;
+  type: 'own' | 'farm';
+}
+
+export interface AccessRequest {
+  id: string;
+  researcherId: string;
+  researcherName: string;
+  farmId: string;
+  farmName: string;
+  farmOwnerId: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+  respondedAt?: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: 'access_request' | 'access_granted' | 'access_denied' | 'general';
+  title: string;
+  message: string;
+  fromUserId?: string;
+  fromUserName?: string;
+  relatedEntityId?: string; // farm id, request id, etc.
+  read: boolean;
+  createdAt: string;
+  actionRequired?: boolean;
+  actionData?: any;
 }

@@ -23,6 +23,7 @@ type SubmittedImage = {
     bean_type: string;
     is_validated: boolean;
     location: string;
+    allegedVariety?: string;
 };
 
 type AdminImage = {
@@ -31,6 +32,7 @@ type AdminImage = {
     bean_type: string;
     is_validated: boolean;
     location: string;
+    allegedVariety?: string;
     predictions: {
         area: number;
         perimeter: number;
@@ -246,6 +248,21 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                                                 <p className="text-green-900">{image.location}</p>
                                             )}
                                         </div>
+                                        {(image as any).allegedVariety && (
+                                            <div>
+                                                <span className="text-sm font-medium text-green-600">Alleged Variety:</span>
+                                                {editMode && type === 'admin' ? (
+                                                    <input
+                                                        type="text"
+                                                        value={(editedData as any).allegedVariety || ''}
+                                                        onChange={(e) => handleFieldChange('allegedVariety', e.target.value)}
+                                                        className="ml-2 border border-gray-300 rounded px-2 py-1 text-sm w-full mt-1"
+                                                    />
+                                                ) : (
+                                                    <p className="text-green-900">{(image as any).allegedVariety}</p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
