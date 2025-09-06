@@ -11,6 +11,47 @@ import type {
   PaginationData,
 } from "@/interfaces/global";
 
+// Farm interface for admin GIS map
+export interface Farm {
+  id: string;
+  name: string;
+  lat?: number;
+  lng?: number;
+  hasLocation: boolean;
+  userCount: number;
+  imageCount: number;
+  avgBeanSize: number;
+  qualityRating: number;
+  lastActivity: string;
+  owner: string;
+  createdDate: string;
+  totalUploads: number;
+  validatedUploads: number;
+}
+
+export interface FarmDetails extends Farm {
+  users: Array<{
+    id: string;
+    name: string;
+    role: string;
+    uploads: number;
+  }>;
+  recentImages: Array<{
+    id: string;
+    url: string;
+    uploadDate: string;
+    beanCount: number;
+  }>;
+  aggregatedData: {
+    avgBeanLength: number;
+    avgBeanWidth: number;
+    avgBeanArea: number;
+    commonBeanTypes: string[];
+    qualityDistribution: Record<string, number>;
+    monthlyUploads: Array<{ month: string; count: number }>;
+  };
+}
+
 // Temporary data - replace with actual API calls
 const tempAdminStats: AdminStats = {
   totalUsers: 1247,
@@ -177,6 +218,138 @@ const tempSystemStatus: SystemStatus = {
   lastBackup: "2024-01-20 02:00 AM",
   storageUsed: "2.4 TB",
   storageTotal: "5.0 TB",
+};
+
+// Temporary farm data
+const tempFarms: Farm[] = [
+  {
+    id: '1',
+    name: 'Sunrise Coffee Farm',
+    lat: 13.956626112464809,
+    lng: 121.16317033767702,
+    hasLocation: true,
+    userCount: 15,
+    imageCount: 234,
+    avgBeanSize: 13.2,
+    qualityRating: 4.2,
+    lastActivity: '2 hours ago',
+    owner: 'John Smith',
+    createdDate: '2023-03-15',
+    totalUploads: 234,
+    validatedUploads: 198
+  },
+  {
+    id: '2',
+    name: 'Mountain View Plantation',
+    lat: 13.950,
+    lng: 121.150,
+    hasLocation: true,
+    userCount: 23,
+    imageCount: 456,
+    avgBeanSize: 12.8,
+    qualityRating: 4.5,
+    lastActivity: '1 day ago',
+    owner: 'Maria Garcia',
+    createdDate: '2023-01-10',
+    totalUploads: 456,
+    validatedUploads: 398
+  },
+  {
+    id: '3',
+    name: 'Highland Coffee Estate',
+    lat: 13.940,
+    lng: 121.160,
+    hasLocation: true,
+    userCount: 8,
+    imageCount: 123,
+    avgBeanSize: 14.1,
+    qualityRating: 3.9,
+    lastActivity: '3 hours ago',
+    owner: 'Ahmed Hassan',
+    createdDate: '2023-06-22',
+    totalUploads: 123,
+    validatedUploads: 89
+  },
+  {
+    id: '4',
+    name: 'Valley Green Farm',
+    hasLocation: false,
+    userCount: 5,
+    imageCount: 67,
+    avgBeanSize: 13.8,
+    qualityRating: 4.1,
+    lastActivity: '1 week ago',
+    owner: 'Sarah Johnson',
+    createdDate: '2023-08-10',
+    totalUploads: 67,
+    validatedUploads: 45
+  },
+  {
+    id: '5',
+    name: 'Riverbank Coffee Co.',
+    hasLocation: false,
+    userCount: 12,
+    imageCount: 189,
+    avgBeanSize: 12.9,
+    qualityRating: 3.7,
+    lastActivity: '5 days ago',
+    owner: 'Carlos Rodriguez',
+    createdDate: '2023-04-18',
+    totalUploads: 189,
+    validatedUploads: 156
+  }
+];
+
+const tempFarmDetails: Record<string, FarmDetails> = {
+  '1': {
+    ...tempFarms[0],
+    users: [
+      { id: 'u1', name: 'John Smith', role: 'Owner', uploads: 89 },
+      { id: 'u2', name: 'Alice Johnson', role: 'Farmer', uploads: 67 },
+      { id: 'u3', name: 'Bob Wilson', role: 'Researcher', uploads: 78 }
+    ],
+    recentImages: [
+      { id: 'img1', url: '/api/images/recent1.jpg', uploadDate: '2024-01-20', beanCount: 15 },
+      { id: 'img2', url: '/api/images/recent2.jpg', uploadDate: '2024-01-19', beanCount: 12 },
+      { id: 'img3', url: '/api/images/recent3.jpg', uploadDate: '2024-01-18', beanCount: 18 }
+    ],
+    aggregatedData: {
+      avgBeanLength: 8.5,
+      avgBeanWidth: 6.2,
+      avgBeanArea: 42.3,
+      commonBeanTypes: ['Arabica', 'Robusta'],
+      qualityDistribution: { 'Excellent': 45, 'Good': 35, 'Average': 20 },
+      monthlyUploads: [
+        { month: 'Jan', count: 45 },
+        { month: 'Feb', count: 52 },
+        { month: 'Mar', count: 38 }
+      ]
+    }
+  },
+  '2': {
+    ...tempFarms[1],
+    users: [
+      { id: 'u4', name: 'Maria Garcia', role: 'Owner', uploads: 156 },
+      { id: 'u5', name: 'Pedro Santos', role: 'Farmer', uploads: 123 },
+      { id: 'u6', name: 'Ana Rodriguez', role: 'Quality Control', uploads: 177 }
+    ],
+    recentImages: [
+      { id: 'img4', url: '/api/images/recent4.jpg', uploadDate: '2024-01-20', beanCount: 20 },
+      { id: 'img5', url: '/api/images/recent5.jpg', uploadDate: '2024-01-19', beanCount: 16 }
+    ],
+    aggregatedData: {
+      avgBeanLength: 9.1,
+      avgBeanWidth: 6.8,
+      avgBeanArea: 48.7,
+      commonBeanTypes: ['Arabica', 'Liberica'],
+      qualityDistribution: { 'Excellent': 60, 'Good': 30, 'Average': 10 },
+      monthlyUploads: [
+        { month: 'Jan', count: 67 },
+        { month: 'Feb', count: 78 },
+        { month: 'Mar', count: 65 }
+      ]
+    }
+  }
 };
 
 // Temporary admin image data
@@ -850,6 +1023,125 @@ export class AdminService {
       return locations;
     } catch (error) {
       console.error("Error fetching unique locations:", error);
+      throw error;
+    }
+  }
+
+  // Farm Management Methods
+  static async getFarms(): Promise<Farm[]> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/admin/farms/`);
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return tempFarms;
+    } catch (error) {
+      console.error('Error fetching farms:', error);
+      throw error;
+    }
+  }
+
+  static async getFarmDetails(farmId: string): Promise<FarmDetails | null> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/admin/farms/${farmId}/`);
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return tempFarmDetails[farmId] || null;
+    } catch (error) {
+      console.error('Error fetching farm details:', error);
+      throw error;
+    }
+  }
+
+  static async createFarm(farmData: {
+    name: string;
+    lat: number;
+    lng: number;
+    owner: string;
+  }): Promise<Farm> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/admin/farms/`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(farmData)
+      // });
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const newFarm: Farm = {
+        id: Date.now().toString(),
+        name: farmData.name,
+        lat: farmData.lat === 0 ? undefined : farmData.lat,
+        lng: farmData.lng === 0 ? undefined : farmData.lng,
+        hasLocation: farmData.lat !== 0 && farmData.lng !== 0,
+        userCount: 0,
+        imageCount: 0,
+        avgBeanSize: 0,
+        qualityRating: 0,
+        lastActivity: 'Never',
+        owner: farmData.owner,
+        createdDate: new Date().toISOString().split('T')[0],
+        totalUploads: 0,
+        validatedUploads: 0
+      };
+      
+      tempFarms.push(newFarm);
+      return newFarm;
+    } catch (error) {
+      console.error('Error creating farm:', error);
+      throw error;
+    }
+  }
+
+  static async updateFarmLocation(farmId: string, lat: number, lng: number): Promise<Farm> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/admin/farms/${farmId}/location/`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ lat, lng })
+      // });
+      // return await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const farmIndex = tempFarms.findIndex(f => f.id === farmId);
+      if (farmIndex !== -1) {
+        tempFarms[farmIndex] = {
+          ...tempFarms[farmIndex],
+          lat,
+          lng,
+          hasLocation: true
+        };
+        return tempFarms[farmIndex];
+      }
+      throw new Error('Farm not found');
+    } catch (error) {
+      console.error('Error updating farm location:', error);
+      throw error;
+    }
+  }
+
+  static async deleteFarm(farmId: string): Promise<boolean> {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/admin/farms/${farmId}/`, {
+      //   method: 'DELETE'
+      // });
+      // return response.ok;
+      
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const farmIndex = tempFarms.findIndex(f => f.id === farmId);
+      if (farmIndex !== -1) {
+        tempFarms.splice(farmIndex, 1);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting farm:', error);
       throw error;
     }
   }

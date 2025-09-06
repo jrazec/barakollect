@@ -22,6 +22,7 @@ import ActivityLogs from "@/pages/admin/ActivityLogs";
 import Settings from "@/pages/admin/Settings";
 import AdminBeansGallery from "../components/AdminBeansGallery";
 import AdminBeansMetadata from "@/components/AdminBeansMetadata";
+import AdminFarmMap from "@/pages/admin/AdminFarmMap";
 
 
 export default function AppRoute() {
@@ -54,6 +55,7 @@ export default function AppRoute() {
                 <Route path="monitoring" element={<SystemMonitoring />} />
                 <Route path="activity-logs" element={<ActivityLogs />} />
                 <Route path="gallery" element={<AdminBeansGallery />} />
+                <Route path="farm-map" element={<AdminFarmMap />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="metadata" element={<AdminBeansMetadata />} />

@@ -93,6 +93,11 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 route: "/admin/user-management"
             },
             {
+                icon: (<MapPin />),
+                label: "Farm Management",
+                route: "/admin/farm-map"
+            },
+            {
                 icon: (<Monitor />),
                 label: "System Monitor",
                 route: "/admin/monitoring"
