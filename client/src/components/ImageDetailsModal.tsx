@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 type PredictedImage = {
     src: string;
+    is_validated?: boolean;
     predictions: {
         area: number;
         perimeter: number;
@@ -15,15 +16,6 @@ type PredictedImage = {
         equivalent_diameter: number;
         bean_type: string;
     };
-};
-
-type SubmittedImage = {
-    id: string;
-    src: string;
-    bean_type: string;
-    is_validated: boolean;
-    location: string;
-    allegedVariety?: string;
 };
 
 type AdminImage = {
@@ -54,8 +46,8 @@ type AdminImage = {
 type ImageDetailsModalProps = {
     isOpen: boolean;
     onClose: () => void;
-    image: PredictedImage | SubmittedImage | AdminImage;
-    type: 'predicted' | 'submitted' | 'admin';
+    image: PredictedImage | AdminImage;
+    type: 'predicted' | 'admin';
     isEditing?: boolean;
     onDelete?: (id: string) => void;
     onSave?: (updatedImage: any) => void;
@@ -74,11 +66,12 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
     const [isSaving, setIsSaving] = useState(false);
     const [editMode, setEditMode] = useState(isEditing);
     const [editedData, setEditedData] = useState<any>(image);
+    const [showDetailedFeatures, setShowDetailedFeatures] = useState(false);
 
     if (!isOpen) return null;
 
     const handleDelete = async () => {
-        if ((type === 'submitted' || type === 'admin') && onDelete && 'id' in image) {
+        if (type === 'admin' && onDelete && 'id' in image) {
             setIsDeleting(true);
             try {
                 // Temporary API simulation - replace with actual endpoint
@@ -117,8 +110,6 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
         switch (type) {
             case 'predicted':
                 return 'Coffee Bean Prediction Results';
-            case 'submitted':
-                return 'Submitted Image Details';
             case 'admin':
                 return editMode ? 'Edit Image Details' : 'Image Details - Admin View';
             default:
@@ -193,8 +184,8 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                                 </div>
                             )}
 
-                            {/* Bean Type and Validation Status */}
-                            {(type === 'submitted' || type === 'admin') && 'bean_type' in image && (
+                            {/* Bean Type and Validation Status for Admin */}
+                            {type === 'admin' && 'bean_type' in image && (
                                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                                     <h3 className="text-lg font-semibold text-green-800 mb-2">Classification</h3>
                                     <div className="space-y-3">
@@ -226,11 +217,10 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                                                     <option value="pending">Pending</option>
                                                 </select>
                                             ) : (
-                                                <span className={`inline-block ml-2 px-3 py-1 rounded-full text-sm font-medium ${
-                                                    image.is_validated 
-                                                        ? 'bg-green-100 text-green-800 border border-green-200' 
-                                                        : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                                                }`}>
+                                                <span className={`inline-block ml-2 px-3 py-1 rounded-full text-sm font-medium ${image.is_validated
+                                                    ? 'bg-green-100 text-green-800 border border-green-200'
+                                                    : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                                                    }`}>
                                                     {image.is_validated ? '✓ Verified' : '⏳ Pending'}
                                                 </span>
                                             )}
@@ -271,10 +261,10 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                             {type === 'predicted' && 'predictions' in image && (
                                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                                     <h3 className="text-xl font-bold text-green-800 mb-2">
-                                        Identified Bean Type: {image.predictions.bean_type}
+                                        {image.is_validated ? 'Bean Type:' : 'Predicted Bean Type:'} {image.predictions.bean_type}
                                     </h3>
                                     <p className="text-sm text-green-600">
-                                        AI-powered analysis completed with high confidence
+                                        {image.is_validated ? 'Validation completed' : 'AI-powered analysis completed with high confidence'}
                                     </p>
                                 </div>
                             )}
@@ -282,7 +272,87 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                     </div>
 
                     {/* Morphological Features */}
-                    {((type === 'predicted' && 'predictions' in image) || (type === 'admin' && 'predictions' in image)) && (
+                    {type === 'predicted' && 'predictions' in image && (
+                        <div className="mt-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h4 className="text-lg font-semibold text-gray-800">Bean Measurements</h4>
+                                <button
+                                    onClick={() => setShowDetailedFeatures(!showDetailedFeatures)}
+                                    className="px-3 py-1 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200 transition-colors text-sm"
+                                >
+                                    {showDetailedFeatures ? 'View Simple' : 'View Detailed'}
+                                </button>
+                            </div>
+
+                            {!showDetailedFeatures ? (
+                                // Simplified view for farmers - key measurements only
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                        <span className="text-sm font-medium text-gray-600">Length</span>
+                                        {
+                                            image.predictions.major_axis_length ? (
+                                                <p className="text-2xl font-bold text-gray-900">
+                                                    {image.predictions.major_axis_length.toFixed(1)} <span className="text-lg text-gray-600">px</span>
+                                                </p>
+                                            ) : <p className="text-gray-500">N/A</p>
+                                        }
+                                        <p className="text-xs text-gray-500">Major axis length</p>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                        <span className="text-sm font-medium text-gray-600">Width</span>
+                                        {
+                                            image.predictions.minor_axis_length ? (
+                                                <p className="text-2xl font-bold text-gray-900">
+                                                    {image.predictions.minor_axis_length.toFixed(1)} <span className="text-lg text-gray-600">px</span>
+                                                </p>
+                                            ) : <p className="text-gray-500">N/A</p>
+                                        }
+                                        <p className="text-xs text-gray-500">Minor axis length</p>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                        <span className="text-sm font-medium text-gray-600">Size (Area)</span>
+                                        {
+                                            image.predictions.area ? (
+                                                <p className="text-2xl font-bold text-gray-900">
+                                                    {image.predictions.area.toFixed(0)} <span className="text-lg text-gray-600">px²</span>
+                                                </p>
+                                            ) : <p className="text-gray-500">N/A</p>
+                                        }
+                                        <p className="text-xs text-gray-500">Total bean area</p>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                        <span className="text-sm font-medium text-gray-600">Shape Quality</span>
+                                        {
+                                            image.predictions.solidity ? (
+                                                <p className="text-2xl font-bold text-gray-900">
+                                                    {(image.predictions.solidity * 100).toFixed(0)}<span className="text-lg text-gray-600">%</span>
+                                                </p>
+                                            ) : <p className="text-gray-500">N/A</p>
+                                        }
+                                        <p className="text-xs text-gray-500">Bean uniformity (solidity)</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                // Detailed view - all morphological features
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {Object.entries(image.predictions).filter(([key]) => key !== 'bean_type').map(([key, value]) => (
+                                        <div key={key} className="bg-gray-50 p-3 rounded-lg">
+                                            <span className="text-sm font-medium text-gray-600 capitalize">
+                                                {key.replace(/_/g, ' ')}
+                                            </span>
+                                            <p className="text-lg font-semibold text-gray-900">
+                                                {typeof value === 'number' ? value.toFixed(4) : value}
+                                                {key.includes('area') ? ' px²' : key.includes('length') || key.includes('perimeter') || key.includes('diameter') ? ' px' : ''}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Admin Morphological Features - always detailed */}
+                    {type === 'admin' && 'predictions' in image && (
                         <div className="mt-6">
                             <h4 className="text-lg font-semibold mb-4 text-gray-800">Morphological Analysis</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -350,7 +420,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                             </>
                         )}
 
-                        {((type === 'submitted' || type === 'admin') && onDelete && 'id' in image) && (
+                        {(type === 'admin' && onDelete && 'id' in image) && (
                             <button
                                 onClick={handleDelete}
                                 disabled={isDeleting}

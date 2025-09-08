@@ -129,13 +129,12 @@ def create_user(request):
     role = request.data.get("role")
     role_id = 3 # temp is farmer
 
-    match role:
-        case "farmer":
-            role_id = 3
-        case "researcher":
-            role_id = 2
-        case "admin":
-            role_id = 1
+    if role == "farmer":
+        role_id = 3
+    elif role == "researcher":
+        role_id = 2
+    elif role == "admin":
+        role_id = 1
 
     try:
         # Create the user auth here as well for supabase
@@ -186,14 +185,12 @@ def update_user(request):
 
     role_id = 3 # temp is farmer
 
-    match role:
-        case "3":
-            role_id = 3
-        case "2":
-            role_id = 2
-        case "1":
-            role_id = 1
-
+    if role == "3":
+        role_id = 3
+    elif role == "2":
+        role_id = 2
+    elif role == "1":
+        role_id = 1
     if not all([user_id, first_name, last_name, username, role]):
         return JsonResponse({"error": "Missing required fields"}, status=400)
 

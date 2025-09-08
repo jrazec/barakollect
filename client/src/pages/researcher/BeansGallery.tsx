@@ -6,6 +6,7 @@ import PageContainer from '../../components/PageContainer';
 import PageHeader from '../../components/PageHeader';
 import TabComponent from '@/components/TabComponent';
 import GalleryComponent from '@/components/GalleryComponent';
+import { storageService } from '@/services/storageService';
 
 const BeansGallery: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Validated');
@@ -36,9 +37,10 @@ const BeansGallery: React.FC = () => {
       const isValidated = activeTab === 'Validated';
       
       // Fetch researcher's own images with validation filter
-      const userImages = await AdminService.getUserImages(userId, 'researcher', isValidated);
+      const userImages = await storageService.getUserImages(userId, 'researcher', isValidated);
       
       setImages(userImages);
+      console.log(userImages);
     } catch (error) {
       console.error('Error fetching images:', error);
       setImages([]);
@@ -52,7 +54,7 @@ const BeansGallery: React.FC = () => {
     id: img.id,
     src: img.src,
     bean_type: img.predictions.bean_type,
-    is_validated: img.validated,
+    is_validated: img.is_validated,
     location: img.locationName,
     predictions: img.predictions,
     userName: img.userName,
@@ -79,7 +81,7 @@ const BeansGallery: React.FC = () => {
 
         {/* Gallery Content */}
         <GalleryComponent 
-          type='submitted' 
+          type='predicted' 
           images={convertedImages}
           isLoading={isLoading}
         />

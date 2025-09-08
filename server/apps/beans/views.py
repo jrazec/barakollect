@@ -3,6 +3,8 @@ from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from django.utils import timezone
 import uuid
+import json
+import random
 from services.supabase_service import supabase
 from models.models import User,UserImage
 from models.models import Image as ImageBucket
@@ -62,17 +64,34 @@ def upload_beans(request):
 @api_view(['GET'])
 def get_user_beans(request, user_id):
     # Logic for retrieving beans
-    user_images = ImageBucket.objects.filter(userimage__user_id=user_id).values("image_url", "upload_date", "id")
+    user_images = ImageBucket.objects.filter(userimage__user_id=user_id).values("image_url", "upload_date", "id",  "userimage__user__location", "userimage__user__first_name", "userimage__user__last_name", "userimage__user__userrole__role__name", "userimage__user__id","userimage__image__prediction__predicted_label__bean_type", "userimage__image__prediction__predicted_label__confidence","userimage__image__annotation__label__is_validated")
     beans = supabase.storage.from_("Beans").list(f"uploads/{user_id}/")
 
-    urls = []
+    data = []
     for img in user_images:
         signed = supabase.storage.from_("Beans").create_signed_url(
             img["image_url"], 3600
         )
-        urls.append(signed["signedURL"])
+        data.append({
+            "src":signed["signedURL"],
+            "upload_date": img["upload_date"],
+            "id": img["id"],
+            "userId": img["userimage__user__id"],
+            "location": img["userimage__user__location"],
+            "userName": f"{img['userimage__user__first_name']} {img['userimage__user__last_name']}",
+            "userRole": img["userimage__user__userrole__role__name"],
+            # Placeholder fields
+            "bean_type": None,
+            "is_validated": True if img["userimage__image__annotation__label__is_validated"] == 1 else False, 
+            "predictions":{
+                "bean_type": img["userimage__image__prediction__predicted_label__bean_type"] if img["userimage__image__prediction__predicted_label__bean_type"] else "unknown",
+                "confidence": img["userimage__image__prediction__predicted_label__confidence"] if img["userimage__image__prediction__predicted_label__confidence"] else 0.0,
+            },
+            "submissionDate": img["upload_date"],
+            "allegedVariety": None
+        })
 
-    return JsonResponse({"images": urls})
+    return JsonResponse({"images":data})
 
 
 

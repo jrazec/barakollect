@@ -3,6 +3,7 @@ import React from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { AdminService } from '@/services/adminService';
 import type { BeanImage } from '@/interfaces/global';
+import {storageService} from '@/services/storageService';
 
 interface GallerySectionProps {
     activeTab: string;
@@ -31,9 +32,10 @@ const GallerySection: React.FC<GallerySectionProps> = ({ activeTab }) => {
                 const isValidated = activeTab === 'Validated';
                 
                 // Fetch user's images with validation filter
-                const userImages = await AdminService.getUserImages(userId, 'farmer', isValidated);
+                const userImages = await storageService.getUserImages(userId, 'farmer', isValidated);
                 
                 setImages(userImages);
+                console.log(userImages);
             } catch (error) {
                 console.error('Error fetching images:', error);
                 setImages([]);
@@ -45,23 +47,16 @@ const GallerySection: React.FC<GallerySectionProps> = ({ activeTab }) => {
         fetchImages();
     }, [activeTab, userId]);
 
-    // Convert BeanImage to format expected by GalleryComponent
+    // Convert BeanImage to format expected by GalleryComponent (predicted type)
     const convertedImages = images.map(img => ({
-        id: img.id,
         src: img.src,
-        bean_type: img.predictions.bean_type,
-        is_validated: img.validated,
-        location: img.locationName,
-        predictions: img.predictions,
-        userName: img.userName,
-        userRole: img.userRole,
-        submissionDate: img.submissionDate,
-        allegedVariety: img.allegedVariety
+        is_validated: img.is_validated,
+        predictions: img.predictions
     }));
 
     return (
         <GalleryComponent 
-            type='submitted' 
+            type='predicted' 
             images={convertedImages}
             isLoading={isLoading}
         />

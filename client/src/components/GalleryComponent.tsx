@@ -6,6 +6,7 @@ import ImageDetailsModal from './ImageDetailsModal';
 
 type PredictedImage = {
     src: string;
+    is_validated?: boolean;
     predictions: {
         area: number;
         perimeter: number;
@@ -21,7 +22,7 @@ type PredictedImage = {
     };
 };
 
-type SubmittedImage = {
+type AdminImage = {
     id: string;
     src: string;
     bean_type: string;
@@ -47,8 +48,8 @@ type SubmittedImage = {
 };
 
 type GalleryComponentProps = {
-    images: (string | PredictedImage | SubmittedImage)[];
-    type: 'simple' | 'predicted' | 'submitted' | 'admin';
+    images: (string | PredictedImage | AdminImage)[];
+    type: 'simple' | 'predicted' | 'admin';
     isLoading?: boolean;
     onDeleteImage?: (id: string) => void;
     customViewMode?: 'grid' | 'list';
@@ -66,7 +67,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
     maxHeight = '400px'
 }) => {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>(customViewMode || 'grid');
-    const [selectedImage, setSelectedImage] = useState<PredictedImage | SubmittedImage | null>(null);
+    const [selectedImage, setSelectedImage] = useState<PredictedImage | AdminImage | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Update viewMode when customViewMode changes
@@ -80,12 +81,13 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
         console.log('Image clicked:', image, 'Type:', type); // Debug log
         if (type === 'simple') return;
         
-        if (type === 'predicted' || type === 'submitted' || type === 'admin') {
+        if (type === 'predicted' || type === 'admin') {
             // For simple string images, create a mock object for demo
             if (typeof image === 'string') {
                 // TODO: Replace with Service call to fetch image details
                 const mockImage = type === 'predicted' ? {
                     src: image,
+                    is_validated: Math.random() > 0.5,
                     predictions: {
                         area: 1500.5,
                         perimeter: 120.3,
@@ -104,7 +106,23 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                     src: image,
                     bean_type: 'Robusta',
                     is_validated: Math.random() > 0.5,
-                    location: 'Farm A, Section 2'
+                    location: 'Farm A, Section 2',
+                    predictions: {
+                        area: 1500.5,
+                        perimeter: 120.3,
+                        major_axis_length: 45.2,
+                        minor_axis_length: 32.1,
+                        extent: 0.75,
+                        eccentricity: 0.68,
+                        convex_area: 1520.2,
+                        solidity: 0.95,
+                        mean_intensity: 128.5,
+                        equivalent_diameter: 43.7,
+                        bean_type: 'Arabica'
+                    },
+                    userName: 'Mock User',
+                    userRole: 'farmer',
+                    submissionDate: '2024-01-20'
                 };
                 setSelectedImage(mockImage);
             } else {
@@ -237,7 +255,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                                     <div className="flex-1">
                                         <p className="text-sm font-medium text-gray-900">{name}</p>
                                         <p className="text-xs text-gray-500">
-                                            {type === 'submitted' && typeof image === 'object' && 'bean_type' in image ? 
+                                            {type === 'admin' && typeof image === 'object' && 'bean_type' in image ? 
                                                 `${image.bean_type} • ${image.is_validated ? 'Validated' : 'Pending'}` : 
                                                 type === 'predicted' ? 'Prediction available' : 'Image file'}
                                         </p>
@@ -267,9 +285,9 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                         setIsModalOpen(false);
                         setSelectedImage(null);
                     }}
-                    image={selectedImage}
-                    type={type as 'predicted' | 'submitted' | 'admin'}
-                    onDelete={type === 'submitted' ? handleDelete : undefined}
+                    image={selectedImage as any}
+                    type={type as 'predicted' | 'admin'}
+                    onDelete={type === 'admin' ? handleDelete : undefined}
                 />
             )}
         </div>
