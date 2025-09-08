@@ -184,7 +184,7 @@ export interface BeanImage {
   locationId: string;
   locationName: string;
   submissionDate: string;
-  validated: boolean;
+  is_validated: boolean;
   allegedVariety?: string;
   predictions: {
     area: number;

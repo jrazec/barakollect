@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AdminService } from '@/services/adminService';
 import { supabase } from '@/lib/supabaseClient';
 import type { FarmFolder, BeanImage, PaginationData } from '@/interfaces/global';
+import { storageService } from '@/services/storageService';
 
 const ResearcherAnnotations: React.FC = () => {
     const navigate = useNavigate();
@@ -46,7 +47,7 @@ const ResearcherAnnotations: React.FC = () => {
         
         setIsLoading(true);
         try {
-            const folderData = await AdminService.getFarmFolders(userId);
+            const folderData = await storageService.getFarmFolders(userId);
             setFolders(folderData);
         } catch (error) {
             console.error('Error loading folders:', error);
@@ -61,7 +62,7 @@ const ResearcherAnnotations: React.FC = () => {
         setIsLoading(true);
         try {
             const validated = validationFilter === 'all' ? undefined : validationFilter === 'validated';
-            const result = await AdminService.getBeanImagesByFarm(
+            const result = await storageService.getBeanImagesByFarm(
                 selectedFolder.id,
                 userId,
                 validated,
@@ -104,7 +105,7 @@ const ResearcherAnnotations: React.FC = () => {
         notes?: string;
     }) => {
         try {
-            await AdminService.annotateBeanImage(imageId, annotations);
+            await storageService.annotateBeanImage(imageId, annotations);
             // Refresh images after annotation
             loadImages();
             setIsModalOpen(false);
@@ -241,11 +242,11 @@ const ResearcherAnnotations: React.FC = () => {
                                 <div className="p-3">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className={`px-2 py-1 text-xs rounded-full ${
-                                            image.validated 
+                                            image.is_validated 
                                                 ? 'bg-green-100 text-green-800' 
                                                 : 'bg-yellow-100 text-yellow-800'
                                         }`}>
-                                            {image.validated ? 'Validated' : 'Pending'}
+                                            {image.is_validated ? 'Validated' : 'Pending'}
                                         </span>
                                         <span className="text-xs text-gray-500">
                                             {new Date(image.submissionDate).toLocaleDateString()}
@@ -368,7 +369,7 @@ interface AnnotationModalProps {
 
 const AnnotationModal: React.FC<AnnotationModalProps> = ({ isOpen, onClose, image, onSave }) => {
     const [allegedVariety, setAllegedVariety] = useState(image.allegedVariety || '');
-    const [validated, setValidated] = useState(image.validated);
+    const [validated, setValidated] = useState(image.is_validated);
     const [notes, setNotes] = useState('');
     const [showConfirmation, setShowConfirmation] = useState(false);
 
