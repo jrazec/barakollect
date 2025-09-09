@@ -21,11 +21,16 @@ type PredictedImage = {
 type AdminImage = {
     id: string;
     src: string;
-    bean_type: string;
+    userId: string;
+    userName: string;
+    userRole: string;
+    locationId: string | null;
+    locationName: string | null;
+    submissionDate: string;
     is_validated: boolean;
-    location: string;
-    allegedVariety?: string;
-    predictions: {
+    allegedVariety?: string | null;
+    bean_type?: string; // For legacy single bean predictions
+    predictions?: {
         area: number;
         perimeter: number;
         major_axis_length: number;
@@ -38,9 +43,6 @@ type AdminImage = {
         equivalent_diameter: number;
         bean_type: string;
     };
-    userName: string;
-    userRole: string;
-    submissionDate: string;
 };
 
 type ImageDetailsModalProps = {
@@ -185,7 +187,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                             )}
 
                             {/* Bean Type and Validation Status for Admin */}
-                            {type === 'admin' && 'bean_type' in image && (
+                            {type === 'admin' && ('bean_type' in image || (image.predictions && !Array.isArray(image.predictions) && 'bean_type' in image.predictions)) && (
                                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                                     <h3 className="text-lg font-semibold text-green-800 mb-2">Classification</h3>
                                     <div className="space-y-3">
@@ -202,7 +204,11 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                                                     <option value="Liberica">Liberica</option>
                                                 </select>
                                             ) : (
-                                                <p className="text-xl font-bold text-green-900">{image.bean_type}</p>
+                                                <p className="text-xl font-bold text-green-900">
+                                                    {('bean_type' in image && image.bean_type) || 
+                                                     (image.predictions && !Array.isArray(image.predictions) && image.predictions.bean_type) || 
+                                                     'Unknown'}
+                                                </p>
                                             )}
                                         </div>
                                         <div>
@@ -235,7 +241,11 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                                                     className="ml-2 border border-gray-300 rounded px-2 py-1 text-sm w-full mt-1"
                                                 />
                                             ) : (
-                                                <p className="text-green-900">{image.location}</p>
+                                                <>
+                                                    {type === 'admin' && (image as AdminImage).locationName !== undefined && (
+                                                        <p className="text-green-900">{(image as AdminImage).locationName || 'Unknown location'}</p>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                         {(image as any).allegedVariety && (
@@ -261,7 +271,11 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                             {type === 'predicted' && 'predictions' in image && (
                                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                                     <h3 className="text-xl font-bold text-green-800 mb-2">
-                                        {image.is_validated ? 'Bean Type:' : 'Predicted Bean Type:'} {image.predictions.bean_type}
+                                        {image.is_validated ? 'Bean Type:' : 'Predicted Bean Type:'} {
+                                            'bean_type' in image 
+                                                ? image.bean_type || image.predictions?.bean_type || 'Unknown'
+                                                : image.predictions?.bean_type || 'Unknown'
+                                        }
                                     </h3>
                                     <p className="text-sm text-green-600">
                                         {image.is_validated ? 'Validation completed' : 'AI-powered analysis completed with high confidence'}
@@ -290,7 +304,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                                     <div className="bg-gray-50 p-4 rounded-lg">
                                         <span className="text-sm font-medium text-gray-600">Length</span>
                                         {
-                                            image.predictions.major_axis_length ? (
+                                            image.predictions?.major_axis_length ? (
                                                 <p className="text-2xl font-bold text-gray-900">
                                                     {image.predictions.major_axis_length.toFixed(1)} <span className="text-lg text-gray-600">px</span>
                                                 </p>
@@ -301,7 +315,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                                     <div className="bg-gray-50 p-4 rounded-lg">
                                         <span className="text-sm font-medium text-gray-600">Width</span>
                                         {
-                                            image.predictions.minor_axis_length ? (
+                                            image.predictions?.minor_axis_length ? (
                                                 <p className="text-2xl font-bold text-gray-900">
                                                     {image.predictions.minor_axis_length.toFixed(1)} <span className="text-lg text-gray-600">px</span>
                                                 </p>
@@ -312,7 +326,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                                     <div className="bg-gray-50 p-4 rounded-lg">
                                         <span className="text-sm font-medium text-gray-600">Size (Area)</span>
                                         {
-                                            image.predictions.area ? (
+                                            image.predictions?.area ? (
                                                 <p className="text-2xl font-bold text-gray-900">
                                                     {image.predictions.area.toFixed(0)} <span className="text-lg text-gray-600">px²</span>
                                                 </p>
@@ -323,7 +337,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                                     <div className="bg-gray-50 p-4 rounded-lg">
                                         <span className="text-sm font-medium text-gray-600">Shape Quality</span>
                                         {
-                                            image.predictions.solidity ? (
+                                            image.predictions?.solidity ? (
                                                 <p className="text-2xl font-bold text-gray-900">
                                                     {(image.predictions.solidity * 100).toFixed(0)}<span className="text-lg text-gray-600">%</span>
                                                 </p>
@@ -335,7 +349,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                             ) : (
                                 // Detailed view - all morphological features
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {Object.entries(image.predictions).filter(([key]) => key !== 'bean_type').map(([key, value]) => (
+                                    {image.predictions && Object.entries(image.predictions).filter(([key]) => key !== 'bean_type').map(([key, value]) => (
                                         <div key={key} className="bg-gray-50 p-3 rounded-lg">
                                             <span className="text-sm font-medium text-gray-600 capitalize">
                                                 {key.replace(/_/g, ' ')}
@@ -356,7 +370,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                         <div className="mt-6">
                             <h4 className="text-lg font-semibold mb-4 text-gray-800">Morphological Analysis</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {Object.entries(image.predictions).filter(([key]) => key !== 'bean_type').map(([key, value]) => (
+                                {image.predictions && Object.entries(image.predictions).filter(([key]) => key !== 'bean_type').map(([key, value]) => (
                                     <div key={key} className="bg-gray-50 p-3 rounded-lg">
                                         <span className="text-sm font-medium text-gray-600 capitalize">
                                             {key.replace(/_/g, ' ')}

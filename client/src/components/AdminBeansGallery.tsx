@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AdminService } from '@/services/adminService';
 import type { AdminPredictedImage, AdminImageFilters, PaginationData } from '@/interfaces/global';
 import ImageDetailsModal from './ImageDetailsModal';
+import EnhancedImageDetailsModal from './EnhancedImageDetailsModal';
 import GalleryComponent from './GalleryComponent';
 
 type FolderViewMode = 'grid' | 'list';
@@ -309,13 +310,14 @@ const AdminBeansGallery: React.FC = () => {
                                                         images={userGroup.images.map(img => ({
                                                             id: img.id,
                                                             src: img.src,
-                                                            bean_type: img.predictions.bean_type,
-                                                            is_validated: img.validated === 'verified',
-                                                            location: img.locationName,
+                                                            bean_type: img.bean_type,
+                                                            is_validated: img.is_validated,
+                                                            location: img.locationName || 'Unknown',
                                                             predictions: img.predictions,
                                                             userName: img.userName,
                                                             userRole: img.userRole,
-                                                            submissionDate: img.submissionDate
+                                                            submissionDate: img.submissionDate,
+                                                            allegedVariety: img.allegedVariety || undefined
                                                         }))}
                                                         type="admin"
                                                         onDeleteImage={handleDelete}
@@ -376,29 +378,55 @@ const AdminBeansGallery: React.FC = () => {
 
             {/* Modal */}
             {selectedImage && (
-                <ImageDetailsModal
-                    isOpen={isModalOpen}
-                    onClose={() => {
-                        setIsModalOpen(false);
-                        setSelectedImage(null);
-                        setIsEditing(false);
-                    }}
-                    image={{
-                        id: selectedImage.id,
-                        src: selectedImage.src,
-                        bean_type: selectedImage.predictions.bean_type,
-                        is_validated: selectedImage.validated === 'verified',
-                        location: selectedImage.locationName,
-                        predictions: selectedImage.predictions,
-                        userName: selectedImage.userName,
-                        userRole: selectedImage.userRole,
-                        submissionDate: selectedImage.submissionDate
-                    }}
-                    type="admin"
-                    isEditing={isEditing}
-                    onSave={handleSaveEdit}
-                    onDelete={handleDelete}
-                />
+                <>
+                    {selectedImage.predictions && Array.isArray(selectedImage.predictions) ? (
+                        <EnhancedImageDetailsModal
+                            isOpen={isModalOpen}
+                            onClose={() => {
+                                setIsModalOpen(false);
+                                setSelectedImage(null);
+                                setIsEditing(false);
+                            }}
+                            image={{
+                                id: selectedImage.id,
+                                src: selectedImage.src,
+                                predictions: selectedImage.predictions,
+                                submissionDate: selectedImage.submissionDate,
+                                allegedVariety: selectedImage.allegedVariety || undefined,
+                                userName: selectedImage.userName,
+                                userRole: selectedImage.userRole
+                            }}
+                            userRole="admin"
+                        />
+                    ) : (
+                        <ImageDetailsModal
+                            isOpen={isModalOpen}
+                            onClose={() => {
+                                setIsModalOpen(false);
+                                setSelectedImage(null);
+                                setIsEditing(false);
+                            }}
+                            image={{
+                                id: selectedImage.id,
+                                src: selectedImage.src,
+                                userId: selectedImage.userId,
+                                userName: selectedImage.userName,
+                                userRole: selectedImage.userRole,
+                                locationId: selectedImage.locationId,
+                                locationName: selectedImage.locationName,
+                                submissionDate: selectedImage.submissionDate,
+                                is_validated: selectedImage.is_validated,
+                                allegedVariety: selectedImage.allegedVariety || undefined,
+                                bean_type: selectedImage.bean_type,
+                                predictions: selectedImage.predictions
+                            }}
+                            type="admin"
+                            isEditing={isEditing}
+                            onSave={handleSaveEdit}
+                            onDelete={handleDelete}
+                        />
+                    )}
+                </>
             )}
         </div>
     );
