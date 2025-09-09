@@ -109,6 +109,13 @@ def process_bean(request):
     img = Image.open(file_obj)
     img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
+    if extractor.extract_mm_per_px(img) is False:
+        return Response({"error": "Calibration marker not found"}, status=400)
+    
+    img_debug, h, w = extractor.extract_mm_per_px(img)
+
+    print(f"Image dimensions: {w}mm x{h}mm")
+
     # Run bean feature extraction
     black_bg, mask, gray = extractor.preprocess_image(img)
     features, bbox = extractor.extract_features(mask, gray)
@@ -130,7 +137,17 @@ def process_bean(request):
 
     img_str = settings.MEDIA_URL + "processed/" + filename
 
+    # Do the filepath saving to img_debug as well
+    filepath2 = os.path.join(folder, f"debug_{filename}")
+    cv2.imwrite(filepath2, img_debug)
+
+    img_debug_str = settings.MEDIA_URL + "processed/" + f"debug_{filename}"
+
     return Response({
         "features": features,
-        "processed_image": img_str
+        "processed_image": img_str,
+        "image_debug" : img_debug_str
     })
+
+
+
