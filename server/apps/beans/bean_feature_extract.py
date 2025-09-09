@@ -1,8 +1,10 @@
-import cv2
+import cv2, os
 import numpy as np
 from skimage.measure import label, regionprops
 from ultralytics import YOLO
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+MODEL = os.path.join(current_dir, "my_model", "my_model.pt")
 class BeanFeatureExtractor:
     def __init__(self, marker_length=20):
         """
@@ -10,7 +12,8 @@ class BeanFeatureExtractor:
         """
         self.mm_per_px = None
         self.marker_length = marker_length
-        self.model = YOLO()
+        self.model = YOLO(MODEL)
+
 
     def extract_mm_per_px(self, img):
         try:
@@ -80,53 +83,129 @@ class BeanFeatureExtractor:
         except Exception:
             pass
         
-        _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        if np.mean(gray[mask == 255]) > np.mean(gray[mask == 0]):
-            mask = cv2.bitwise_not(mask)
+        # Use YOLO model to detect beans
+        results = self.model(img)
+        bean_mask = np.zeros_like(gray, dtype=np.uint8)
+        bean_bboxes = []
         
-        # Apply ArUco exclusion mask
-        mask = cv2.bitwise_and(mask, aruco_mask)
+        for result in results:
+            if result.boxes is not None:
+                for box in result.boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    # Create mask for detected bean area
+                    cv2.rectangle(bean_mask, (x1, y1), (x2, y2), 255, -1)
+                    bean_bboxes.append((x1, y1, x2-x1, y2-y1))
         
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5,5), np.uint8))
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((7,7), np.uint8))
-        labeled = label(mask)
-        props = regionprops(labeled)
-        if len(props) > 0:
-            largest = max(props, key=lambda x: x.area)
-            new_mask = np.zeros_like(mask)
-            new_mask[labeled == largest.label] = 255
-            mask = new_mask
+        # Apply ArUco exclusion mask to bean mask
+        bean_mask = cv2.bitwise_and(bean_mask, aruco_mask)
+        
+        # Apply morphological operations
+        bean_mask = cv2.morphologyEx(bean_mask, cv2.MORPH_OPEN, np.ones((5,5), np.uint8))
+        bean_mask = cv2.morphologyEx(bean_mask, cv2.MORPH_CLOSE, np.ones((7,7), np.uint8))
+        
+        # Create output image with detected beans
         black_bg = np.zeros_like(img)
-        black_bg[mask == 255] = img[mask == 255]
-        return black_bg, mask, gray
+        black_bg[bean_mask == 255] = img[bean_mask == 255]
+        
+        return black_bg, bean_mask, gray, bean_bboxes
+    
+    def draw_bbox(self, img, bboxes):
+        debug_img = img.copy()
+        for i, bbox in enumerate(bboxes):
+            x, y, w, h = bbox
+            cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+            if self.mm_per_px is not None:
+                cv2.putText(debug_img, f"{w*self.mm_per_px:.1f}x{h*self.mm_per_px:.1f}mm", 
+                           (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+            cv2.putText(debug_img, f"Bean {i+1}", (x, y-25), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+        return debug_img
+
+    def extract_features_for_all_beans(self, mask, gray, bean_bboxes):
+        """
+        Extract features for all detected beans
+        """
+        all_beans = []
+        
+        # If no YOLO detections, fall back to connected components
+        if not bean_bboxes:
+            labeled = label(mask)
+            props = regionprops(labeled, intensity_image=gray)
+            
+            for i, bean in enumerate(props):
+                if bean.area > 100:  # Filter small noise
+                    features = self._calculate_bean_features(bean)
+                    minr, minc, maxr, maxc = bean.bbox
+                    bbox = (minc, minr, maxc-minc, maxr-minr)
+                    
+                    all_beans.append({
+                        "bean_id": i + 1,
+                        "length_mm": features["major_axis_length_mm"],
+                        "width_mm": features["minor_axis_length_mm"],
+                        "bbox": bbox,
+                        "features": features
+                    })
+        else:
+            # Process each YOLO detected bean
+            for i, (x, y, w, h) in enumerate(bean_bboxes):
+                # Extract region for this bean
+                bean_region_mask = np.zeros_like(mask)
+                bean_region_mask[y:y+h, x:x+w] = mask[y:y+h, x:x+w]
+                
+                # Get properties for this specific bean region
+                labeled = label(bean_region_mask)
+                props = regionprops(labeled, intensity_image=gray)
+                
+                if props:
+                    # Take the largest component in this region
+                    bean = max(props, key=lambda x: x.area)
+                    features = self._calculate_bean_features(bean)
+                    
+                    all_beans.append({
+                        "bean_id": i + 1,
+                        "length_mm": features["major_axis_length_mm"],
+                        "width_mm": features["minor_axis_length_mm"],
+                        "bbox": (x, y, w, h),
+                        "features": features
+                    })
+        
+        return all_beans
+    
+    def _calculate_bean_features(self, bean_props):
+        """
+        Calculate standardized features for a bean
+        """
+        return {
+            "area_mm2": bean_props.area * (self.mm_per_px**2),
+            "perimeter_mm": bean_props.perimeter * self.mm_per_px,
+            "major_axis_length_mm": bean_props.major_axis_length * self.mm_per_px,
+            "minor_axis_length_mm": bean_props.minor_axis_length * self.mm_per_px,
+            "eccentricity": bean_props.eccentricity,
+            "extent": bean_props.extent,
+            "equivalent_diameter_mm": bean_props.equivalent_diameter * self.mm_per_px,
+            "solidity": bean_props.solidity,
+            "mean_intensity": bean_props.mean_intensity,
+            "aspect_ratio": bean_props.major_axis_length / bean_props.minor_axis_length if bean_props.minor_axis_length > 0 else 0
+        }
 
     def extract_features(self, mask, gray):
+        # Keep for backward compatibility, but now returns single bean
         labeled = label(mask)
         props = regionprops(labeled, intensity_image=gray)
         if len(props) == 0:
             return None, None
         bean = max(props, key=lambda x: x.area)
-        features = {
-            "area_mm2": bean.area * (self.mm_per_px**2),
-            "perimeter_mm": bean.perimeter * self.mm_per_px,
-            "major_axis_length_mm": bean.major_axis_length * self.mm_per_px,
-            "minor_axis_length_mm": bean.minor_axis_length * self.mm_per_px,
-            "eccentricity": bean.eccentricity,
-            "extent": bean.extent,
-            "equivalent_diameter_mm": bean.equivalent_diameter * self.mm_per_px,
-            "solidity": bean.solidity,
-            "mean_intensity": bean.mean_intensity
-        }
+        features = self._calculate_bean_features(bean)
         minr, minc, maxr, maxc = bean.bbox
         bbox = (minc, minr, maxc-minc, maxr-minr)
         return features, bbox
-
-    def draw_bbox(self, img, bbox):
-        x, y, w, h = bbox
-        debug_img = img.copy()
-        cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0,0,255), 2)
-        cv2.putText(debug_img, f"{w*self.mm_per_px:.2f} mm", (x, y-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,0), 2)
-        cv2.putText(debug_img, f"{h*self.mm_per_px:.2f} mm", (x+w+5, y+h//2),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,0), 2)
-        return debug_img
+    
+    def save_temporary_image(self, img, folder, prefix="temp"):
+        """
+        Save image temporarily with expiry
+        """
+        import uuid
+        filename = f"{prefix}_{uuid.uuid4()}.png"
+        filepath = os.path.join(folder, filename)
+        cv2.imwrite(filepath, img)
+        return filename
