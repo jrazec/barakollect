@@ -10,7 +10,7 @@ import { storageService } from '@/services/storageService';
 
 const BeansGallery: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Validated');
-  const [images, setImages] = useState<BeanImage[]>([]);
+  const [allImages, setAllImages] = useState<BeanImage[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,43 +24,48 @@ const BeansGallery: React.FC = () => {
 
   useEffect(() => {
     if (userId) {
-      fetchImages();
+      fetchAllImages();
     }
-  }, [activeTab, userId]);
+  }, [userId]);
 
-  const fetchImages = async () => {
+  const fetchAllImages = async () => {
     if (!userId) return;
     
     setIsLoading(true);
     try {
-      // Determine validation status based on active tab
-      const isValidated = activeTab === 'Validated';
+      // Fetch all researcher's images without validation filter
+      const userImages = await storageService.getUserImages(userId, 'researcher');
       
-      // Fetch researcher's own images with validation filter
-      const userImages = await storageService.getUserImages(userId, 'researcher', isValidated);
-      
-      setImages(userImages);
+      setAllImages(userImages);
       console.log(userImages);
     } catch (error) {
       console.error('Error fetching images:', error);
-      setImages([]);
+      setAllImages([]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Filter images based on active tab
+  const filteredImages = allImages.filter(img => {
+    if (activeTab === 'Validated') {
+      return img.is_validated === true;
+    } else {
+      return img.is_validated === false || img.is_validated === null;
+    }
+  });
+
   // Convert BeanImage to format expected by GalleryComponent
-  const convertedImages = images.map(img => ({
+  const convertedImages = filteredImages.map(img => ({
     id: img.id,
     src: img.src,
-    bean_type: img.predictions.bean_type,
-    is_validated: img.is_validated,
-    location: img.locationName,
     predictions: img.predictions,
     userName: img.userName,
     userRole: img.userRole,
     submissionDate: img.submissionDate,
-    allegedVariety: img.allegedVariety
+    allegedVariety: img.allegedVariety,
+    location: img.locationName,
+    is_validated: img.is_validated
   }));
 
   return (

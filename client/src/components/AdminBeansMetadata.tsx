@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AdminService } from '@/services/adminService';
 import type { AdminPredictedImage, AdminImageFilters } from '@/interfaces/global';
 import ImageDetailsModal from './ImageDetailsModal';
+import EnhancedImageDetailsModal from './EnhancedImageDetailsModal';
 import TableComponent, { type TableColumn } from './TableComponent';
 
 const AdminBeansMetadata: React.FC = () => {
@@ -159,21 +160,44 @@ const AdminBeansMetadata: React.FC = () => {
             key: 'bean_type',
             label: 'Bean Type',
             width: 'w-1/6',
-            render: (_, row) => (
-                <div className="text-sm text-[var(--espresso-black)]">{row.predictions.bean_type}</div>
-            )
+            render: (_, row) => {
+                // Handle both legacy and new formats
+                let beanType = 'Unknown';
+                if (row.bean_type) {
+                    // Legacy single bean prediction
+                    beanType = row.bean_type;
+                } else if (row.predictions) {
+                    if (Array.isArray(row.predictions)) {
+                        // New multi-bean format - show first bean type or count
+                        beanType = row.predictions.length > 0 
+                            ? row.predictions.length === 1 
+                                ? row.predictions[0].bean_type 
+                                : `${row.predictions.length} beans detected`
+                            : 'No beans detected';
+                    } else {
+                        // Legacy prediction object format
+                        beanType = row.predictions.bean_type || 'Unknown';
+                    }
+                }
+                return (
+                    <div className="text-sm text-[var(--espresso-black)]">{beanType}</div>
+                );
+            }
         },
         {
-            key: 'validated',
+            key: 'is_validated',
             label: 'Status',
             width: 'w-1/6',
-            render: (value) => (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    value === 'verified' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                    {value.charAt(0).toUpperCase() + value.slice(1)}
-                </span>
-            )
+            render: (value) => {
+                const isValidated = value === true;
+                return (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        isValidated ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                        {isValidated ? 'Verified' : 'Pending'}
+                    </span>
+                );
+            }
         },
         {
             key: 'locationName',
@@ -361,29 +385,55 @@ const AdminBeansMetadata: React.FC = () => {
 
             {/* Edit Modal */}
             {selectedImage && (
-                <ImageDetailsModal
-                    isOpen={isModalOpen}
-                    onClose={() => {
-                        setIsModalOpen(false);
-                        setSelectedImage(null);
-                        setIsEditing(false);
-                    }}
-                    image={{
-                        id: selectedImage.id,
-                        src: selectedImage.src,
-                        bean_type: selectedImage.predictions.bean_type,
-                        is_validated: selectedImage.validated === 'verified',
-                        location: selectedImage.locationName,
-                        predictions: selectedImage.predictions,
-                        userName: selectedImage.userName,
-                        userRole: selectedImage.userRole,
-                        submissionDate: selectedImage.submissionDate
-                    }}
-                    type="admin"
-                    isEditing={isEditing}
-                    onSave={handleSaveEdit}
-                    onDelete={handleDeleteClick}
-                />
+                <>
+                    {selectedImage.predictions && Array.isArray(selectedImage.predictions) ? (
+                        <EnhancedImageDetailsModal
+                            isOpen={isModalOpen}
+                            onClose={() => {
+                                setIsModalOpen(false);
+                                setSelectedImage(null);
+                                setIsEditing(false);
+                            }}
+                            image={{
+                                id: selectedImage.id,
+                                src: selectedImage.src,
+                                predictions: selectedImage.predictions,
+                                submissionDate: selectedImage.submissionDate,
+                                allegedVariety: selectedImage.allegedVariety || undefined,
+                                userName: selectedImage.userName,
+                                userRole: selectedImage.userRole
+                            }}
+                            userRole="admin"
+                        />
+                    ) : (
+                        <ImageDetailsModal
+                            isOpen={isModalOpen}
+                            onClose={() => {
+                                setIsModalOpen(false);
+                                setSelectedImage(null);
+                                setIsEditing(false);
+                            }}
+                            image={{
+                                id: selectedImage.id,
+                                src: selectedImage.src,
+                                userId: selectedImage.userId,
+                                userName: selectedImage.userName,
+                                userRole: selectedImage.userRole,
+                                locationId: selectedImage.locationId,
+                                locationName: selectedImage.locationName,
+                                submissionDate: selectedImage.submissionDate,
+                                is_validated: selectedImage.is_validated,
+                                allegedVariety: selectedImage.allegedVariety || undefined,
+                                bean_type: selectedImage.bean_type,
+                                predictions: selectedImage.predictions
+                            }}
+                            type="admin"
+                            isEditing={isEditing}
+                            onSave={handleSaveEdit}
+                            onDelete={handleDeleteClick}
+                        />
+                    )}
+                </>
             )}
 
             {/* Delete Confirmation Modal */}

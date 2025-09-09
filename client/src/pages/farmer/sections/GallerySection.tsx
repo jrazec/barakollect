@@ -10,7 +10,7 @@ interface GallerySectionProps {
 }
 
 const GallerySection: React.FC<GallerySectionProps> = ({ activeTab }) => {
-    const [images, setImages] = React.useState<BeanImage[]>([]);
+    const [allImages, setAllImages] = React.useState<BeanImage[]>([]);
     const [userId, setUserId] = React.useState<string | null>(null);
     const [isLoading, setIsLoading] = React.useState(false);
 
@@ -23,32 +23,38 @@ const GallerySection: React.FC<GallerySectionProps> = ({ activeTab }) => {
     }, []);
 
     React.useEffect(() => {
-        const fetchImages = async () => {
+        const fetchAllImages = async () => {
             if (!userId) return;
             
             setIsLoading(true);
             try {
-                // Determine validation status based on active tab
-                const isValidated = activeTab === 'Validated';
+                // Fetch all user's images without validation filter
+                const userImages = await storageService.getUserImages(userId, 'farmer');
                 
-                // Fetch user's images with validation filter
-                const userImages = await storageService.getUserImages(userId, 'farmer', isValidated);
-                
-                setImages(userImages);
+                setAllImages(userImages);
                 console.log(userImages);
             } catch (error) {
                 console.error('Error fetching images:', error);
-                setImages([]);
+                setAllImages([]);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchImages();
-    }, [activeTab, userId]);
+        fetchAllImages();
+    }, [userId]);
+
+    // Filter images based on active tab
+    const filteredImages = allImages.filter(img => {
+        if (activeTab === 'Validated') {
+            return img.is_validated === true;
+        } else {
+            return img.is_validated === false || img.is_validated === null;
+        }
+    });
 
     // Convert BeanImage to format expected by GalleryComponent (predicted type)
-    const convertedImages = images.map(img => ({
+    const convertedImages = filteredImages.map(img => ({
         src: img.src,
         is_validated: img.is_validated,
         predictions: img.predictions
