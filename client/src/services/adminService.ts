@@ -357,6 +357,101 @@ const tempFarmDetails: Record<string, FarmDetails> = {
 // Temporary admin image data
 const tempAdminImages: AdminPredictedImage[] = [
   {
+    id: "66",
+    src: "https://sodfcdrqpvcsblclppne.supabase.co/storage/v1/object/sign/Beans/uploads/34288323-8234-474d-9a35-713327ae5c8b/5b716e27-6456-4bf0-9e4d-0c6353218083.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8xNzRlYzA5MS0zNGY4LTRmOTItYmI1MS1hOWI3ZmQzYmM1MDYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJCZWFucy91cGxvYWRzLzM0Mjg4MzIzLTgyMzQtNDc0ZC05YTM1LTcxMzMyN2FlNWM4Yi81YjcxNmUyNy02NDU2LTRiZjAtOWU0ZC0wYzYzNTMyMTgwODMucG5nIiwiaWF0IjoxNzU3NDIwNTk2LCJleHAiOjE3NTc0MjQxOTZ9.KStS8cvheHiKb3gxc-b8lFh_Gz0ZTj2YMTt9koDuCrY",
+    userId: "34288323-8234-474d-9a35-713327ae5c8b",
+    userName: "Jiro Meru",
+    userRole: "farmer",
+    locationId: null,
+    locationName: null,
+    submissionDate: "2025-09-09T10:53:36.635Z",
+    is_validated: false,
+    allegedVariety: null,
+    predictions: [
+      {
+        bean_id: 1,
+        is_validated: false,
+        bean_type: "Alleged Liberica",
+        confidence: 0.76,
+        length_mm: 13.496,
+        width_mm: 9.403,
+        bbox: [1081, 165, 122, 85],
+        comment: "",
+        detection_date: "2025-09-09T10:53:38.722Z"
+      },
+      {
+        bean_id: 2,
+        is_validated: false,
+        bean_type: "Alleged Liberica",
+        confidence: 0.76,
+        length_mm: 12.058,
+        width_mm: 9.624,
+        bbox: [215, 787, 109, 87],
+        comment: "",
+        detection_date: "2025-09-09T10:53:38.900Z"
+      },
+      {
+        bean_id: 3,
+        is_validated: false,
+        bean_type: "Alleged Liberica",
+        confidence: 0.76,
+        length_mm: 13.496,
+        width_mm: 9.182,
+        bbox: [1094, 790, 122, 83],
+        comment: "",
+        detection_date: "2025-09-09T10:53:39.082Z"
+      },
+      {
+        bean_id: 4,
+        is_validated: false,
+        bean_type: "Alleged Liberica",
+        confidence: 0.76,
+        length_mm: 13.939,
+        width_mm: 8.296,
+        bbox: [218, 202, 126, 75],
+        comment: "",
+        detection_date: "2025-09-09T10:53:39.264Z"
+      }
+    ]
+  },
+  {
+    id: "67",
+    src: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400",
+    userId: "12345678-9abc-def0-1234-567890abcdef",
+    userName: "Maria Santos",
+    userRole: "researcher",
+    locationId: "farm1",
+    locationName: "Santos Coffee Farm",
+    submissionDate: "2025-09-08T14:30:15.123Z",
+    is_validated: true,
+    allegedVariety: "Robusta Premium",
+    predictions: [
+      {
+        bean_id: 1,
+        is_validated: true,
+        bean_type: "Robusta",
+        confidence: 0.89,
+        length_mm: 11.234,
+        width_mm: 8.567,
+        bbox: [450, 230, 98, 76],
+        comment: "Excellent specimen",
+        detection_date: "2025-09-08T14:30:17.456Z"
+      },
+      {
+        bean_id: 2,
+        is_validated: true,
+        bean_type: "Robusta",
+        confidence: 0.92,
+        length_mm: 10.875,
+        width_mm: 8.234,
+        bbox: [680, 456, 94, 72],
+        comment: "Good quality",
+        detection_date: "2025-09-08T14:30:17.789Z"
+      }
+    ]
+  },
+  // Legacy single bean prediction (for backward compatibility)
+  {
     id: "120",
     src: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400",
     userId: "12",
@@ -365,8 +460,9 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm2",
     locationName: "Kenya Coffee Farm",
     submissionDate: "2024-01-15",
-    validated: "verified",
+    is_validated: true,
     allegedVariety: "Arabica Premium",
+    bean_type: "Arabica", // Legacy field
     predictions: {
       area: 1520.5,
       perimeter: 125.3,
@@ -390,8 +486,9 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm2",
     locationName: "Kenya Coffee Farm",
     submissionDate: "2024-01-15",
-    validated: "verified",
+    is_validated: true,
     allegedVariety: "Arabica Classic",
+    bean_type: "Arabica", // Legacy field
     predictions: {
       area: 1520.5,
       perimeter: 125.3,
@@ -415,7 +512,8 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm2",
     locationName: "Kenya Coffee Farm",
     submissionDate: "2024-01-15",
-    validated: "verified",
+    is_validated: true,
+    bean_type: "Arabica", // Legacy field
     predictions: {
       area: 1520.5,
       perimeter: 125.3,
@@ -439,8 +537,9 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm1",
     locationName: "Kenya Coffee Farm",
     submissionDate: "2024-01-15",
-    validated: "verified",
+    is_validated: true,
     allegedVariety: "Liberica Premium",
+    bean_type: "Liberica", // Legacy field
     predictions: {
       area: 1520.5,
       perimeter: 125.3,
@@ -452,9 +551,10 @@ const tempAdminImages: AdminPredictedImage[] = [
       solidity: 0.95,
       mean_intensity: 128.5,
       equivalent_diameter: 43.7,
-      bean_type: "Arabica",
+      bean_type: "Liberica",
     },
   },
+  
   {
     id: "2",
     src: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400",
@@ -464,7 +564,8 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm2",
     locationName: "Brazil Plantation",
     submissionDate: "2024-01-16",
-    validated: "pending",
+    is_validated: false,
+    bean_type: "Robusta", // Legacy field
     predictions: {
       area: 1480.2,
       perimeter: 120.8,
@@ -488,8 +589,9 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm3",
     locationName: "Ethiopia Highlands",
     submissionDate: "2024-01-17",
-    validated: "verified",
+    is_validated: true,
     allegedVariety: "Ethiopian Heirloom",
+    bean_type: "Arabica", // Legacy field
     predictions: {
       area: 1620.8,
       perimeter: 130.2,
@@ -513,7 +615,8 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm4",
     locationName: "Colombian Highlands",
     submissionDate: "2024-01-18",
-    validated: "pending",
+    is_validated: false,
+    bean_type: "Liberica", // Legacy field
     predictions: {
       area: 1380.5,
       perimeter: 115.6,
@@ -537,8 +640,9 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm1",
     locationName: "Kenya Coffee Farm",
     submissionDate: "2024-01-19",
-    validated: "verified",
+    is_validated: true,
     allegedVariety: "Robusta Supreme",
+    bean_type: "Robusta", // Legacy field
     predictions: {
       area: 1555.3,
       perimeter: 127.8,
@@ -550,7 +654,7 @@ const tempAdminImages: AdminPredictedImage[] = [
       solidity: 0.96,
       mean_intensity: 130.2,
       equivalent_diameter: 44.3,
-      bean_type: "Arabica",
+      bean_type: "Robusta",
     },
   },
   {
@@ -562,7 +666,8 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm5",
     locationName: "Uganda Cooperative",
     submissionDate: "2024-01-20",
-    validated: "pending",
+    is_validated: false,
+    bean_type: "Robusta", // Legacy field
     predictions: {
       area: 1420.7,
       perimeter: 118.4,
@@ -910,8 +1015,9 @@ export class AdminService {
 
       // Apply status filter
       if (status) {
+        const isVerified = status === "verified";
         filteredImages = filteredImages.filter(
-          (img) => img.validated === status
+          (img) => img.is_validated === isVerified
         );
       }
 
@@ -1027,7 +1133,7 @@ export class AdminService {
 
       await new Promise((resolve) => setTimeout(resolve, 100));
       const locations = [
-        ...new Set(tempAdminImages.map((img) => img.locationName)),
+        ...new Set(tempAdminImages.map((img) => img.locationName).filter((location): location is string => location !== null)),
       ];
       return locations;
     } catch (error) {
