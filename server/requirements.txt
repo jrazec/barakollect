@@ -60,10 +60,10 @@ supabase_auth==2.12.3
 supabase_functions==0.10.1
 sympy==1.14.0
 tifffile==2025.8.28
-torch==2.8.0
-torchvision==0.23.0
-typing-inspection==0.4.1
-typing_extensions==4.14.1
+# CPU-only PyTorch + Torchvision
+torch==2.2.0+cpu
+torchvision==0.17.0+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
 ultralytics==8.3.196
 ultralytics-thop==2.0.17
 urllib3==2.5.0
