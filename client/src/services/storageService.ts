@@ -4,7 +4,9 @@ import type {
   FarmFolder,
   PaginationData,
   MultiImageProcessingResponse,
+  Location
 } from "@/interfaces/global";
+import { supabase } from "@/lib/supabaseClient";
 
 export interface UploadImageRequest {
   user_id: string;
@@ -595,6 +597,20 @@ class StorageService {
       }
     } catch (error: any) {
       throw new Error(error.message || "Failed to retrieve images");
+    }
+  }
+
+  async getLocationForSignup(): Promise<Location[]> {
+    try {
+      const { data, error } = await supabase.from('locations').select('id, name');
+
+      if (error) {
+        throw new Error(error.message || "Failed to retrieve locations");
+      }
+      return data;
+
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to retrieve locations");
     }
   }
 }

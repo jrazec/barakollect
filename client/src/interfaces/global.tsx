@@ -114,7 +114,8 @@ export interface UserManagementUser {
   last_login: string,
   username: string,
   role: 'farmer' | 'researcher' | 'admin',
-  location: string,
+  location__name: string,
+  location_id: string,
   email: string,
   is_deleted?: boolean,
   created_at?: string,
@@ -300,3 +301,8 @@ export interface MultiImageProcessingResponse {
   total_images_processed: number;
   total_beans_detected: number;
 }
+
+export type Location = {
+    id: string;
+    name: string;
+};

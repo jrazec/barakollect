@@ -57,7 +57,7 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
               </div>
               <div className="flex justify-between">
                 <span>Validated Uploads:</span>
-                <span className="font-medium">{farmDetails.validatedUploads}/{farmDetails.totalUploads}</span>
+                <span className="font-medium">{farmDetails.validatedUploads}/{farmDetails.imageCount}</span>
               </div>
               <div className="flex justify-between">
                 <span>Quality Rating:</span>
@@ -92,7 +92,7 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
               </div>
               <div className="flex justify-between">
                 <span>Common Types:</span>
-                <span className="font-medium">{farmDetails.aggregatedData.commonBeanTypes.join(', ')}</span>
+                <span className="font-medium">{farmDetails.aggregatedData.commonBeanTypes && farmDetails.aggregatedData.commonBeanTypes.join(', ')}</span>
               </div>
             </div>
           </div>
@@ -119,7 +119,7 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
           <h4 className="font-semibold text-[var(--espresso-black)] mb-3">Quality Distribution</h4>
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="grid grid-cols-3 gap-4 text-sm">
-              {Object.entries(farmDetails.aggregatedData.qualityDistribution).map(([quality, percentage]) => (
+              {farmDetails.aggregatedData.qualityDistribution && Object.entries(farmDetails.aggregatedData.qualityDistribution).map(([quality, percentage]) => (
                 <div key={quality} className="text-center">
                   <div className="font-medium">{quality}</div>
                   <div className="text-2xl font-bold text-[var(--espresso-black)]">{percentage}%</div>
