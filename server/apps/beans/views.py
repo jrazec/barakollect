@@ -65,7 +65,7 @@ def upload_beans(request):
 @api_view(['GET'])
 def get_user_beans(request, user_id):
     # Logic for retrieving beans
-    user_images = ImageBucket.objects.filter(userimage__user_id=user_id).values("image_url", "upload_date", "id",  "userimage__user__location", "userimage__user__first_name", "userimage__user__last_name", "userimage__user__userrole__role__name", "userimage__user__id")
+    user_images = ImageBucket.objects.filter(userimage__user_id=user_id).values("image_url", "upload_date", "id",  "userimage__user__location_id", "userimage__user__first_name", "userimage__user__last_name", "userimage__user__userrole__role__name", "userimage__user__id")
     beans = BeanDetection.objects.filter(image__userimage__user_id=user_id)
 
     """
@@ -108,7 +108,7 @@ def get_user_beans(request, user_id):
             "upload_date": img["upload_date"],
             "id": img["id"],
             "userId": img["userimage__user__id"],
-            "location": img["userimage__user__location"],
+            "location_id": img["userimage__user__location_id"],
             "userName": f"{img['userimage__user__first_name']} {img['userimage__user__last_name']}",
             "userRole": img["userimage__user__userrole__role__name"],
             # Placeholder fields
@@ -250,7 +250,7 @@ def process_bean(request):
                     # Get user location from the User table
                     try:
                         user = User.objects.get(id=user_id)
-                        user_location = user.location if user.location else "Unknown"
+                        user_location = user.location_id if user.location else "Unknown"
                         print(f"DEBUG: Found user {user_id} with location: {user_location}")
                     except User.DoesNotExist:
                         raise Exception(f"User with id {user_id} not found")
