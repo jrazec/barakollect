@@ -30,7 +30,7 @@ const PredictionResultModal: React.FC<PredictionResultModalProps> = ({
 
   if (!isOpen) return null;
 
-  const imageUrl = `${import.meta.env.VITE_HOST_BE}/api/beans${processedImage}`;
+  const imageUrl = `${processedImage}`;
   
   console.log('Backend URL:', import.meta.env.VITE_HOST_BE);
   console.log('Processed Image Path:', processedImage);

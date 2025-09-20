@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
 import EmptyStateNotice from './EmptyStateNotice';
 import ImageDetailsModal from './ImageDetailsModal';
+import EnhancedImageDetailsModal from './EnhancedImageDetailsModal';
 
-
+interface BeanDetection {
+    bean_id: number;
+    is_validated?: boolean | null;
+    bean_type?: string;
+    confidence?: number;
+    length_mm: number;
+    width_mm: number;
+    bbox: [number, number, number, number];
+    comment?: string;
+    detection_date?: string;
+}
 
 type PredictedImage = {
     src: string;
     is_validated?: boolean;
-    predictions: {
+    predictions: BeanDetection[] | {
         area: number;
         perimeter: number;
         major_axis_length: number;
@@ -25,14 +36,14 @@ type PredictedImage = {
 type AdminImage = {
     id: string;
     src: string;
-    bean_type: string;
+    bean_type?: string; // For single bean predictions (legacy)
     is_validated: boolean;
     location: string;
     allegedVariety?: string;
     userName?: string;
     userRole?: string;
     submissionDate?: string;
-    predictions?: {
+    predictions?: BeanDetection[] | {
         area: number;
         perimeter: number;
         major_axis_length: number;
@@ -104,7 +115,6 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                 } : {
                     id: `img_${index}`,
                     src: image,
-                    bean_type: 'Robusta',
                     is_validated: Math.random() > 0.5,
                     location: 'Farm A, Section 2',
                     predictions: {
@@ -255,8 +265,26 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                                     <div className="flex-1">
                                         <p className="text-sm font-medium text-gray-900">{name}</p>
                                         <p className="text-xs text-gray-500">
-                                            {type === 'admin' && typeof image === 'object' && 'bean_type' in image ? 
-                                                `${image.bean_type} • ${image.is_validated ? 'Validated' : 'Pending'}` : 
+                                            {type === 'admin' && typeof image === 'object' && ('bean_type' in image || 'predictions' in image) ? 
+                                                (() => {
+                                                    const adminImg = image as AdminImage;
+                                                    // Handle multi-bean predictions
+                                                    if (adminImg.predictions && Array.isArray(adminImg.predictions)) {
+                                                        return `${adminImg.predictions.length} beans detected • ${adminImg.is_validated ? 'Validated' : 'Pending'}`;
+                                                    }
+                                                    // Handle single bean prediction object
+                                                    else if (adminImg.predictions && !Array.isArray(adminImg.predictions)) {
+                                                        return `${adminImg.predictions.bean_type} • ${adminImg.is_validated ? 'Validated' : 'Pending'}`;
+                                                    }
+                                                    // Handle legacy bean_type field
+                                                    else if (adminImg.bean_type) {
+                                                        return `${adminImg.bean_type} • ${adminImg.is_validated ? 'Validated' : 'Pending'}`;
+                                                    }
+                                                    // Fallback
+                                                    else {
+                                                        return `${adminImg.is_validated ? 'Validated' : 'Pending'}`;
+                                                    }
+                                                })() : 
                                                 type === 'predicted' ? 'Prediction available' : 'Image file'}
                                         </p>
                                     </div>
@@ -279,16 +307,42 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
 
             {/* Modal */}
             {selectedImage && (
-                <ImageDetailsModal
-                    isOpen={isModalOpen}
-                    onClose={() => {
-                        setIsModalOpen(false);
-                        setSelectedImage(null);
-                    }}
-                    image={selectedImage as any}
-                    type={type as 'predicted' | 'admin'}
-                    onDelete={type === 'admin' ? handleDelete : undefined}
-                />
+                <>
+                    {/* Check if we have multi-bean detection data (array of BeanDetection) or if it's admin with multi-bean predictions */}
+                    {(Array.isArray(selectedImage.predictions) || 
+                      (type === 'admin' && selectedImage.predictions && Array.isArray((selectedImage as AdminImage).predictions))) ? (
+                        <EnhancedImageDetailsModal
+                            isOpen={isModalOpen}
+                            onClose={() => {
+                                setIsModalOpen(false);
+                                setSelectedImage(null);
+                            }}
+                            image={{
+                                id: (selectedImage as AdminImage).id,
+                                src: selectedImage.src,
+                                predictions: selectedImage.predictions as BeanDetection[],
+                                userName: (selectedImage as AdminImage).userName,
+                                userRole: (selectedImage as AdminImage).userRole,
+                                location: (selectedImage as AdminImage).location,
+                                submissionDate: (selectedImage as AdminImage).submissionDate,
+                                allegedVariety: (selectedImage as AdminImage).allegedVariety
+                            }}
+                            userRole={type === 'admin' ? 'admin' : 'farmer'}
+                            onDeleteImage={type === 'admin' ? handleDelete : undefined}
+                        />
+                    ) : (
+                        <ImageDetailsModal
+                            isOpen={isModalOpen}
+                            onClose={() => {
+                                setIsModalOpen(false);
+                                setSelectedImage(null);
+                            }}
+                            image={selectedImage as any}
+                            type={type as 'predicted' | 'admin'}
+                            onDelete={type === 'admin' ? handleDelete : undefined}
+                        />
+                    )}
+                </>
             )}
         </div>
     );

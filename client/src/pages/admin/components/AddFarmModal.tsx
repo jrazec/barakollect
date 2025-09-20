@@ -3,21 +3,19 @@ import React, { useState } from 'react';
 interface AddFarmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (farmData: { name: string; lat: number; lng: number; owner: string }) => void;
+  onSubmit: (farmData: { name: string; lat: number; lng: number;  }) => void;
 }
 
 const AddFarmModal: React.FC<AddFarmModalProps> = ({ isOpen, onClose, onSubmit }) => {
   const [farmName, setFarmName] = useState('');
-  const [owner, setOwner] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (farmName.trim() && owner.trim()) {
+    if (farmName.trim()) {
       // Create farm without location initially
       onSubmit({
         name: farmName.trim(),
-        owner: owner.trim(),
-        lat: 0, // Default coordinates
+        lat: 0, 
         lng: 0
       });
       handleClose();
@@ -26,7 +24,7 @@ const AddFarmModal: React.FC<AddFarmModalProps> = ({ isOpen, onClose, onSubmit }
 
   const handleClose = () => {
     setFarmName('');
-    setOwner('');
+
     onClose();
   };
 
@@ -62,19 +60,6 @@ const AddFarmModal: React.FC<AddFarmModalProps> = ({ isOpen, onClose, onSubmit }
             />
           </div>
           
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Owner Name
-            </label>
-            <input
-              type="text"
-              value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--espresso-black)] focus:border-transparent"
-              placeholder="Enter owner name"
-              required
-            />
-          </div>
 
           <div className="flex gap-3 justify-end">
             <button

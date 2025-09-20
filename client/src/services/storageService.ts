@@ -3,12 +3,17 @@ import type {
   BeanImage,
   FarmFolder,
   PaginationData,
+  MultiImageProcessingResponse,
+  Location
 } from "@/interfaces/global";
+import { supabase } from "@/lib/supabaseClient";
 
 export interface UploadImageRequest {
   user_id: string;
   image?: File;
   images?: File[];
+  comment?: string;
+  save_to_db?: boolean;
 }
 
 export interface UploadImageResponse {
@@ -18,6 +23,9 @@ export interface UploadImageResponse {
   images?: string[];
   features?: any;
   processed_image?: string;
+  // New multi-image response structure
+  total_images_processed?: number;
+  total_beans_detected?: number;
 }
 
 // Temporary farm folders for researchers
@@ -296,7 +304,24 @@ const tempAdminImages: AdminPredictedImage[] = [
 // Temporary bean images for researcher annotations
 const tempBeanImages: BeanImage[] = tempAdminImages.map((img) => ({
   ...img,
+  locationId: img.locationId,
+  locationName: img.locationName,
   is_validated: img.validated === "verified",
+  
+  // Convert single prediction to array of bean detections for demo
+  predictions: [
+    {
+      bean_id: 1,
+      is_validated: img.predictions.validated === "verified",
+      bean_type: img.predictions.bean_type,
+      confidence: img.predictions.confidence, // Random confidence between 0.7-1.0
+      length_mm: img.predictions.major_axis_length,
+      width_mm: img.predictions.minor_axis_length,
+      bbox: [50, 50, 100, 150], // Mock bbox
+      comment: img.predictions.comment,
+      detection_date: img.submissionDate
+    }
+  ]
 }));
 
 class StorageService {
@@ -333,10 +358,18 @@ class StorageService {
     }
   }
 
-  async predictImage(data: UploadImageRequest): Promise<UploadImageResponse> {
+  async predictImage(data: UploadImageRequest): Promise<MultiImageProcessingResponse> {
     try {
       const formData = new FormData();
       formData.append("user_id", data.user_id);
+
+      if (data.comment) {
+        formData.append("comment", data.comment);
+      }
+
+      if (data.save_to_db !== undefined) {
+        formData.append("save_to_db", data.save_to_db.toString());
+      }
 
       if (data.image) {
         formData.append("image", data.image);
@@ -396,7 +429,7 @@ class StorageService {
   }
 
   // Bean Image Management Methods for Researcher Annotations
-  async getFarmFolders(researcherId: string): Promise<FarmFolder[]> {
+  async getFarmFolders(_researcherId: string): Promise<FarmFolder[]> {
     try {
       // TODO: Replace with actual API call
       // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/researcher/farm-folders/${researcherId}/`);
@@ -521,7 +554,7 @@ class StorageService {
 
   async getUserImages(
     userId: string,
-    userRole: "farmer" | "researcher",
+    _userRole: "farmer" | "researcher",
     validated?: boolean
   ): Promise<BeanImage[]> {
     try {
@@ -535,20 +568,49 @@ class StorageService {
       }
 
       const data = await response.json();
+      
+      // Transform the backend data to match our interface
+      const transformedImages = data.images.map((img: any) => ({
+        id: img.id,
+        src: img.src,
+        userId: img.userId,
+        userName: img.userName,
+        userRole: img.userRole,
+        locationId: img.location, // Using location as locationId for now
+        locationName: img.location,
+        submissionDate: img.submissionDate || img.upload_date,
+        is_validated: img.predictions && img.predictions.length > 0 
+          ? img.predictions.some((p: any) => p.is_validated === true)
+          : false,
+        allegedVariety: img.allegedVariety,
+        predictions: img.predictions || []
+      }));
+
       // If validated filter is provided, filter the results
-      if (validated) {
-        console.log(data.images);
-        return data.images.filter(
+      if (validated !== undefined) {
+        return transformedImages.filter(
           (img: BeanImage) => img.is_validated === validated
         );
-      }else {
-        console.log(data.images);
-        return data.images.filter(
-          (img: BeanImage) => img.is_validated === false
-        );
+      } else {
+        // Return all images when no filter is specified
+        return transformedImages;
       }
     } catch (error: any) {
       throw new Error(error.message || "Failed to retrieve images");
+    }
+  }
+
+  async getLocationForSignup(): Promise<Location[]> {
+    try {
+      const { data, error } = await supabase.from('locations').select('id, name');
+
+      if (error) {
+        throw new Error(error.message || "Failed to retrieve locations");
+      }
+      return data;
+
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to retrieve locations");
     }
   }
 }

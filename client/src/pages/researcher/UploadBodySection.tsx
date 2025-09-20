@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { storageService } from '../../services/storageService';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
 import PredictionResultModal from '../../components/PredictionResultModal';
+import MultiImagePredictionModal from '../../components/MultiImagePredictionModal';
 import PredictionLoadingModal from '../../components/PredictionLoadingModal';
 import CameraCapture from '../../components/CameraCapture';
 import { supabase } from '../../lib/supabaseClient';
+import type { MultiImageProcessingResponse } from '../../interfaces/global';
 
 interface UploadBodySectionProps {
   activeTab: string;
@@ -20,10 +22,13 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
   const [isUploading, setIsUploading] = useState(false);
   const [isPredicting, setIsPredicting] = useState(false);
   const [showPredictionResult, setShowPredictionResult] = useState(false);
+  const [showMultiImageResult, setShowMultiImageResult] = useState(false);
   const [predictionData, setPredictionData] = useState<{
     features: any;
     processed_image: string;
   } | null>(null);
+  const [multiImageResults, setMultiImageResults] = useState<MultiImageProcessingResponse | null>(null);
+  const [comment, setComment] = useState('');
 
   const handleFileSelect = (files: FileList) => {
     const newFiles = Array.from(files).slice(0, 5 - selectedFiles.length);
@@ -70,35 +75,42 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         
         response = await storageService.predictImage({
           user_id,
+          comment: comment,
+          save_to_db: true, // Always save to database for predictions
           ...(imagesToUpload.length === 1 ? { image: imagesToUpload[0] } : { images: imagesToUpload })
         });
         
         setIsPredicting(false);
         
-        // Handle prediction response - check if we have the required data
-        if (response && response.features && response.processed_image) {
-          console.log('Prediction response:', response);
-          console.log('Features:', response.features);
-          console.log('Processed image path:', response.processed_image);
+        // Handle new multi-image response structure
+        if (response && response.images && response.images.length > 0) {
+          console.log('Multi-image prediction response:', response);
           
-          setPredictionData({
-            features: response.features,
-            processed_image: response.processed_image
-          });
-          setShowPredictionResult(true);
+          // Check if any images were successfully processed
+          const successfulImages = response.images.filter(img => !img.error && img.beans.length > 0);
           
-          // Reset state and clear preview images
-          setCapturedImages([]);
-          setSelectedFiles([]);
-          
-          // Clear the file input as well
-          const fileInput = document.getElementById(`upload-input-${activeTab}`) as HTMLInputElement;
-          if (fileInput) {
-            fileInput.value = '';
+          if (successfulImages.length > 0) {
+            setMultiImageResults(response);
+            setShowMultiImageResult(true);
+            
+            // Reset state and clear preview images
+            setCapturedImages([]);
+            setSelectedFiles([]);
+            setShowPreviewModal(false);
+            setComment('');
+            
+            // Clear the file input as well
+            const fileInput = document.getElementById(`upload-input-${activeTab}`) as HTMLInputElement;
+            if (fileInput) {
+              fileInput.value = '';
+            }
+          } else {
+            // All images failed or no beans detected
+            const errorMessages = response.images.map(img => img.error || 'No beans detected').join(', ');
+            alert(`Prediction failed: ${errorMessages}`);
           }
         } else {
           console.error('Prediction response:', response);
-          console.error('Missing fields - features:', response?.features, 'processed_image:', response?.processed_image);
           alert('Prediction failed or no results returned');
         }
       } else if (activeTab === 'Submit Image') {
@@ -113,6 +125,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
           setCapturedImages([]);
           setSelectedFiles([]);
           setShowPreviewModal(false);
+          setComment('');
           
           // Clear the file input as well
           const fileInput = document.getElementById(`upload-input-${activeTab}`) as HTMLInputElement;
@@ -196,6 +209,17 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
                 <div className="text-sm text-gray-600 mb-2">
                   Selected: {selectedFiles.map(f => f.name).join(', ')}
                 </div>
+                {activeTab === 'Predict Image' && (
+                  <div className="mb-2">
+                    <textarea
+                      placeholder="Add optional comment for analysis..."
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded text-sm resize-none h-16"
+                      maxLength={500}
+                    />
+                  </div>
+                )}
                 <button
                   onClick={() => setShowPreviewModal(true)}
                   className="w-full bg-[var(--espresso-black)] text-white py-2 rounded font-medium"
@@ -229,6 +253,17 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
                 <div className="text-sm text-gray-600 mb-2">
                   Captured {capturedImages.length} photo{capturedImages.length > 1 ? 's' : ''}
                 </div>
+                {activeTab === 'Predict Image' && (
+                  <div className="mb-2">
+                    <textarea
+                      placeholder="Add optional comment for analysis..."
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded text-sm resize-none h-16"
+                      maxLength={500}
+                    />
+                  </div>
+                )}
                 <button
                   onClick={() => setShowPreviewModal(true)}
                   className="w-full bg-[var(--espresso-black)] text-white py-2 rounded font-medium"
@@ -263,12 +298,19 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         {/* Prediction Loading Modal */}
         <PredictionLoadingModal isOpen={isPredicting} />
 
-        {/* Prediction Result Modal */}
+        {/* Prediction Result Modal (Legacy - for old single image results) */}
         <PredictionResultModal
           isOpen={showPredictionResult}
           onClose={() => setShowPredictionResult(false)}
           processedImage={predictionData?.processed_image || ''}
           features={predictionData?.features || {}}
+        />
+
+        {/* Multi-Image Prediction Result Modal */}
+        <MultiImagePredictionModal
+          isOpen={showMultiImageResult}
+          onClose={() => setShowMultiImageResult(false)}
+          results={multiImageResults}
         />
       </div>
     );

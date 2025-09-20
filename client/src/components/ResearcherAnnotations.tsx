@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AdminService } from '@/services/adminService';
 import { supabase } from '@/lib/supabaseClient';
 import type { FarmFolder, BeanImage, PaginationData } from '@/interfaces/global';
 import { storageService } from '@/services/storageService';
+import EnhancedImageDetailsModal from './EnhancedImageDetailsModal';
 
 const ResearcherAnnotations: React.FC = () => {
     const navigate = useNavigate();
@@ -99,20 +99,32 @@ const ResearcherAnnotations: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const handleAnnotation = async (imageId: string, annotations: {
-        allegedVariety?: string;
-        validated: boolean;
-        notes?: string;
-    }) => {
+    const handleBeanValidation = async (beanId: number, validated: boolean) => {
+        if (!selectedImage) return;
+        
         try {
-            await storageService.annotateBeanImage(imageId, annotations);
-            // Refresh images after annotation
+            // TODO: Implement API call for bean validation
+            // await storageService.validateBeanDetection(selectedImage.id, beanId, validated);
+            console.log(`Validating bean ${beanId} as ${validated ? 'validated' : 'not validated'}`);
+            // Refresh images after validation
+            loadImages();
+        } catch (error) {
+            console.error('Error validating bean:', error);
+            alert('Failed to validate bean. Please try again.');
+        }
+    };
+
+    const handleImageDelete = async (imageId: string) => {
+        try {
+            // TODO: Implement API call for image deletion
+            // await storageService.deleteImage(imageId);
+            console.log(`Deleting image ${imageId}`);
             loadImages();
             setIsModalOpen(false);
             setSelectedImage(null);
         } catch (error) {
-            console.error('Error saving annotation:', error);
-            alert('Failed to save annotation. Please try again.');
+            console.error('Error deleting image:', error);
+            alert('Failed to delete image. Please try again.');
         }
     };
 
@@ -253,7 +265,12 @@ const ResearcherAnnotations: React.FC = () => {
                                         </span>
                                     </div>
                                     <p className="text-sm font-medium text-gray-900 truncate">
-                                        {image.predictions.bean_type}
+                                        {image.predictions.length > 0 
+                                            ? image.predictions.length === 1 
+                                                ? image.predictions[0].bean_type 
+                                                : `${image.predictions.length} beans detected`
+                                            : 'No beans detected'
+                                        }
                                     </p>
                                     {image.allegedVariety && (
                                         <p className="text-xs text-gray-600 truncate">
@@ -339,187 +356,28 @@ const ResearcherAnnotations: React.FC = () => {
                 renderFolderView()
             )}
 
-            {/* Annotation Modal */}
+            {/* Enhanced Annotation Modal */}
             {selectedImage && (
-                <AnnotationModal
+                <EnhancedImageDetailsModal
                     isOpen={isModalOpen}
                     onClose={() => {
                         setIsModalOpen(false);
                         setSelectedImage(null);
                     }}
-                    image={selectedImage}
-                    onSave={handleAnnotation}
+                    image={{
+                        id: selectedImage.id,
+                        src: selectedImage.src,
+                        predictions: selectedImage.predictions,
+                        submissionDate: selectedImage.submissionDate,
+                        allegedVariety: selectedImage.allegedVariety,
+                        userName: selectedImage.userName,
+                        userRole: selectedImage.userRole
+                    }}
+                    userRole="researcher"
+                    onValidateBean={handleBeanValidation}
+                    onDeleteImage={handleImageDelete}
                 />
             )}
-        </div>
-    );
-};
-
-// Annotation Modal Component
-interface AnnotationModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    image: BeanImage;
-    onSave: (imageId: string, annotations: {
-        allegedVariety?: string;
-        validated: boolean;
-        notes?: string;
-    }) => void;
-}
-
-const AnnotationModal: React.FC<AnnotationModalProps> = ({ isOpen, onClose, image, onSave }) => {
-    const [allegedVariety, setAllegedVariety] = useState(image.allegedVariety || '');
-    const [validated, setValidated] = useState(image.is_validated);
-    const [notes, setNotes] = useState('');
-    const [showConfirmation, setShowConfirmation] = useState(false);
-
-    if (!isOpen) return null;
-
-    const handleSave = () => {
-        if (allegedVariety && !showConfirmation) {
-            setShowConfirmation(true);
-            return;
-        }
-
-        onSave(image.id, {
-            allegedVariety: allegedVariety || undefined,
-            validated,
-            notes: notes || undefined
-        });
-        setShowConfirmation(false);
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-6">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-semibold text-gray-900">Annotate Bean Sample</h2>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600"
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Image */}
-                        <div>
-                            <img
-                                src={image.src}
-                                alt="Bean sample"
-                                className="w-full h-64 object-cover rounded-lg shadow"
-                            />
-                            
-                            {/* Predictions */}
-                            <div className="mt-4 bg-gray-50 p-4 rounded-lg">
-                                <h3 className="font-medium text-gray-900 mb-2">Predictions</h3>
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div>Bean Type: <span className="font-medium">{image.predictions.bean_type}</span></div>
-                                    <div>Area: <span className="font-medium">{image.predictions.area.toFixed(2)}</span></div>
-                                    <div>Perimeter: <span className="font-medium">{image.predictions.perimeter.toFixed(2)}</span></div>
-                                    <div>Solidity: <span className="font-medium">{image.predictions.solidity.toFixed(3)}</span></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Annotation Form */}
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Validation Status
-                                </label>
-                                <div className="flex space-x-4">
-                                    <label className="flex items-center">
-                                        <input
-                                            type="radio"
-                                            name="validation"
-                                            checked={validated}
-                                            onChange={() => setValidated(true)}
-                                            className="mr-2"
-                                        />
-                                        Validated
-                                    </label>
-                                    <label className="flex items-center">
-                                        <input
-                                            type="radio"
-                                            name="validation"
-                                            checked={!validated}
-                                            onChange={() => setValidated(false)}
-                                            className="mr-2"
-                                        />
-                                        Not Yet Validated
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Alleged Variety (Optional)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={allegedVariety}
-                                    onChange={(e) => setAllegedVariety(e.target.value)}
-                                    placeholder="e.g., Arabica Premium, Robusta Supreme"
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Notes (Optional)
-                                </label>
-                                <textarea
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    placeholder="Add any additional observations..."
-                                    rows={3}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-
-                            {/* Confirmation */}
-                            {showConfirmation && allegedVariety && (
-                                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-                                    <div className="flex">
-                                        <svg className="w-5 h-5 text-yellow-400 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                        </svg>
-                                        <div>
-                                            <h4 className="text-sm font-medium text-yellow-800">Confirm Alleged Variety</h4>
-                                            <p className="text-sm text-yellow-700 mt-1">
-                                                You are setting the alleged variety to "<strong>{allegedVariety}</strong>". 
-                                                This will be recorded permanently. Continue?
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="flex space-x-3 pt-4">
-                                <button
-                                    onClick={handleSave}
-                                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                                >
-                                    {showConfirmation ? 'Confirm & Save' : 'Save Annotation'}
-                                </button>
-                                <button
-                                    onClick={showConfirmation ? () => setShowConfirmation(false) : onClose}
-                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-                                >
-                                    {showConfirmation ? 'Cancel' : 'Close'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };

@@ -114,7 +114,8 @@ export interface UserManagementUser {
   last_login: string,
   username: string,
   role: 'farmer' | 'researcher' | 'admin',
-  location: string,
+  location__name: string,
+  location_id: string,
   email: string,
   is_deleted?: boolean,
   created_at?: string,
@@ -135,18 +136,32 @@ export interface ActivityLog {
 }
 
 // Admin Beans Gallery Interfaces
+export interface BeanDetection {
+  bean_id: number;
+  is_validated: boolean;
+  bean_type: string;
+  confidence: number;
+  length_mm: number;
+  width_mm: number;
+  bbox: [number, number, number, number]; // [x, y, width, height]
+  comment: string;
+  detection_date: string;
+}
+
 export interface AdminPredictedImage {
   id: string;
   src: string;
   userId: string;
   userName: string;
   userRole: 'farmer' | 'researcher';
-  locationId: string;
-  locationName: string;
+  locationId: string | null;
+  locationName: string | null;
   submissionDate: string;
-  validated: 'verified' | 'pending';
-  allegedVariety?: string;
-  predictions: {
+  is_validated: boolean;
+  allegedVariety?: string | null;
+  // Legacy single bean prediction support (for backward compatibility)
+  bean_type?: string;
+  predictions?: {
     area: number;
     perimeter: number;
     major_axis_length: number;
@@ -158,7 +173,7 @@ export interface AdminPredictedImage {
     mean_intensity: number;
     equivalent_diameter: number;
     bean_type: string;
-  };
+  } | BeanDetection[]; // Can be either legacy format or new multi-bean format
 }
 
 export interface AdminImageFilters {
@@ -186,19 +201,19 @@ export interface BeanImage {
   submissionDate: string;
   is_validated: boolean;
   allegedVariety?: string;
-  predictions: {
-    area: number;
-    perimeter: number;
-    major_axis_length: number;
-    minor_axis_length: number;
-    extent: number;
-    eccentricity: number;
-    convex_area: number;
-    solidity: number;
-    mean_intensity: number;
-    equivalent_diameter: number;
-    bean_type: string;
-  };
+  predictions: BeanDetection[];
+}
+
+export interface BeanDetection {
+  bean_id: number;
+  is_validated: boolean;
+  bean_type: string;
+  confidence: number;
+  length_mm: number;
+  width_mm: number;
+  bbox: [number, number, number, number]; // [x, y, width, height]
+  comment: string;
+  detection_date: string;
 }
 
 export interface FarmFolder {
@@ -239,3 +254,55 @@ export interface NotificationItem {
   actionRequired?: boolean;
   actionData?: any;
 }
+
+// New interfaces for multiple bean detection
+export interface ProcessedBeanDetection {
+  bean_id: number;
+  length_mm: number;
+  width_mm: number;
+  bbox: [number, number, number, number];
+  features: {
+    area_mm2: number;
+    perimeter_mm: number;
+    major_axis_length_mm: number;
+    minor_axis_length_mm: number;
+    eccentricity: number;
+    extent: number;
+    equivalent_diameter_mm: number;
+    solidity: number;
+    mean_intensity: number;
+    aspect_ratio: number;
+  };
+  comment?: string;
+}
+
+export interface ProcessedImageResult {
+  image_id: string;
+  image_dimensions_mm: {
+    width: number;
+    height: number;
+  };
+  calibration: {
+    mm_per_pixel: number;
+    marker_size_mm: number;
+  };
+  beans: ProcessedBeanDetection[];
+  debug_images: {
+    processed: string;
+    debug: string;
+    calibration: string;
+  };
+  total_beans_detected: number;
+  error?: string;
+}
+
+export interface MultiImageProcessingResponse {
+  images: ProcessedImageResult[];
+  total_images_processed: number;
+  total_beans_detected: number;
+}
+
+export type Location = {
+    id: string;
+    name: string;
+};

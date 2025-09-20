@@ -25,6 +25,7 @@ import AdminBeansMetadata from "@/components/AdminBeansMetadata";
 import AdminFarmMap from "@/pages/admin/AdminFarmMap";
 import ResearcherAnnotations from "@/components/ResearcherAnnotations";
 import NotificationsEnhanced from "@/components/NotificationsEnhanced";
+import TestEnhancedGallery from "@/pages/TestEnhancedGallery";
 
 
 export default function AppRoute() {
@@ -39,6 +40,7 @@ export default function AppRoute() {
                 <Route path="dashboard" element={<ResearcherDashboard />} />
                 <Route path="upload-image" element={<UploadSamples />} />
                 <Route path="gallery" element={<BeansGallery />} />
+                <Route path="test-enhanced" element={<TestEnhancedGallery />} />
                 <Route path="annotations" element={<ResearcherAnnotations />} />
                 <Route path="validation" element={<ValidationQueue />} />
                 <Route path="analytics" element={<Analytics />} />
