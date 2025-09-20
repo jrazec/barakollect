@@ -1,6 +1,15 @@
-from django.db import models
+from django.contrib.gis.db import models 
 
 
+
+
+class Location(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    location = models.PointField(geography=True, blank=True, null=True)
+    name = models.CharField(max_length=255, unique=True)
+    
+    class Meta:
+        db_table = "locations"
 
 # ==================+USER MANAGEMENT & RBAC+==================
 class User(models.Model):
@@ -11,10 +20,10 @@ class User(models.Model):
     avatar_image = models.TextField(blank=True, null=True)
     registration_date = models.DateTimeField()
     is_deleted = models.BooleanField(default=False)
-    location = models.TextField(blank=True, null=True)
     username = models.CharField(max_length=255, unique=True)
     last_login = models.DateTimeField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
     class Meta:
         db_table = "users"  
         managed = False     
@@ -99,7 +108,7 @@ class Notification(models.Model):
 class Image(models.Model):
     id = models.BigAutoField(primary_key=True)
     image_url = models.TextField()
-    origin_id = models.BigIntegerField(null=True, blank=True)
+    location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
     upload_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -178,3 +187,4 @@ class BeanDetection(models.Model):
     class Meta:
         db_table = "bean_detections"
         unique_together = ('image', 'bean_id')
+
