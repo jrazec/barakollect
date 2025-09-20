@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/activity/', include('apps.activitylogs.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/beans/', include('apps.beans.urls')),  # <- add this
+    path('api/farms/', include('apps.farms.urls')),  # <- add this
 ]
 
 # Serve media files in development
