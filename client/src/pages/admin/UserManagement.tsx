@@ -13,6 +13,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   const [filteredUsers, setFilteredUsers] = useState<UserManagementUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]); 
 
   // Search and filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,11 +40,12 @@ const UserManagement: React.FC<UserManagementProps> = () => {
     lastName: '',
     username: '',
     role: 'farmer' as 'farmer' | 'researcher' | 'admin',
-    location: '',
+    location_name: '',
     is_active: true,
     resetPassword: false,
     email: '',
     password: '',
+    location_id: '',
   });
 
   // Fetch users data
@@ -53,8 +55,10 @@ const UserManagement: React.FC<UserManagementProps> = () => {
         setLoading(true);
         // TODO: Replace with actual API call
         const users = await AdminService.getUsers();
+        const locations = await AdminService.getLocations();
         setUsers(users);
         setFilteredUsers(users);
+        setLocations(locations);
         console.log(users)
       } catch (err) {
         console.error('Error fetching users:', err);
@@ -86,7 +90,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
 
     // Filter by location
     if (locationFilter !== 'all') {
-      filtered = filtered.filter(user => user.location === locationFilter);
+      filtered = filtered.filter(user => `${user.location_id}` === locationFilter);
     }
 
     setFilteredUsers(filtered);
@@ -94,8 +98,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   }, [users, searchTerm, roleFilter, locationFilter]);
 
   // Get unique locations for filter
-  const uniqueLocations = Array.from(new Set(users.map(user => user.location)));
-
+  const uniqueLocations = locations;
   // Pagination
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
@@ -112,7 +115,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
           last_name: formData.lastName,
           username: formData.username,
           role: formData.role,
-          location: formData.location,
+          location_id: formData.location_id,
           is_active: formData.is_active,
           email: formData.email
         });
@@ -128,7 +131,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
           last_name: formData.lastName,
           username: formData.username,
           role: formData.role,
-          location: formData.location,
+          location_id: formData.location_id,
           reset_password: formData.resetPassword
         });
 
@@ -194,7 +197,8 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       lastName: '',
       username: '',
       role: 'farmer',
-      location: '',
+      location_id: '',
+      location_name: '',
       is_active: true,
       resetPassword: false,
       email: '',
@@ -210,7 +214,8 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       lastName: user.last_name,
       username: user.username,
       role: user.role,
-      location: user.location,
+      location_name: user.location__name,
+      location_id: user.location_id,
       is_active: user.is_active,
       resetPassword: false,
       email: user.email,
@@ -269,7 +274,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       )
     },
     {
-      key: 'location',
+      key: 'location__name',
       label: 'Location',
       width: 'w-1/6'
     },
@@ -417,7 +422,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
               >
                 <option value="all">All Locations</option>
                 {uniqueLocations.map(location => (
-                  <option key={location} value={location}>{location}</option>
+                  <option key={location.id} value={location.id}>{location.name}</option>
                 ))}
               </select>
             </div>
@@ -571,14 +576,19 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-accent text-gray-600 mb-2">Location</label>
-                  <input
-                    type="text"
+                  <select
                     required
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    value={formData.location_id}
+                    onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
-                  />
+                  >
+                    <option value="">Select Location</option>
+                    {locations.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 {showAddModal && (
                   <div className="flex items-center gap-2">
@@ -799,7 +809,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                 <div>
                   <label className="block text-sm font-accent text-gray-600 mb-1">Location</label>
                   <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
-                    {selectedUser.location}
+                    {(selectedUser.location__name === '' || !selectedUser.location__name) ? 'N/A' : selectedUser.location__name}
                   </div>
                 </div>
 
