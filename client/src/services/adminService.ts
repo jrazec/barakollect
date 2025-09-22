@@ -1029,58 +1029,33 @@ export class AdminService {
     limit: number = 10
   ): Promise<{ images: AdminPredictedImage[]; pagination: PaginationData }> {
     try {
-      // TODO: Replace with actual API call
-      // const params = new URLSearchParams();
-      // if (status) params.append('status', status);
-      // if (filters?.farm) params.append('farm', filters.farm);
-      // if (filters?.role) params.append('role', filters.role);
-      // params.append('page', page.toString());
-      // params.append('limit', limit.toString());
-      // const response = await fetch(`/api/admin/images?${params}`);
-      // return await response.json();
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      let filteredImages = [...tempAdminImages];
-
-      // Apply status filter
-      if (status) {
-        const isVerified = status === "verified";
-        filteredImages = filteredImages.filter(
-          (img) => img.is_validated === isVerified
-        );
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (filters?.farm) params.append('farm', filters.farm);
+      if (filters?.role) params.append('role', filters.role);
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+      
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/beans/get-images?${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      // Apply farm filter
-      if (filters?.farm) {
-        filteredImages = filteredImages.filter(
-          (img) => img.locationName === filters.farm
-        );
-      }
-
-      // Apply role filter
-      if (filters?.role) {
-        filteredImages = filteredImages.filter(
-          (img) => img.userRole === filters.role
-        );
-      }
-
-      // Apply pagination
-      const totalItems = filteredImages.length;
-      const totalPages = Math.ceil(totalItems / limit);
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedImages = filteredImages.slice(startIndex, endIndex);
-
+      
+      const result = await response.json();
+      
       return {
-        images: paginatedImages,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalItems,
-          itemsPerPage: limit,
-        },
+        images: result.images || [],
+        pagination: result.pagination || {
+          current_page: page,
+          per_page: limit,
+          total: 0,
+          total_pages: 0,
+          has_next: false,
+          has_previous: false
+        }
       };
+
     } catch (error) {
       console.error("Error fetching images by status:", error);
       throw error;
