@@ -1,5 +1,3 @@
-import type { SignInWithPasswordCredentials } from "@supabase/supabase-js";
-
 export interface CardAttributes {
     title: string,
     subtitle: string,
@@ -20,7 +18,7 @@ export interface NotifAttributes {
   message: string;
   timestamp: string;
   read: boolean;
-  type?: 'info' | 'warning' | 'error';
+  type: 'info' | 'alert' | 'system';
 }
 
 export interface User {
@@ -226,33 +224,6 @@ export interface FarmFolder {
   imageCount: number;
   validatedCount: number;
   type: 'own' | 'farm';
-}
-
-export interface AccessRequest {
-  id: string;
-  researcherId: string;
-  researcherName: string;
-  farmId: string;
-  farmName: string;
-  farmOwnerId: string;
-  message: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  createdAt: string;
-  respondedAt?: string;
-}
-
-export interface NotificationItem {
-  id: string;
-  type: 'access_request' | 'access_granted' | 'access_denied' | 'general';
-  title: string;
-  message: string;
-  fromUserId?: string;
-  fromUserName?: string;
-  relatedEntityId?: string; // farm id, request id, etc.
-  read: boolean;
-  createdAt: string;
-  actionRequired?: boolean;
-  actionData?: any;
 }
 
 // New interfaces for multiple bean detection

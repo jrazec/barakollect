@@ -1,6 +1,11 @@
 from django.urls import path
-from .views import notification_list
+from .views import notification_list, mark_as_read, mark_all_as_read, send_broadcast_notification, send_personal_notification, clear_notifications
 
 urlpatterns = [
-   path('get-list/', notification_list),
+   path('get-list/<str:user_id>/', notification_list),
+   path('mark-as-read/', mark_as_read),
+   path('mark-all-as-read/', mark_all_as_read),
+   path('admin/broadcast/', send_broadcast_notification),
+   path('send-personal/', send_personal_notification),
+   path('clear/', clear_notifications),
 ]
