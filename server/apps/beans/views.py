@@ -7,7 +7,7 @@ import uuid
 import json
 import random
 from services.supabase_service import supabase
-from models.models import Annotation, User, UserImage, BeanDetection, Prediction, ExtractedFeature,UserRole
+from models.models import Annotation, User, UserImage, BeanDetection, Prediction, ExtractedFeature,UserRole, Location
 from models.models import Image as ImageBucket
 
 from rest_framework.decorators import api_view, parser_classes
@@ -252,7 +252,7 @@ def process_bean(request):
                     # Get user location from the User table
                     try:
                         user = User.objects.get(id=user_id)
-                        user_location = user.location_id if user.location else "Unknown"
+                        user_location = user.location_id if user.location else None
                         print(f"DEBUG: Found user {user_id} with location: {user_location}")
                     except User.DoesNotExist:
                         raise Exception(f"User with id {user_id} not found")
@@ -275,7 +275,8 @@ def process_bean(request):
                     print(f"DEBUG: Creating Image record")
                     image_record = ImageBucket.objects.create(
                         image_url=original_filename,
-                        upload_date=timezone.now()
+                        upload_date=timezone.now(),
+                        location=Location.objects.get(id=user_location) if user_location else None
                     )
                     print(f"DEBUG: Created Image record with id: {image_record.id}")
                     
