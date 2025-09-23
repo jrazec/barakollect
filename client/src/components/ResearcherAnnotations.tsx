@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import type { FarmFolder, BeanImage, PaginationData } from '@/interfaces/global';
 import { storageService } from '@/services/storageService';
 import EnhancedImageDetailsModal from './EnhancedImageDetailsModal';
 
 const ResearcherAnnotations: React.FC = () => {
-    const navigate = useNavigate();
     const [folders, setFolders] = useState<FarmFolder[]>([]);
     const [selectedFolder, setSelectedFolder] = useState<FarmFolder | null>(null);
     const [images, setImages] = useState<BeanImage[]>([]);
@@ -79,12 +77,6 @@ const ResearcherAnnotations: React.FC = () => {
     };
 
     const handleFolderClick = async (folder: FarmFolder) => {
-        if (folder.isLocked && !folder.hasAccess) {
-            // Redirect to notifications with farm owner ID
-            navigate(`/researcher/notifications?farmOwnerId=${folder.ownerId}&farmId=${folder.id}&farmName=${encodeURIComponent(folder.name)}`);
-            return;
-        }
-        
         setSelectedFolder(folder);
         setPagination(prev => ({ ...prev, currentPage: 1 }));
     };
@@ -139,22 +131,12 @@ const ResearcherAnnotations: React.FC = () => {
                     <div
                         key={folder.id}
                         onClick={() => handleFolderClick(folder)}
-                        className={`p-6 bg-white rounded-lg shadow-md border-2 transition-all duration-200 cursor-pointer ${
-                            folder.isLocked && !folder.hasAccess
-                                ? 'border-red-200 hover:border-red-300 bg-red-50'
-                                : 'border-gray-200 hover:border-blue-300 hover:shadow-lg'
-                        }`}
+                        className="p-6 bg-white rounded-lg shadow-md border-2 border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200 cursor-pointer"
                     >
                         <div className="flex items-center space-x-3 mb-3">
-                            {folder.isLocked && !folder.hasAccess ? (
-                                <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                                </svg>
-                            ) : (
-                                <svg className="w-8 h-8 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                                </svg>
-                            )}
+                            <svg className="w-8 h-8 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                            </svg>
                             <div>
                                 <h3 className="text-lg font-medium text-gray-900">{folder.name}</h3>
                                 {folder.type !== 'own' && (
@@ -181,12 +163,6 @@ const ResearcherAnnotations: React.FC = () => {
                                 ></div>
                             </div>
                         </div>
-
-                        {folder.isLocked && !folder.hasAccess && (
-                            <div className="mt-3 p-2 bg-red-100 rounded text-sm text-red-700">
-                                🔒 Locked - Click to request access
-                            </div>
-                        )}
                     </div>
                 ))}
             </div>
@@ -339,7 +315,7 @@ const ResearcherAnnotations: React.FC = () => {
                 <p className="text-gray-600">
                     {selectedFolder 
                         ? `Annotate and validate bean samples in ${selectedFolder.name}`
-                        : 'Select a farm folder to start annotating bean samples'
+                        : 'Select a farm folder to start annotating bean samples. All folders are accessible for research purposes.'
                     }
                 </p>
             </div>
