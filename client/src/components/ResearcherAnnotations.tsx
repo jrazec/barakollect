@@ -364,15 +364,7 @@ const ResearcherAnnotations: React.FC = () => {
                         setIsModalOpen(false);
                         setSelectedImage(null);
                     }}
-                    image={{
-                        id: selectedImage.id,
-                        src: selectedImage.src,
-                        predictions: selectedImage.predictions,
-                        submissionDate: selectedImage.submissionDate,
-                        allegedVariety: selectedImage.allegedVariety,
-                        userName: selectedImage.userName,
-                        userRole: selectedImage.userRole
-                    }}
+                    image={selectedImage}
                     userRole="researcher"
                     onValidateBean={handleBeanValidation}
                     onDeleteImage={handleImageDelete}

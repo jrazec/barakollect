@@ -15,24 +15,19 @@ class BeanFeatureExtractor:
         self.model = YOLO(MODEL)
 
 
+    # ---------- Calibration ----------
     def extract_mm_per_px(self, img):
         try:
-            # Load predefined dictionary of ArUco markers
             aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
             parameters = cv2.aruco.DetectorParameters()
-
-            # Detect markers
             detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
             corners, ids, _ = detector.detectMarkers(img)
-
             img_debug = img.copy()
 
             if ids is not None and len(corners) > 0:
-                # Assume the first detected marker is our calibration marker
-                c = corners[0][0]  # 4 corners of marker
+                c = corners[0][0]
                 cv2.polylines(img_debug, [np.int32(c)], True, (0, 255, 0), 2)
 
-                # Compute pixel side length (average of all 4 sides)
                 side_lengths = [
                     np.linalg.norm(c[0] - c[1]),
                     np.linalg.norm(c[1] - c[2]),
@@ -40,91 +35,113 @@ class BeanFeatureExtractor:
                     np.linalg.norm(c[3] - c[0]),
                 ]
                 avg_side_px = np.mean(side_lengths)
-
-                # Convert to mm/px
                 self.mm_per_px = self.marker_length / avg_side_px
 
-                # Draw label
-                cv2.putText(img_debug, f"{self.mm_per_px:.4f} mm/px",
-                            (int(c[0][0]), int(c[0][1]) - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
-                
-                # Also return here the whole length and widht size of the iamge in mm converted using mm_per_px
                 h, w = img.shape[:2]
-                if self.mm_per_px is not None:
-                    h_mm = h * self.mm_per_px
-                    w_mm = w * self.mm_per_px
-                else:
-                    h_mm = w_mm = None
+                h_mm = h * self.mm_per_px
+                w_mm = w * self.mm_per_px
                 return (img_debug, h_mm, w_mm)
             else:
                 return False
         except Exception:
             return False
 
+    # ---------- Watershed helper ----------
+    def apply_watershed(self, img, mask):
+        """
+        Apply watershed algorithm to split touching beans.
+        img  - original BGR image
+        mask - binary mask of beans (255 = bean, 0 = background)
+        """
+        ret, thresh = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
+        kernel = np.ones((3,3), np.uint8)
+        opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2)
+        sure_bg = cv2.dilate(opening, kernel, iterations=3)
 
+        dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
+        ret, sure_fg = cv2.threshold(dist_transform, 0.5 * dist_transform.max(), 255, 0)
+        sure_fg = np.uint8(sure_fg)
 
+        unknown = cv2.subtract(sure_bg, sure_fg)
+
+        ret, markers = cv2.connectedComponents(sure_fg)
+        markers = markers + 1
+        markers[unknown == 255] = 0
+
+        markers = cv2.watershed(img, markers)
+
+        segmented_mask = np.zeros_like(mask)
+        segmented_mask[markers > 1] = 255
+
+        return segmented_mask, markers
+
+    # ---------- Preprocessing ----------
     def preprocess_image(self, img):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Create a mask to exclude ArUco markers
         aruco_mask = np.ones_like(gray, dtype=np.uint8) * 255
+
+        # Mask out ArUco markers if found
         try:
             aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
             parameters = cv2.aruco.DetectorParameters()
             detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
             corners, ids, _ = detector.detectMarkers(img)
-            
             if ids is not None and len(corners) > 0:
                 for corner in corners:
-                    # Create mask to exclude ArUco marker area
                     cv2.fillPoly(aruco_mask, [np.int32(corner[0])], 0)
         except Exception:
             pass
-        
-        # Use YOLO model to detect beans
+
+        # Step 1: YOLO detections → coarse bean mask
         results = self.model(img)
         bean_mask = np.zeros_like(gray, dtype=np.uint8)
-        bean_bboxes = []
-        
+
         for result in results:
             if result.boxes is not None:
                 for box in result.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    # Create mask for detected bean area
                     cv2.rectangle(bean_mask, (x1, y1), (x2, y2), 255, -1)
-                    bean_bboxes.append((x1, y1, x2-x1, y2-y1))
-        
-        # Apply ArUco exclusion mask to bean mask
+
+        # Step 2: Clean up mask
         bean_mask = cv2.bitwise_and(bean_mask, aruco_mask)
-        
-        # Apply morphological operations
         bean_mask = cv2.morphologyEx(bean_mask, cv2.MORPH_OPEN, np.ones((5,5), np.uint8))
         bean_mask = cv2.morphologyEx(bean_mask, cv2.MORPH_CLOSE, np.ones((7,7), np.uint8))
-        
-        # Create output image with detected beans
+
+        # Step 3: Watershed segmentation
+        segmented_mask, markers = self.apply_watershed(img, bean_mask)
+
+        # Step 4: Recompute bean bboxes from watershed regions
+        bean_bboxes = []
+        labeled = label(segmented_mask)
+        props = regionprops(labeled)
+        for prop in props:
+            if prop.area > 100:  # skip tiny noise
+                minr, minc, maxr, maxc = prop.bbox
+                bean_bboxes.append((minc, minr, maxc - minc, maxr - minr))
+
+        # Visualization mask
         black_bg = np.zeros_like(img)
-        black_bg[bean_mask == 255] = img[bean_mask == 255]
-        
-        return black_bg, bean_mask, gray, bean_bboxes
-    
+        black_bg[segmented_mask == 255] = img[segmented_mask == 255]
+
+        return black_bg, segmented_mask, gray, bean_bboxes
+
+    # ---------- Visualization ----------
     def draw_bbox(self, img, bboxes):
         debug_img = img.copy()
         for i, bbox in enumerate(bboxes):
             x, y, w, h = bbox
             cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0, 255, 0), 2)
             if self.mm_per_px is not None:
-                cv2.putText(debug_img, f"{w*self.mm_per_px:.1f}x{h*self.mm_per_px:.1f}mm", 
+                cv2.putText(debug_img, f"{w*self.mm_per_px:.1f}x{h*self.mm_per_px:.1f}mm",
                            (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-            cv2.putText(debug_img, f"Bean {i+1}", (x, y-25), 
+            cv2.putText(debug_img, f"Bean {i+1}", (x, y-25),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
         return debug_img
 
+
+    # ---------- Feature extraction ----------
     def extract_features_for_all_beans(self, mask, gray, bean_bboxes):
-        """
-        Extract features for all detected beans
-        """
         all_beans = []
         
         # If no YOLO detections, fall back to connected components
@@ -170,11 +187,8 @@ class BeanFeatureExtractor:
                     })
         
         return all_beans
-    
+
     def _calculate_bean_features(self, bean_props):
-        """
-        Calculate standardized features for a bean
-        """
         return {
             "area_mm2": bean_props.area * (self.mm_per_px**2),
             "perimeter_mm": bean_props.perimeter * self.mm_per_px,
@@ -189,7 +203,6 @@ class BeanFeatureExtractor:
         }
 
     def extract_features(self, mask, gray):
-        # Keep for backward compatibility, but now returns single bean
         labeled = label(mask)
         props = regionprops(labeled, intensity_image=gray)
         if len(props) == 0:
@@ -199,11 +212,8 @@ class BeanFeatureExtractor:
         minr, minc, maxr, maxc = bean.bbox
         bbox = (minc, minr, maxc-minc, maxr-minr)
         return features, bbox
-    
+
     def save_temporary_image(self, img, folder, prefix="temp"):
-        """
-        Save image temporarily with expiry
-        """
         import uuid
         filename = f"{prefix}_{uuid.uuid4()}.png"
         filepath = os.path.join(folder, filename)
