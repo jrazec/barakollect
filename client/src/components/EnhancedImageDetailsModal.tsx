@@ -45,7 +45,6 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
 }) => {
   const [selectedBeanId, setSelectedBeanId] = useState<number | undefined>();
   const [activeTab, setActiveTab] = useState<'overview' | 'beans' | 'analysis'>('overview');
-  const [editMode, setEditMode] = useState(false);
 
   if (!isOpen) return null;
 
@@ -82,14 +81,6 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
             </p>
           </div>
           <div className="flex items-center space-x-2">
-            {userRole === 'admin' && !editMode && (
-              <button
-                onClick={() => setEditMode(true)}
-                className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
-              >
-                Edit
-              </button>
-            )}
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 text-xl font-bold"
@@ -108,8 +99,8 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                 <button
                   onClick={() => setActiveTab('overview')}
                   className={`px-3 py-2 text-left rounded ${activeTab === 'overview'
-                      ? 'bg-[var(--espresso-black)] text-white'
-                      : 'text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[var(--espresso-black)] text-white'
+                    : 'text-gray-600 hover:bg-gray-200'
                     }`}
                 >
                   Overview
@@ -117,8 +108,8 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                 <button
                   onClick={() => setActiveTab('beans')}
                   className={`px-3 py-2 text-left rounded ${activeTab === 'beans'
-                      ? 'bg-[var(--espresso-black)] text-white'
-                      : 'text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[var(--espresso-black)] text-white'
+                    : 'text-gray-600 hover:bg-gray-200'
                     }`}
                 >
                   Bean Details ({beans.length})
@@ -126,8 +117,8 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                 <button
                   onClick={() => setActiveTab('analysis')}
                   className={`px-3 py-2 text-left rounded ${activeTab === 'analysis'
-                      ? 'bg-[var(--espresso-black)] text-white'
-                      : 'text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[var(--espresso-black)] text-white'
+                    : 'text-gray-600 hover:bg-gray-200'
                     }`}
                 >
                   Analysis
@@ -143,8 +134,8 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                       <div
                         key={bean.bean_id}
                         className={`p-3 rounded-lg cursor-pointer transition-colors border ${selectedBeanId === bean.bean_id
-                            ? 'bg-[var(--espresso-black)] text-white border-gray-900'
-                            : 'bg-white hover:bg-gray-100 border-gray-200'
+                          ? 'bg-[var(--espresso-black)] text-white border-gray-900'
+                          : 'bg-white hover:bg-gray-100 border-gray-200'
                           }`}
                         onClick={() => setSelectedBeanId(bean.bean_id)}
                       >
@@ -158,10 +149,10 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                             )}
                             <span
                               className={`text-xs px-2 py-1 rounded ${bean.is_validated === true
-                                  ? 'bg-green-100 text-green-800'
-                                  : bean.is_validated === false
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-gray-100 text-gray-800'
+                                ? 'bg-green-100 text-green-800'
+                                : bean.is_validated === false
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-gray-100 text-gray-800'
                                 }`}
                             >
                               {bean.is_validated === true ? 'Validated' :
@@ -281,8 +272,8 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                               <button
                                 onClick={() => handleValidateBean(selectedBean.bean_id, true)}
                                 className={`px-3 py-1 text-xs rounded ${selectedBean.is_validated === true
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-green-100'
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-green-100'
                                   }`}
                               >
                                 Validate
@@ -290,8 +281,8 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                               <button
                                 onClick={() => handleValidateBean(selectedBean.bean_id, false)}
                                 className={`px-3 py-1 text-xs rounded ${selectedBean.is_validated === false
-                                    ? 'bg-yellow-500 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-yellow-100'
+                                  ? 'bg-yellow-500 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-yellow-100'
                                   }`}
                               >
                                 Pending
@@ -332,10 +323,10 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                         <div>
                           <div className="text-sm font-medium text-gray-700">Validation Status</div>
                           <div className={`inline-block px-2 py-1 rounded text-sm ${selectedBean.is_validated === true
-                              ? 'bg-green-100 text-green-800'
-                              : selectedBean.is_validated === false
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-gray-100 text-gray-800'
+                            ? 'bg-green-100 text-green-800'
+                            : selectedBean.is_validated === false
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
                             }`}>
                             {selectedBean.is_validated === true ? 'Validated' :
                               selectedBean.is_validated === false ? 'Pending Validation' : 'Unknown'}
@@ -377,6 +368,10 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                             <div>
                               <span className="font-medium text-blue-700">Major Axis:</span>
                               <span className="ml-1">{selectedBean?.features?.major_axis_length_mm?.toFixed(2) || 'N/A'} mm</span>
+                            </div>
+                            <div>
+                              <span className="font-medium text-blue-700">Minor Axis:</span>
+                              <span className="ml-1">{selectedBean?.features?.minor_axis_length_mm?.toFixed(2) || 'N/A'} mm</span>
                             </div>
                             <div>
                               <span className="font-medium text-blue-700">Extent:</span>
