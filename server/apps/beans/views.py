@@ -67,7 +67,7 @@ def upload_beans(request):
 def get_user_beans(request, user_id):
     # Logic for retrieving beans
     user_images = ImageBucket.objects.filter(userimage__user_id=user_id).values("image_url", "upload_date", "id",  "userimage__user__location_id", "userimage__user__first_name", "userimage__user__last_name", "userimage__user__userrole__role__name", "userimage__user__id")
-    beans = BeanDetection.objects.filter(image__userimage__user_id=user_id)
+    beans = BeanDetection.objects.filter(extracted_features__prediction__image__userimage__user_id=user_id).values("extracted_features__prediction__image_id", "bean_id", "length_mm", "width_mm", "bbox_x", "bbox_y", "bbox_width", "bbox_height", "comment", "created_at","extracted_features_id","extracted_features__prediction__id","extracted_features__prediction__image__id")
 
     """
     "userimage__image__prediction__predicted_label__bean_type", "userimage__image__prediction__predicted_label__confidence","userimage__image__annotation__label__is_validated"
@@ -75,6 +75,11 @@ def get_user_beans(request, user_id):
 
 
     data = []
+
+    # Query predictions and annotations table first.
+    annotation_table = Annotation.objects.values("label__is_validated", "image_id")
+    prediction_table = Prediction.objects.values("predicted_label__bean_type", "predicted_label__confidence","image_id")
+    extracted_features_table = ExtractedFeature.objects.values("id","prediction__image_id", "prediction_id", "area", "perimeter", "major_axis_length", "minor_axis_length", "extent", "eccentricity", "convex_area", "solidity", "mean_intensity", "equivalent_diameter")
     for img in user_images:
         publicUrl = supabase.storage.from_("Beans").get_public_url(
             img["image_url"]
@@ -82,27 +87,39 @@ def get_user_beans(request, user_id):
         predictions = []
  
         for b in beans:
-            if str(b.image.id) != str(img["id"]):
+            if str(b["extracted_features__prediction__image_id"]) != str(img["id"]):
                 continue
 
-            is_validated = Annotation.objects.filter(image_id=img["id"]).values_list("label__is_validated", flat=True).first()
-            if b.image.id == 67:
-                print(is_validated,"sdf")  
-            bean_type = Prediction.objects.filter(image_id=img["id"]).values_list("predicted_label__bean_type", flat=True).first()
-            confidence = Prediction.objects.filter(image_id=img["id"]).values_list("predicted_label__confidence", flat=True).first()
+            is_validated = annotation_table.filter(image_id=img["id"]).values_list("label__is_validated", flat=True).first()
+
+            bean_type = prediction_table.filter(image_id=img["id"]).values_list("predicted_label__bean_type", flat=True).first()
+            confidence = prediction_table.filter(image_id=img["id"]).values_list("predicted_label__confidence", flat=True).first()
+            features = extracted_features_table.filter(prediction__image_id=b["extracted_features__prediction__image_id"], id=b["extracted_features_id"]).values().first()
 
 
             predictions.append({
-                "bean_id": b.bean_id,
+                "bean_id": b["bean_id"],
                 "is_validated": is_validated,
                 "bean_type": bean_type,
                 "confidence": confidence,
-                "length_mm": float(b.length_mm),
-                "width_mm": float(b.width_mm),
-                "bbox": [b.bbox_x, b.bbox_y, b.bbox_width, b.bbox_height],
-                "comment": b.comment,
-                "detection_date": b.created_at
-                
+                "length_mm": float(b["length_mm"]),
+                "width_mm": float(b["width_mm"]),
+                "bbox": [b["bbox_x"], b["bbox_y"], b["bbox_width"], b["bbox_height"]],
+                "comment": b["comment"],
+                "detection_date": b["created_at"],
+                "features": {
+                    "area_mm2": float(features["area"]) if features else None,
+                    "perimeter_mm": float(features["perimeter"]) if features else None,
+                    "major_axis_length_mm": float(features["major_axis_length"]) if features else None,
+                    "minor_axis_length_mm": float(features["minor_axis_length"]) if features else None,
+                    "extent": float(features["extent"]) if features else None,
+                    "eccentricity": float(features["eccentricity"]) if features else None,
+                    "convex_area_mm2": float(features["convex_area"]) if features else None,
+                    "solidity": float(features["solidity"]) if features else None,
+                    "mean_intensity": float(features["mean_intensity"]) if features else None,
+                    "equivalent_diameter_mm": float(features["equivalent_diameter"]) if features else None
+                }
+
             })
                 
         data.append({
@@ -310,7 +327,7 @@ def process_bean(request):
                         
                         # Extract features for ExtractedFeature table
                         features = bean['features']
-                        ExtractedFeature.objects.create(
+                        extracted_feature_record = ExtractedFeature.objects.create(
                             prediction=prediction,
                             # Converting to decimal
                             area=float(features.get('area_mm2', 0)),
@@ -327,7 +344,7 @@ def process_bean(request):
 
                         # Also save to BeanDetection for the new structure
                         BeanDetection.objects.create(
-                            image=image_record,
+                            extracted_features=extracted_feature_record,
                             bean_id=bean['bean_id'],
                             length_mm=float(bean['length_mm']),
                             width_mm=float(bean['width_mm']),
@@ -502,7 +519,7 @@ def get_bean_detections(request, user_id):
     try:
         # Get all bean detections for the user
         bean_detections = BeanDetection.objects.filter(
-            image__userimage__user_id=user_id
+            extracted_features__prediction__image__userimage__user_id=user_id
         ).select_related('image').order_by('-created_at')
         
         # Group by image
@@ -598,13 +615,14 @@ def get_all_beans(request):
                     ef.convex_area,
                     ef.solidity,
                     ef.mean_intensity,
-                    ef.equivalent_diameter
+                    ef.equivalent_diameter,
+                    ef.id as extracted_feature_id
                 FROM images i
                 INNER JOIN user_images ui ON i.id = ui.image_id
                 INNER JOIN users u ON ui.user_id = u.id
-                LEFT JOIN user_roles ur ON u.id = ur.user_id
-                LEFT JOIN roles r ON ur.role_id = r.id
-                LEFT JOIN locations loc ON u.location_id = loc.id
+                INNER JOIN user_roles ur ON u.id = ur.user_id
+                INNER JOIN roles r ON ur.role_id = r.id
+                INNER JOIN locations loc ON u.location_id = loc.id
                 LEFT JOIN annotations a ON i.id = a.image_id
                 LEFT JOIN predictions p ON i.id = p.image_id
                 LEFT JOIN extracted_features ef ON p.id = ef.prediction_id
@@ -623,7 +641,7 @@ def get_all_beans(request):
                 
                 bean_query = """
                     SELECT 
-                        bd.image_id,
+                        p.image_id,
                         bd.bean_id,
                         bd.length_mm,
                         bd.width_mm,
@@ -632,10 +650,13 @@ def get_all_beans(request):
                         bd.bbox_width,
                         bd.bbox_height,
                         bd.comment,
-                        bd.created_at
+                        bd.created_at,
+                        ef.id as extracted_feature_id
                     FROM bean_detections bd
-                    WHERE bd.image_id = ANY(%s)
-                    ORDER BY bd.image_id, bd.bean_id
+                    JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                    JOIN predictions p ON ef.prediction_id = p.id
+                    WHERE p.image_id = ANY(%s)
+                    ORDER BY p.image_id, bd.bean_id
                 """
                 
                 cursor.execute(bean_query, [image_ids])
@@ -646,7 +667,7 @@ def get_all_beans(request):
                 bean_rows = []
         
         # Step 3: Process data in memory (NO database queries in this section)
-        print("DEBUG: Processing data in memory - NO database queries from here")
+        print(f"DEBUG: Print Beautify all_rows {json.dumps(all_rows, indent=2, default=str)}")
         
         # Group main data by image_id
         images_data = {}
@@ -677,10 +698,13 @@ def get_all_beans(request):
                         'convex_area': row[19],
                         'solidity': row[20],
                         'mean_intensity': row[21],
-                        'equivalent_diameter': row[22]
+                        'equivalent_diameter': row[22],
+                        'extracted_feature_id': row[23]
                     } if row[13] is not None else None
-                }
-        
+            }
+        print(f"DEBUG: Processed {len(images_data)} uique images from main query")
+        print(f"DEBUG: Print Beautify images_data {json.dumps(images_data, indent=2, default=str)}")
+    
         # Group bean detections by image_id
         beans_by_image = {}
         for bean_row in bean_rows:
@@ -697,7 +721,8 @@ def get_all_beans(request):
                 'bbox_width': bean_row[6],
                 'bbox_height': bean_row[7],
                 'comment': bean_row[8] or "",
-                'created_at': bean_row[9]
+                'created_at': bean_row[9],
+                'extracted_feature_id': bean_row[10]
             })
         
         # Filter by status if needed
@@ -755,8 +780,25 @@ def get_all_beans(request):
                 # Process predictions using pre-extracted data
                 bean_type = img_data['bean_type'] or "Unknown"
                 confidence = float(img_data['confidence']) if img_data['confidence'] else 0.0
-                
+                extracted_features_data = {}
+                for row in all_rows:
+                    extracted_features_data[row[23]] = { # per ef id
+                        'area': row[13],
+                        'perimeter': row[14],
+                        'major_axis_length': row[15],
+                        'minor_axis_length': row[16],
+                        'extent': row[17],
+                        'eccentricity': row[18],
+                        'convex_area': row[19],
+                        'solidity': row[20],
+                        'mean_intensity': row[21],
+                        'equivalent_diameter': row[22],
+                        'extracted_feature_id': row[23]
+                    }
+                print(f"Beautify extracted_features_data {json.dumps(extracted_features_data, indent=2, default=str)}")
+
                 for detection in bean_detections:
+                    
                     predictions.append({
                         "bean_id": detection['bean_id'],
                         "is_validated": is_validated,
@@ -769,16 +811,16 @@ def get_all_beans(request):
                         "comment": detection['comment'],
                         "detection_date": detection['created_at'].isoformat() if hasattr(detection['created_at'], 'isoformat') else str(detection['created_at']),
                         "features":{
-                            "area_mm2": float(img_data['extracted_features']['area']) if img_data['extracted_features'] else None,
-                            "perimeter_mm": float(img_data['extracted_features']['perimeter']) if img_data['extracted_features'] else None,
-                            "major_axis_length_mm": float(img_data['extracted_features']['major_axis_length']) if img_data['extracted_features'] else None,
-                            "minor_axis_length_mm": float(img_data['extracted_features']['minor_axis_length']) if img_data['extracted_features'] else None,
-                            "extent": float(img_data['extracted_features']['extent']) if img_data['extracted_features'] else None,
-                            "eccentricity": float(img_data['extracted_features']['eccentricity']) if img_data['extracted_features'] else None,
-                            "convex_area": float(img_data['extracted_features']['convex_area']) if img_data['extracted_features'] else None,
-                            "solidity": float(img_data['extracted_features']['solidity']) if img_data['extracted_features'] else None,
-                            "mean_intensity": float(img_data['extracted_features']['mean_intensity']) if img_data['extracted_features'] else None,
-                            "equivalent_diameter_mm": float(img_data['extracted_features']['equivalent_diameter']) if img_data['extracted_features'] else None
+                            "area_mm2": float(extracted_features_data[detection['extracted_feature_id']]['area']) if extracted_features_data[detection['extracted_feature_id']] else None,
+                            "perimeter_mm": float(extracted_features_data[detection['extracted_feature_id']]['perimeter']) if extracted_features_data[detection['extracted_feature_id']] else None,
+                            "major_axis_length_mm": float(extracted_features_data[detection['extracted_feature_id']]['major_axis_length']) if extracted_features_data[detection['extracted_feature_id']] else None,
+                            "minor_axis_length_mm": float(extracted_features_data[detection['extracted_feature_id']]['minor_axis_length']) if extracted_features_data[detection['extracted_feature_id']] else None,
+                            "extent": float(extracted_features_data[detection['extracted_feature_id']]['extent']) if extracted_features_data[detection['extracted_feature_id']] else None,
+                            "eccentricity": float(extracted_features_data[detection['extracted_feature_id']]['eccentricity']) if extracted_features_data[detection['extracted_feature_id']] else None,
+                            "convex_area": float(extracted_features_data[detection['extracted_feature_id']]['convex_area']) if extracted_features_data[detection['extracted_feature_id']] else None,
+                            "solidity": float(extracted_features_data[detection['extracted_feature_id']]['solidity']) if extracted_features_data[detection['extracted_feature_id']] else None,
+                            "mean_intensity": float(extracted_features_data[detection['extracted_feature_id']]['mean_intensity']) if extracted_features_data[detection['extracted_feature_id']] else None,
+                            "equivalent_diameter_mm": float(extracted_features_data[detection['extracted_feature_id']]['equivalent_diameter']) if extracted_features_data[detection['extracted_feature_id']] else None
                         }
                         
                     })
