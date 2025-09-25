@@ -214,7 +214,7 @@ def get_farm_details(request, farm_id):
               GROUP BY 
                 i.id,i.image_url,i.upload_date
               ORDER BY i.upload_date DESC
-              LIMIT 3
+              LIMIT 5
             """, [farm_id])
 
             images_columns = [col[0] for col in cursor.description]
@@ -274,11 +274,11 @@ def get_farm_details(request, farm_id):
                 'uploads': user['uploads']
               } for user in users_data
             ]
-
+            baseUrl = 'https://sodfcdrqpvcsblclppne.supabase.co/storage/v1/object/public/Beans/'
             recentImages = [
               {
                 'id': str(image['id']),
-                'url': image['url'],
+                'url': baseUrl + image['url'],
                 'uploadDate': image['uploaddate'].isoformat() if image['uploaddate'] else '',
                 'beanCount': image['beancount']
               } for image in images_data
