@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import BeanDetectionCanvas from './BeanDetectionCanvas';
+import BeanImageExtractor from './BeanImageExtractor';
 
 interface BeanDetection {
   bean_id: number;
@@ -45,6 +46,8 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
 }) => {
   const [selectedBeanId, setSelectedBeanId] = useState<number | undefined>();
   const [activeTab, setActiveTab] = useState<'overview' | 'beans' | 'analysis'>('overview');
+  const [showBeanBoxes, setShowBeanBoxes] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   if (!isOpen) return null;
 
@@ -54,7 +57,7 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
   // Find best candidate (largest bean)
   const bestCandidate = beans.length > 0
     ? beans.reduce((prev, current) =>
-      (prev.length_mm > current.length_mm) ? prev : current
+      (prev.features?.area_mm2 > current.features?.area_mm2) ? prev : current
     )
     : null;
 
@@ -71,7 +74,7 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg max-w-7xl max-h-[95vh] overflow-hidden w-full mx-4">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
+        <div className="flex justify-between items-center p-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">
               Bean Analysis Results
@@ -90,178 +93,241 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
           </div>
         </div>
 
-        <div className="flex h-[calc(95vh-100px)]">
-          {/* Left Panel - Navigation */}
-          <div className="w-80 border-r bg-gray-50 overflow-y-auto">
-            <div className="p-4">
-              {/* Tab Navigation */}
-              <div className="flex flex-col space-y-2 mb-4">
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className={`px-3 py-2 text-left rounded ${activeTab === 'overview'
-                    ? 'bg-[var(--espresso-black)] text-white'
-                    : 'text-gray-600 hover:bg-gray-200'
-                    }`}
-                >
-                  Overview
-                </button>
-                <button
-                  onClick={() => setActiveTab('beans')}
-                  className={`px-3 py-2 text-left rounded ${activeTab === 'beans'
-                    ? 'bg-[var(--espresso-black)] text-white'
-                    : 'text-gray-600 hover:bg-gray-200'
-                    }`}
-                >
-                  Bean Details ({beans.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('analysis')}
-                  className={`px-3 py-2 text-left rounded ${activeTab === 'analysis'
-                    ? 'bg-[var(--espresso-black)] text-white'
-                    : 'text-gray-600 hover:bg-gray-200'
-                    }`}
-                >
-                  Analysis
-                </button>
-              </div>
+        {/* Tab Navigation */}
+        <div className="bg-gray-50">
+          <div className="px-6">
+            <div className="flex space-x-8">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'overview'
+                    ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab('beans')}
+                className={`py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'beans'
+                    ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Bean Details ({beans.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('analysis')}
+                className={`py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'analysis'
+                    ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Analysis
+              </button>
+            </div>
+          </div>
+        </div>
 
-              {/* Bean List (when beans tab is active) */}
-              {activeTab === 'beans' && (
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-3">Select Bean</h4>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {beans.map((bean) => (
-                      <div
-                        key={bean.bean_id}
-                        className={`p-3 rounded-lg cursor-pointer transition-colors border ${selectedBeanId === bean.bean_id
-                          ? 'bg-[var(--espresso-black)] text-white border-gray-900'
-                          : 'bg-white hover:bg-gray-100 border-gray-200'
-                          }`}
-                        onClick={() => setSelectedBeanId(bean.bean_id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">Bean #{bean.bean_id}</span>
-                          <div className="flex items-center space-x-1">
-                            {bean.bean_id === bestCandidate?.bean_id && userRole === 'farmer' && (
-                              <span className="text-xs bg-green-500 text-white px-2 py-1 rounded">
-                                BEST
-                              </span>
-                            )}
-                            <span
-                              className={`text-xs px-2 py-1 rounded ${bean.is_validated === true
-                                ? 'bg-green-100 text-green-800'
-                                : bean.is_validated === false
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-gray-100 text-gray-800'
-                                }`}
-                            >
-                              {bean.is_validated === true ? 'Validated' :
-                                bean.is_validated === false ? 'Pending' : 'Unknown'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-sm opacity-75 mt-1">
-                          {bean.length_mm.toFixed(1)} × {bean.width_mm.toFixed(1)} mm
-                        </div>
-                        {bean.bean_type && (
-                          <div className="text-sm opacity-75">
-                            {bean.bean_type} {bean.confidence && `(${(bean.confidence * 100).toFixed(0)}%)`}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+        {/* Content Area */}
+        <div className="h-[calc(95vh-180px)] overflow-y-auto">
+          <div className="p-6">
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                {/* Bean Visualization - Large and Responsive */}
+                <div className="w-full">
+                  <div className="h-96 md:h-[500px]">
+                    <BeanDetectionCanvas
+                      imageSrc={image.src}
+                      beans={beans}
+                      selectedBeanId={selectedBeanId}
+                      onBeanSelect={setSelectedBeanId}
+                      highlightBestCandidate={userRole === 'farmer'}
+                      showBeanBoxes={showBeanBoxes}
+                      zoomLevel={zoomLevel}
+                      showZoomControls={true}
+                      onZoomChange={setZoomLevel}
+                      className="h-full rounded-lg"
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Image Info (when overview tab is active) */}
-              {activeTab === 'overview' && (
-                <div className="space-y-4">
-                  <div className="bg-white rounded-lg p-3">
-                    <h6 className="font-medium text-gray-800 mb-2">Image Information</h6>
-                    <div className="text-sm text-gray-600 space-y-1">
+                {/* Information Cards Below Image */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Image Information */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h6 className="font-semibold text-gray-800 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Image Information
+                    </h6>
+                    <div className="text-sm text-gray-600 space-y-2">
                       {image.userName && (
-                        <div><strong>Submitted by:</strong> {image.userName}</div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Submitted by:</span>
+                          <span>{image.userName}</span>
+                        </div>
                       )}
                       {image.userRole && (
-                        <div><strong>Role:</strong> {image.userRole}</div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Role:</span>
+                          <span className="capitalize">{image.userRole}</span>
+                        </div>
                       )}
                       {image.location && (
-                        <div><strong>Location:</strong> {image.location}</div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Location:</span>
+                          <span>{image.location}</span>
+                        </div>
                       )}
                       {(image.upload_date || image.submissionDate) && (
-                        <div><strong>Date:</strong> {new Date(image.upload_date || image.submissionDate || '').toLocaleDateString()}</div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Date:</span>
+                          <span>{new Date(image.upload_date || image.submissionDate || '').toLocaleDateString()}</span>
+                        </div>
                       )}
                       {image.allegedVariety && (
-                        <div><strong>Alleged Variety:</strong> {image.allegedVariety}</div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Alleged Variety:</span>
+                          <span>{image.allegedVariety}</span>
+                        </div>
                       )}
-
                     </div>
                   </div>
 
-                  <div className="bg-green-50 rounded-lg p-3">
-                    <h6 className="font-medium text-green-800 mb-2">Detection Summary</h6>
-                    <div className="text-sm text-green-600 space-y-1">
-                      <div><strong>Total Beans:</strong> {beans.length}</div>
-                      <div><strong>Validated:</strong> {validatedCount}</div>
-                      <div><strong>Pending:</strong> {pendingCount}</div>
+                  {/* Detection Summary */}
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <h6 className="font-semibold text-green-800 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Detection Summary
+                    </h6>
+                    <div className="text-sm text-green-700 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Total Beans:</span>
+                        <span className="text-lg font-bold">{beans.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Validated:</span>
+                        <span className="text-lg font-bold text-green-600">{validatedCount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Pending:</span>
+                        <span className="text-lg font-bold text-yellow-600">{pendingCount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Validation Rate:</span>
+                        <span className="text-lg font-bold">
+                          {beans.length > 0 ? ((validatedCount / beans.length) * 100).toFixed(0) : 0}%
+                        </span>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Best Candidate for Farmers */}
                   {bestCandidate && userRole === 'farmer' && (
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <h6 className="font-medium text-blue-800 mb-2">Best Candidate for Planting</h6>
-                      <div className="text-sm text-blue-600 space-y-1">
-                        <div><strong>Bean #{bestCandidate.bean_id}</strong></div>
-                        <div>Length: {bestCandidate.length_mm.toFixed(1)} mm</div>
-                        <div>Width: {bestCandidate.width_mm.toFixed(1)} mm</div>
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h6 className="font-semibold text-blue-800 mb-3 flex items-center">
+                        <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                        Best Candidate for Planting
+                      </h6>
+                      <div className="text-sm text-blue-700 space-y-2">
+                        <div className="flex justify-between">
+                          <span className="font-medium">Bean ID:</span>
+                          <span className="font-bold">#{bestCandidate.bean_id}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Longest Side:</span>
+                          <span>{bestCandidate.length_mm.toFixed(1)} mm</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Shortest Side:</span>
+                          <span>{bestCandidate.width_mm.toFixed(1)} mm</span>
+                        </div>
                         {bestCandidate.bean_type && (
-                          <div>Type: {bestCandidate.bean_type}</div>
+                          <div className="flex justify-between">
+                            <span className="font-medium">Type:</span>
+                            <span>{bestCandidate.bean_type}</span>
+                          </div>
                         )}
                       </div>
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            )}
 
-          {/* Main Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-6">
-              {activeTab === 'overview' && (
-                <div className="h-96">
-                  <h3 className="text-lg font-semibold mb-4">Bean Detection Overview</h3>
-                  <BeanDetectionCanvas
-                    imageSrc={image.src}
-                    beans={beans}
-                    selectedBeanId={selectedBeanId}
-                    onBeanSelect={setSelectedBeanId}
-                    highlightBestCandidate={userRole === 'farmer'}
-                    className="h-full border rounded-lg"
-                  />
+            {activeTab === 'beans' && (
+              <div className="space-y-6">
+                {/* Controls Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-gray-50 p-4 rounded-lg">
+                  {/* Bean Selector Dropdown */}
+                  <div className="flex items-center space-x-4">
+                    <label className="text-sm font-medium text-gray-700">Select Bean:</label>
+                    <select
+                      value={selectedBeanId || ''}
+                      onChange={(e) => setSelectedBeanId(e.target.value ? parseInt(e.target.value) : undefined)}
+                      className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48"
+                    >
+                      <option value="">Select a bean...</option>
+                      {beans.map((bean) => (
+                        <option key={bean.bean_id} value={bean.bean_id}>
+                          Bean #{bean.bean_id} - {bean.length_mm.toFixed(1)}×{bean.width_mm.toFixed(1)}mm
+                          {bean.bean_id === bestCandidate?.bean_id && userRole === 'farmer' ? ' (BEST)' : ''}
+                          {bean.is_validated === true ? ' ✓' : bean.is_validated === false ? ' ⏳' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Controls */}
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm font-medium text-gray-700">Show Bean Boxes:</label>
+                      <button
+                        onClick={() => setShowBeanBoxes(!showBeanBoxes)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          showBeanBoxes ? 'bg-blue-600' : 'bg-gray-200'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            showBeanBoxes ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
 
-              {activeTab === 'beans' && (
-                <div className="grid lg:grid-cols-2 gap-6">
-                  {/* Bean Visualization */}
-                  <div>
+                <div className="grid lg:grid-cols-3 gap-6">
+                  {/* Bean Visualization - Takes up more space */}
+                  <div className="lg:col-span-1">
                     <h3 className="text-lg font-semibold mb-4">Bean Visualization</h3>
-                    <div className="h-80">
+                    <div className="h-96 md:h-[500px]">
                       <BeanDetectionCanvas
                         imageSrc={image.src}
                         beans={beans}
                         selectedBeanId={selectedBeanId}
                         onBeanSelect={setSelectedBeanId}
                         highlightBestCandidate={userRole === 'farmer'}
-                        className="h-full border rounded-lg"
+                        showBeanBoxes={showBeanBoxes}
+                        zoomLevel={zoomLevel}
+                        showZoomControls={true}
+                        onZoomChange={setZoomLevel}
+                        className="h-full  rounded-lg"
                       />
                     </div>
                   </div>
 
                   {/* Bean Details */}
-                  <div>
+                  <div className="lg:col-span-2">
                     <h3 className="text-lg font-semibold mb-4">Bean Details</h3>
                     {selectedBean ? (
                       <div className="bg-gray-50 rounded-lg p-4 space-y-4">
@@ -342,7 +408,6 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                           </div>
                         )}
 
-
                         {selectedBean.bean_id === bestCandidate?.bean_id && userRole === 'farmer' && (
                           <div className="bg-green-100 border border-green-300 rounded p-3">
                             <div className="flex items-center space-x-2">
@@ -354,133 +419,240 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                             </p>
                           </div>
                         )}
+
                         <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                           <h6 className="font-medium text-blue-800 mb-2">Additional Measurements</h6>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div>
+                          <div className="grid grid-cols-1 gap-2 text-sm">
+                            <div className="flex justify-between">
                               <span className="font-medium text-blue-700">Area:</span>
-                              <span className="ml-1">{selectedBean?.features?.area_mm2?.toFixed(2) || 'N/A'} mm²</span>
+                              <span>{selectedBean?.features?.area_mm2?.toFixed(2) || 'N/A'} mm²</span>
                             </div>
-                            <div>
+                            <div className="flex justify-between">
                               <span className="font-medium text-blue-700">Perimeter:</span>
-                              <span className="ml-1">{selectedBean?.features?.perimeter_mm?.toFixed(2) || 'N/A'} mm</span>
+                              <span>{selectedBean?.features?.perimeter_mm?.toFixed(2) || 'N/A'} mm</span>
                             </div>
-                            <div>
+                            <div className="flex justify-between">
                               <span className="font-medium text-blue-700">Major Axis:</span>
-                              <span className="ml-1">{selectedBean?.features?.major_axis_length_mm?.toFixed(2) || 'N/A'} mm</span>
+                              <span>{selectedBean?.features?.major_axis_length_mm?.toFixed(2) || 'N/A'} mm</span>
                             </div>
-                            <div>
+                            <div className="flex justify-between">
                               <span className="font-medium text-blue-700">Minor Axis:</span>
-                              <span className="ml-1">{selectedBean?.features?.minor_axis_length_mm?.toFixed(2) || 'N/A'} mm</span>
+                              <span>{selectedBean?.features?.minor_axis_length_mm?.toFixed(2) || 'N/A'} mm</span>
                             </div>
-                            <div>
+                            <div className="flex justify-between">
                               <span className="font-medium text-blue-700">Extent:</span>
-                              <span className="ml-1">{selectedBean?.features?.extent?.toFixed(3) || 'N/A'}</span>
+                              <span>{selectedBean?.features?.extent?.toFixed(3) || 'N/A'}</span>
                             </div>
-                            <div>
+                            <div className="flex justify-between">
                               <span className="font-medium text-blue-700">Eccentricity:</span>
-                              <span className="ml-1">{selectedBean?.features?.eccentricity?.toFixed(3) || 'N/A'}</span>
-                            </div>
-                            <div>
-                              <span className="font-medium text-blue-700">Convex Area:</span>
-                              <span className="ml-1">{selectedBean?.features?.convex_area?.toFixed(2) || 'N/A'} mm²</span>
-                            </div>
-                            <div>
-                              <span className="font-medium text-blue-700">Solidity:</span>
-                              <span className="ml-1">{selectedBean?.features?.solidity?.toFixed(3) || 'N/A'}</span>
-                            </div>
-                            <div>
-                              <span className="font-medium text-blue-700">Mean Intensity:</span>
-                              <span className="ml-1">{selectedBean?.features?.mean_intensity?.toFixed(1) || 'N/A'}</span>
-                            </div>
-                            <div className="col-span-2">
-                              <span className="font-medium text-blue-700">Equivalent Diameter:</span>
-                              <span className="ml-1">{selectedBean?.features?.equivalent_diameter_mm?.toFixed(2) || 'N/A'} mm</span>
+                              <span>{selectedBean?.features?.eccentricity?.toFixed(3) || 'N/A'}</span>
                             </div>
                           </div>
                         </div>
                       </div>
                     ) : (
                       <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
-                        Select a bean from the list to view its details
+                        Select a bean from the dropdown to view its details
                       </div>
                     )}
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {activeTab === 'analysis' && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Statistical Analysis</h3>
-                  {beans.length > 0 ? (
-                    <div className="grid lg:grid-cols-2 gap-6">
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h4 className="font-medium text-gray-800 mb-3">Size Distribution</h4>
+            {activeTab === 'analysis' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold mb-4">Statistical Analysis</h3>
+                {beans.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Statistics Cards */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
+                        <h4 className="font-semibold text-blue-800 mb-4 flex items-center">
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          Size Distribution
+                        </h4>
                         <div className="space-y-3">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Largest Bean:</span>
-                            <span className="text-sm font-medium">
-                              {Math.max(...beans.map(b => b.length_mm)).toFixed(1)} mm
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-blue-700 font-medium">Largest Bean:</span>
+                            <span className="text-lg font-bold text-blue-900">
+                              {Math.max(...beans.map(b => b.features?.area_mm2)).toFixed(1)} mm
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Smallest Bean:</span>
-                            <span className="text-sm font-medium">
-                              {Math.min(...beans.map(b => b.length_mm)).toFixed(1)} mm
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-blue-700 font-medium">Smallest Bean:</span>
+                            <span className="text-lg font-bold text-blue-900">
+                              {Math.min(...beans.map(b => b.features?.area_mm2)).toFixed(1)} mm
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Average Length:</span>
-                            <span className="text-sm font-medium">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-blue-700 font-medium">Average of Longest Side:</span>
+                            <span className="text-lg font-bold text-blue-900">
                               {(beans.reduce((sum, b) => sum + b.length_mm, 0) / beans.length).toFixed(1)} mm
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Average Width:</span>
-                            <span className="text-sm font-medium">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-blue-700 font-medium">Average of Shortest Side:</span>
+                            <span className="text-lg font-bold text-blue-900">
                               {(beans.reduce((sum, b) => sum + b.width_mm, 0) / beans.length).toFixed(1)} mm
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h4 className="font-medium text-gray-800 mb-3">Validation Status</h4>
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6">
+                        <h4 className="font-semibold text-green-800 mb-4 flex items-center">
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Validation Status
+                        </h4>
                         <div className="space-y-3">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Total Beans:</span>
-                            <span className="text-sm font-medium">{beans.length}</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-green-700 font-medium">Total Beans:</span>
+                            <span className="text-lg font-bold text-green-900">{beans.length}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Validated:</span>
-                            <span className="text-sm font-medium text-green-600">{validatedCount}</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-green-700 font-medium">Validated:</span>
+                            <span className="text-lg font-bold text-green-600">{validatedCount}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Pending:</span>
-                            <span className="text-sm font-medium text-yellow-600">{pendingCount}</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-green-700 font-medium">Pending:</span>
+                            <span className="text-lg font-bold text-yellow-600">{pendingCount}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Validation Rate:</span>
-                            <span className="text-sm font-medium">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-green-700 font-medium">Validation Rate:</span>
+                            <span className="text-lg font-bold text-green-900">
                               {beans.length > 0 ? ((validatedCount / beans.length) * 100).toFixed(0) : 0}%
                             </span>
                           </div>
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
-                      No beans detected for analysis
+
+                    {/* Bean Specimens */}
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Bean Specimens
+                      </h4>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {/* Largest Bean */}
+                        {(() => {
+                          const largestBean = beans.reduce((prev, current) => 
+                            (prev.features?.area_mm2 > current.features?.area_mm2) ? prev : current
+                          );
+                          return (
+                            <div className="bg-white rounded-xl p-6 border-2 border-green-200">
+                              <div className="flex items-center justify-between mb-4">
+                                <h5 className="font-semibold text-green-800 flex items-center">
+                                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18l3-3V9l4-4-3-3-4 4H4l3 3 3-3z" clipRule="evenodd"/>
+                                  </svg>
+                                  Largest Bean #{largestBean.bean_id}
+                                </h5>
+                                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                  LARGEST
+                                </span>
+                              </div>
+                              <div className="bg-gray-100 rounded-lg p-4 mb-4 min-h-32 flex items-center justify-center">
+                                <BeanImageExtractor bean={largestBean} imageSrc={image.src} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div className="text-center">
+                                  <div className="text-gray-600">Longest Side</div>
+                                  <div className="font-bold text-lg text-green-700">{largestBean.length_mm.toFixed(1)} mm</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-gray-600">Shortest Side</div>
+                                  <div className="font-bold text-lg text-green-700">{largestBean.width_mm.toFixed(1)} mm</div>
+                                </div>
+                                {largestBean.features?.area_mm2 && (
+                                  <>
+                                    <div className="text-center">
+                                      <div className="text-gray-600">Area</div>
+                                      <div className="font-semibold text-green-700">{largestBean.features.area_mm2.toFixed(1)} mm²</div>
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="text-gray-600">Perimeter</div>
+                                      <div className="font-semibold text-green-700">{largestBean.features.perimeter_mm?.toFixed(1) || 'N/A'} mm</div>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Smallest Bean */}
+                        {(() => {
+                          const smallestBean = beans.reduce((prev, current) => 
+                            (prev.features?.area_mm2 < current.features?.area_mm2) ? prev : current
+                          );
+                          return (
+                            <div className="bg-white rounded-xl p-6 border-2 border-orange-200">
+                              <div className="flex items-center justify-between mb-4">
+                                <h5 className="font-semibold text-orange-800 flex items-center">
+                                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                                  </svg>
+                                  Smallest Bean #{smallestBean.bean_id}
+                                </h5>
+                                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                                  SMALLEST
+                                </span>
+                              </div>
+                              <div className="bg-gray-100 rounded-lg p-4 mb-4 min-h-32 flex items-center justify-center">
+                                <BeanImageExtractor bean={smallestBean} imageSrc={image.src} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div className="text-center">
+                                  <div className="text-gray-600">Longest Side</div>
+                                  <div className="font-bold text-lg text-orange-700">{smallestBean.length_mm.toFixed(1)} mm</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-gray-600">Shortest Side</div>
+                                  <div className="font-bold text-lg text-orange-700">{smallestBean.width_mm.toFixed(1)} mm</div>
+                                </div>
+                                {smallestBean.features?.area_mm2 && (
+                                  <>
+                                    <div className="text-center">
+                                      <div className="text-gray-600">Area</div>
+                                      <div className="font-semibold text-orange-700">{smallestBean.features.area_mm2.toFixed(1)} mm²</div>
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="text-gray-600">Perimeter</div>
+                                      <div className="font-semibold text-orange-700">{smallestBean.features.perimeter_mm?.toFixed(1) || 'N/A'} mm</div>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.034 0-3.9.785-5.291 2.09M6.343 6.343A8 8 0 1017.657 17.657 8 8 0 006.343 6.343z" />
+                    </svg>
+                    <h4 className="text-lg font-medium text-gray-900 mb-2">No Analysis Available</h4>
+                    <p>No beans detected for analysis</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center p-6 border-t bg-gray-50">
+        <div className="flex justify-between items-center p-6 bg-gray-50">
           <div className="text-sm text-gray-600">
             {beans.length} beans • {validatedCount} validated
           </div>

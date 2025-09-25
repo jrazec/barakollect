@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import BeanDetectionCanvas from './BeanDetectionCanvas';
+import BeanImageExtractor from './BeanImageExtractor';
 
 interface BeanDetection {
   bean_id: number;
@@ -45,6 +46,9 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
   const [beans, setBeans] = useState<BeanDetection[]>(image.predictions || []);
   const [editingBean, setEditingBean] = useState<Partial<BeanDetection>>({});
   const [isValidating, setIsValidating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'edit' | 'analysis'>('edit');
+  const [showBeanBoxes, setShowBeanBoxes] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   if (!isOpen) return null;
 
@@ -156,261 +160,406 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
           </div>
         </div>
 
-        <div className="flex h-[calc(95vh-100px)]">
-          {/* Left Panel - Bean Selection */}
-          <div className="w-80 border-r bg-gray-50 overflow-y-auto">
-            <div className="p-4">
-              <h4 className="font-semibold text-gray-800 mb-3">Select Bean</h4>
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {beans.map((bean) => (
-                  <div
-                    key={bean.bean_id}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors border ${
-                      selectedBeanId === bean.bean_id
-                        ? 'bg-[var(--espresso-black)] text-white border-gray-900'
-                        : 'bg-white hover:bg-gray-100 border-gray-200'
-                    }`}
-                    onClick={() => handleBeanSelect(bean.bean_id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Bean #{bean.bean_id}</span>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          bean.is_validated === true
-                            ? 'bg-green-100 text-green-800'
-                            : bean.is_validated === false
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
+        {/* Tab Navigation */}
+        <div className="border-b bg-gray-50">
+          <div className="px-6">
+            <div className="flex space-x-8">
+              <button
+                onClick={() => setActiveTab('edit')}
+                className={`py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'edit'
+                    ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Edit Beans ({beans.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('analysis')}
+                className={`py-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'analysis'
+                    ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Analysis
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="h-[calc(95vh-180px)] overflow-y-auto">
+          <div className="p-6">
+            {activeTab === 'edit' && (
+              <div className="space-y-6">
+                {/* Controls Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-gray-50 p-4 rounded-lg">
+                  {/* Bean Selector Dropdown */}
+                  <div className="flex items-center space-x-4">
+                    <label className="text-sm font-medium text-gray-700">Select Bean:</label>
+                    <select
+                      value={selectedBeanId || ''}
+                      onChange={(e) => {
+                        const beanId = e.target.value ? parseInt(e.target.value) : undefined;
+                        setSelectedBeanId(beanId);
+                        if (beanId) {
+                          handleBeanSelect(beanId);
+                        }
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48"
+                    >
+                      <option value="">Select a bean to edit...</option>
+                      {beans.map((bean) => (
+                        <option key={bean.bean_id} value={bean.bean_id}>
+                          Bean #{bean.bean_id} - {bean.length_mm.toFixed(1)}×{bean.width_mm.toFixed(1)}mm
+                          {bean.is_validated === true ? ' ✓' : bean.is_validated === false ? ' ⏳' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Controls */}
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm font-medium text-gray-700">Show Bean Boxes:</label>
+                      <button
+                        onClick={() => setShowBeanBoxes(!showBeanBoxes)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          showBeanBoxes ? 'bg-blue-600' : 'bg-gray-200'
                         }`}
                       >
-                        {bean.is_validated === true ? 'Validated' :
-                         bean.is_validated === false ? 'Pending' : 'Unknown'}
-                      </span>
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            showBeanBoxes ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
                     </div>
-                    <div className="text-sm opacity-75 mt-1">
-                      {bean.length_mm.toFixed(1)} × {bean.width_mm.toFixed(1)} mm
+                  </div>
+                </div>
+
+                <div className="grid lg:grid-cols-3 gap-6">
+                  {/* Bean Visualization - Takes up more space */}
+                  <div className="lg:col-span-2">
+                    <h3 className="text-lg font-semibold mb-4">Bean Visualization</h3>
+                    <div className="h-96 md:h-[500px]">
+                      <BeanDetectionCanvas
+                        imageSrc={image.src}
+                        beans={beans}
+                        selectedBeanId={selectedBeanId}
+                        onBeanSelect={setSelectedBeanId}
+                        highlightBestCandidate={false}
+                        showBeanBoxes={showBeanBoxes}
+                        zoomLevel={zoomLevel}
+                        showZoomControls={true}
+                        onZoomChange={setZoomLevel}
+                        className="h-full border rounded-lg"
+                      />
                     </div>
-                    {bean.bean_type && (
-                      <div className="text-sm opacity-75">
-                        {bean.bean_type}
+                  </div>
+
+                  {/* Bean Edit Form */}
+                  <div className="lg:col-span-1">
+                    <h3 className="text-lg font-semibold mb-4">Bean Details</h3>
+                    {beans.find(bean => bean.bean_id === selectedBeanId) && editingBean ? (
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">Bean #{beans.find(bean => bean.bean_id === selectedBeanId)?.bean_id}</h4>
+                          <button
+                            onClick={handleValidate}
+                            disabled={isValidating}
+                            className={`px-4 py-2 rounded ${
+                              isValidating 
+                                ? 'bg-gray-400 cursor-not-allowed' 
+                                : 'bg-green-500 hover:bg-green-600'
+                            } text-white transition-colors`}
+                          >
+                            {isValidating ? 'Validating...' : 'Validate'}
+                          </button>
+                        </div>
+
+                        {/* Read-only Length and Width */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Longest Side (Read-only)
+                            </label>
+                            <input
+                              type="text"
+                              value={`${beans.find(bean => bean.bean_id === selectedBeanId)?.length_mm.toFixed(2)} mm`}
+                              readOnly
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Shortest Side (Read-only)
+                            </label>
+                            <input
+                              type="text"
+                              value={`${beans.find(bean => bean.bean_id === selectedBeanId)?.width_mm.toFixed(2)} mm`}
+                              readOnly
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Bean Type Dropdown */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Bean Type
+                          </label>
+                          <select
+                            value={editingBean.bean_type || 'Others'}
+                            onChange={(e) => handleFieldChange('bean_type', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {beanTypeOptions.map(option => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Validation Status */}
+                        <div>
+                          <div className="text-sm font-medium text-gray-700 mb-1">Validation Status</div>
+                          <div className={`inline-block px-2 py-1 rounded text-sm ${
+                            beans.find(bean => bean.bean_id === selectedBeanId)?.is_validated === true
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {beans.find(bean => bean.bean_id === selectedBeanId)?.is_validated === true ? 'Validated' : 'Pending Validation'}
+                          </div>
+                        </div>
+
+                        {/* Additional Measurements - Editable */}
+                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                          <h6 className="font-medium text-blue-800 mb-3">Additional Measurements</h6>
+                          <div className="grid grid-cols-1 gap-3 text-sm">
+                            <div>
+                              <label className="block font-medium text-blue-700 mb-1">Area (mm²)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editingBean.features?.area_mm2 || ''}
+                                onChange={(e) => handleFeatureChange('area_mm2', parseFloat(e.target.value))}
+                                className="w-full px-2 py-1 border rounded text-gray-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-blue-700 mb-1">Perimeter (mm)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editingBean.features?.perimeter_mm || ''}
+                                onChange={(e) => handleFeatureChange('perimeter_mm', parseFloat(e.target.value))}
+                                className="w-full px-2 py-1 border rounded text-gray-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-blue-700 mb-1">Major Axis (mm)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editingBean.features?.major_axis_length_mm || ''}
+                                onChange={(e) => handleFeatureChange('major_axis_length_mm', parseFloat(e.target.value))}
+                                className="w-full px-2 py-1 border rounded text-gray-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-blue-700 mb-1">Minor Axis (mm)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editingBean.features?.minor_axis_length_mm || ''}
+                                onChange={(e) => handleFeatureChange('minor_axis_length_mm', parseFloat(e.target.value))}
+                                className="w-full px-2 py-1 border rounded text-gray-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-blue-700 mb-1">Extent</label>
+                              <input
+                                type="number"
+                                step="0.001"
+                                value={editingBean.features?.extent || ''}
+                                onChange={(e) => handleFeatureChange('extent', parseFloat(e.target.value))}
+                                className="w-full px-2 py-1 border rounded text-gray-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-medium text-blue-700 mb-1">Eccentricity</label>
+                              <input
+                                type="number"
+                                step="0.001"
+                                value={editingBean.features?.eccentricity || ''}
+                                onChange={(e) => handleFeatureChange('eccentricity', parseFloat(e.target.value))}
+                                className="w-full px-2 py-1 border rounded text-gray-900"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
+                        Select a bean from the dropdown to edit its details
                       </div>
                     )}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          </div>
+            )}
 
-          {/* Main Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-6">
-              <div className="grid lg:grid-cols-2 gap-6">
-                {/* Bean Visualization */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Bean Visualization</h3>
-                  <div className="h-80">
-                    <BeanDetectionCanvas
-                      imageSrc={image.src}
-                      beans={beans}
-                      selectedBeanId={selectedBeanId}
-                      onBeanSelect={setSelectedBeanId}
-                      highlightBestCandidate={false}
-                      className="h-full border rounded-lg"
-                    />
+            {activeTab === 'analysis' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold mb-4">Statistical Analysis</h3>
+                {beans.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Statistics Cards */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
+                        <h4 className="font-semibold text-blue-800 mb-4 flex items-center">
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          Size Distribution
+                        </h4>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-blue-700 font-medium">Largest Bean:</span>
+                            <span className="text-lg font-bold text-blue-900">
+                              {Math.max(...beans.map(b => b.features?.area_mm2)).toFixed(1)} mm
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-blue-700 font-medium">Smallest Bean:</span>
+                            <span className="text-lg font-bold text-blue-900">
+                              {Math.min(...beans.map(b => b.features?.area_mm2)).toFixed(1)} mm
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-blue-700 font-medium">Average of Longest Side:</span>
+                            <span className="text-lg font-bold text-blue-900">
+                              {(beans.reduce((sum, b) => sum + b.length_mm, 0) / beans.length).toFixed(1)} mm
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-blue-700 font-medium">Average of Shortest Side:</span>
+                            <span className="text-lg font-bold text-blue-900">
+                              {(beans.reduce((sum, b) => sum + b.width_mm, 0) / beans.length).toFixed(1)} mm
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6">
+                        <h4 className="font-semibold text-green-800 mb-4 flex items-center">
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Validation Status
+                        </h4>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-green-700 font-medium">Total Beans:</span>
+                            <span className="text-lg font-bold text-green-900">{beans.length}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-green-700 font-medium">Validated:</span>
+                            <span className="text-lg font-bold text-green-600">{beans.filter(bean => bean.is_validated === true).length}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-green-700 font-medium">Pending:</span>
+                            <span className="text-lg font-bold text-yellow-600">{beans.filter(bean => bean.is_validated === false || bean.is_validated === null || bean.is_validated === undefined).length}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bean Specimens */}
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Bean Specimens
+                      </h4>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {/* Largest Bean */}
+                        {(() => {
+                          const largestBean = beans.reduce((prev, current) => 
+                            (prev.features?.area_mm2 > current.features?.area_mm2) ? prev : current
+                          );
+                          return (
+                            <div className="bg-white rounded-xl p-6 border-2 border-green-200">
+                              <div className="flex items-center justify-between mb-4">
+                                <h5 className="font-semibold text-green-800">Largest Bean #{largestBean.bean_id}</h5>
+                                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                  LARGEST
+                                </span>
+                              </div>
+                              <div className="bg-gray-100 rounded-lg p-4 mb-4 min-h-32 flex items-center justify-center">
+                                <BeanImageExtractor bean={largestBean} imageSrc={image.src} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div className="text-center">
+                                  <div className="text-gray-600">Longest Side</div>
+                                  <div className="font-bold text-lg text-green-700">{largestBean.length_mm.toFixed(1)} mm</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-gray-600">Shortest Side</div>
+                                  <div className="font-bold text-lg text-green-700">{largestBean.width_mm.toFixed(1)} mm</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Smallest Bean */}
+                        {(() => {
+                          const smallestBean = beans.reduce((prev, current) => 
+                            (prev.features?.area_mm2 < current.features?.area_mm2) ? prev : current
+                          );
+                          return (
+                            <div className="bg-white rounded-xl p-6 border-2 border-orange-200">
+                              <div className="flex items-center justify-between mb-4">
+                                <h5 className="font-semibold text-orange-800">Smallest Bean #{smallestBean.bean_id}</h5>
+                                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                                  SMALLEST
+                                </span>
+                              </div>
+                              <div className="bg-gray-100 rounded-lg p-4 mb-4 min-h-32 flex items-center justify-center">
+                                <BeanImageExtractor bean={smallestBean} imageSrc={image.src} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div className="text-center">
+                                  <div className="text-gray-600">Longest Side</div>
+                                  <div className="font-bold text-lg text-orange-700">{smallestBean.length_mm.toFixed(1)} mm</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-gray-600">Shortest Side</div>
+                                  <div className="font-bold text-lg text-orange-700">{smallestBean.width_mm.toFixed(1)} mm</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                {/* Bean Edit Form */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Bean Details</h3>
-                  {selectedBean && editingBean ? (
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Bean #{selectedBean.bean_id}</h4>
-                        <button
-                          onClick={handleValidate}
-                          disabled={isValidating}
-                          className={`px-4 py-2 rounded ${
-                            isValidating 
-                              ? 'bg-gray-400 cursor-not-allowed' 
-                              : 'bg-green-500 hover:bg-green-600'
-                          } text-white transition-colors`}
-                        >
-                          {isValidating ? 'Validating...' : 'Validate'}
-                        </button>
-                      </div>
-
-                      {/* Read-only Length and Width */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Length (Read-only)
-                          </label>
-                          <input
-                            type="text"
-                            value={`${selectedBean.length_mm.toFixed(2)} mm`}
-                            readOnly
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Width (Read-only)
-                          </label>
-                          <input
-                            type="text"
-                            value={`${selectedBean.width_mm.toFixed(2)} mm`}
-                            readOnly
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Bean Type Dropdown */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Bean Type
-                        </label>
-                        <select
-                          value={editingBean.bean_type || 'Others'}
-                          onChange={(e) => handleFieldChange('bean_type', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          {beanTypeOptions.map(option => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Validation Status */}
-                      <div>
-                        <div className="text-sm font-medium text-gray-700 mb-1">Validation Status</div>
-                        <div className={`inline-block px-2 py-1 rounded text-sm ${
-                          selectedBean.is_validated === true
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {selectedBean.is_validated === true ? 'Validated' : 'Pending Validation'}
-                        </div>
-                      </div>
-
-                      {/* Additional Measurements - Editable */}
-                      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                        <h6 className="font-medium text-blue-800 mb-3">Additional Measurements</h6>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <label className="block font-medium text-blue-700 mb-1">Area (mm²)</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editingBean.features?.area_mm2 || ''}
-                              onChange={(e) => handleFeatureChange('area_mm2', parseFloat(e.target.value))}
-                              className="w-full px-2 py-1 border rounded text-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <label className="block font-medium text-blue-700 mb-1">Perimeter (mm)</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editingBean.features?.perimeter_mm || ''}
-                              onChange={(e) => handleFeatureChange('perimeter_mm', parseFloat(e.target.value))}
-                              className="w-full px-2 py-1 border rounded text-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <label className="block font-medium text-blue-700 mb-1">Major Axis (mm)</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editingBean.features?.major_axis_length_mm || ''}
-                              onChange={(e) => handleFeatureChange('major_axis_length_mm', parseFloat(e.target.value))}
-                              className="w-full px-2 py-1 border rounded text-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <label className="block font-medium text-blue-700 mb-1">Minor Axis (mm)</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editingBean.features?.minor_axis_length_mm || ''}
-                              onChange={(e) => handleFeatureChange('minor_axis_length_mm', parseFloat(e.target.value))}
-                              className="w-full px-2 py-1 border rounded text-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <label className="block font-medium text-blue-700 mb-1">Extent</label>
-                            <input
-                              type="number"
-                              step="0.001"
-                              value={editingBean.features?.extent || ''}
-                              onChange={(e) => handleFeatureChange('extent', parseFloat(e.target.value))}
-                              className="w-full px-2 py-1 border rounded text-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <label className="block font-medium text-blue-700 mb-1">Eccentricity</label>
-                            <input
-                              type="number"
-                              step="0.001"
-                              value={editingBean.features?.eccentricity || ''}
-                              onChange={(e) => handleFeatureChange('eccentricity', parseFloat(e.target.value))}
-                              className="w-full px-2 py-1 border rounded text-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <label className="block font-medium text-blue-700 mb-1">Convex Area (mm²)</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editingBean.features?.convex_area || ''}
-                              onChange={(e) => handleFeatureChange('convex_area', parseFloat(e.target.value))}
-                              className="w-full px-2 py-1 border rounded text-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <label className="block font-medium text-blue-700 mb-1">Solidity</label>
-                            <input
-                              type="number"
-                              step="0.001"
-                              value={editingBean.features?.solidity || ''}
-                              onChange={(e) => handleFeatureChange('solidity', parseFloat(e.target.value))}
-                              className="w-full px-2 py-1 border rounded text-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <label className="block font-medium text-blue-700 mb-1">Mean Intensity</label>
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={editingBean.features?.mean_intensity || ''}
-                              onChange={(e) => handleFeatureChange('mean_intensity', parseFloat(e.target.value))}
-                              className="w-full px-2 py-1 border rounded text-gray-900"
-                            />
-                          </div>
-                          <div>
-                            <label className="block font-medium text-blue-700 mb-1">Equivalent Diameter (mm)</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editingBean.features?.equivalent_diameter_mm || ''}
-                              onChange={(e) => handleFeatureChange('equivalent_diameter_mm', parseFloat(e.target.value))}
-                              className="w-full px-2 py-1 border rounded text-gray-900"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
-                      Select a bean from the list to edit its details
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.034 0-3.9.785-5.291 2.09M6.343 6.343A8 8 0 1017.657 17.657 8 8 0 006.343 6.343z" />
+                    </svg>
+                    <h4 className="text-lg font-medium text-gray-900 mb-2">No Analysis Available</h4>
+                    <p>No beans detected for analysis</p>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
           </div>
         </div>
 
