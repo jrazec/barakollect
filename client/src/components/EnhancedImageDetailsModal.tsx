@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import BeanDetectionCanvas from './BeanDetectionCanvas';
 import BeanImageExtractor from './BeanImageExtractor';
+import { 
+  calculateBeanMetrics, 
+  findLargestBean, 
+  findSmallestBean, 
+  getBeanCardStyling 
+} from '../utils/beanAnalysisUtils';
 
 interface BeanDetection {
   bean_id: number;
@@ -157,12 +163,13 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                 {/* Information Cards Below Image */}
                 <div className="grid md:grid-cols-2 gap-4">
                   {/* Image Information */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h6 className="font-semibold text-gray-800 mb-3 flex items-center">
-                      <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Image Information
+                  {image.userName || image.userRole || image.location || image.upload_date || image.allegedVariety && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h6 className="font-semibold text-gray-800 mb-3 flex items-center">
+                        <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Image Information
                     </h6>
                     <div className="text-sm text-gray-600 space-y-2">
                       {image.userName && (
@@ -196,7 +203,9 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                         </div>
                       )}
                     </div>
+
                   </div>
+                                      )}
 
                   {/* Detection Summary */}
                   <div className="bg-green-50 rounded-lg p-4">
@@ -532,107 +541,115 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Bean Specimens */}
+                    {/* Bean Specimens - All Beans */}
                     <div>
-                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Bean Specimens
+                      <h4 className="font-semibold text-gray-800 mb-4 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          All Bean Specimens
+                        </div>
+                        <span className="text-sm text-gray-600 bg-white px-3 py-1 rounded-full">
+                          {beans.length} beans detected
+                        </span>
                       </h4>
-                      <div className="grid md:grid-cols-2 gap-6">
-                        {/* Largest Bean */}
+                      
+                      <div className="grid lg:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
                         {(() => {
-                          const largestBean = beans.reduce((prev, current) => 
-                            (prev.features?.area_mm2 > current.features?.area_mm2) ? prev : current
-                          );
-                          return (
-                            <div className="bg-white rounded-xl p-6 border-2 border-green-200">
-                              <div className="flex items-center justify-between mb-4">
-                                <h5 className="font-semibold text-green-800 flex items-center">
-                                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18l3-3V9l4-4-3-3-4 4H4l3 3 3-3z" clipRule="evenodd"/>
-                                  </svg>
-                                  Largest Bean #{largestBean.bean_id}
-                                </h5>
-                                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                                  LARGEST
-                                </span>
-                              </div>
-                              <div className="bg-gray-100 rounded-lg p-4 mb-4 min-h-32 flex items-center justify-center">
-                                <BeanImageExtractor bean={largestBean} imageSrc={image.src} />
-                              </div>
-                              <div className="grid grid-cols-2 gap-3 text-sm">
-                                <div className="text-center">
-                                  <div className="text-gray-600">Longest Side</div>
-                                  <div className="font-bold text-lg text-green-700">{largestBean.length_mm.toFixed(1)} mm</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-gray-600">Shortest Side</div>
-                                  <div className="font-bold text-lg text-green-700">{largestBean.width_mm.toFixed(1)} mm</div>
-                                </div>
-                                {largestBean.features?.area_mm2 && (
-                                  <>
-                                    <div className="text-center">
-                                      <div className="text-gray-600">Area</div>
-                                      <div className="font-semibold text-green-700">{largestBean.features.area_mm2.toFixed(1)} mm²</div>
-                                    </div>
-                                    <div className="text-center">
-                                      <div className="text-gray-600">Perimeter</div>
-                                      <div className="font-semibold text-green-700">{largestBean.features.perimeter_mm?.toFixed(1) || 'N/A'} mm</div>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
+                          // Use utility functions for finding largest/smallest beans
+                          const largestBean = findLargestBean(beans);
+                          const smallestBean = findSmallestBean(beans);
+                          const largestBeanId = largestBean?.bean_id || 0;
+                          const smallestBeanId = smallestBean?.bean_id || 0;
 
-                        {/* Smallest Bean */}
-                        {(() => {
-                          const smallestBean = beans.reduce((prev, current) => 
-                            (prev.features?.area_mm2 < current.features?.area_mm2) ? prev : current
-                          );
-                          return (
-                            <div className="bg-white rounded-xl p-6 border-2 border-orange-200">
-                              <div className="flex items-center justify-between mb-4">
-                                <h5 className="font-semibold text-orange-800 flex items-center">
-                                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
-                                  </svg>
-                                  Smallest Bean #{smallestBean.bean_id}
-                                </h5>
-                                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
-                                  SMALLEST
-                                </span>
-                              </div>
-                              <div className="bg-gray-100 rounded-lg p-4 mb-4 min-h-32 flex items-center justify-center">
-                                <BeanImageExtractor bean={smallestBean} imageSrc={image.src} />
-                              </div>
-                              <div className="grid grid-cols-2 gap-3 text-sm">
-                                <div className="text-center">
-                                  <div className="text-gray-600">Longest Side</div>
-                                  <div className="font-bold text-lg text-orange-700">{smallestBean.length_mm.toFixed(1)} mm</div>
+                          return beans.map((bean) => {
+                            // Calculate metrics using utility functions
+                            const metrics = calculateBeanMetrics(bean);
+                            
+                            // Get styling based on bean status
+                            const styling = getBeanCardStyling(bean, largestBeanId, smallestBeanId);
+
+                            return (
+                              <div key={bean.bean_id} className={styling.cardClass}>
+                                <div className="flex items-center justify-between mb-3">
+                                  <h5 className={`font-semibold ${styling.headerColor} flex items-center text-sm`}>
+                                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                                    </svg>
+                                    Bean #{bean.bean_id}
+                                  </h5>
+                                  <span className={styling.badgeClass}>
+                                    {styling.badgeText}
+                                  </span>
                                 </div>
-                                <div className="text-center">
-                                  <div className="text-gray-600">Shortest Side</div>
-                                  <div className="font-bold text-lg text-orange-700">{smallestBean.width_mm.toFixed(1)} mm</div>
+                                
+                                <div className="bg-gray-100 rounded-lg p-2 mb-3 h-24 flex items-center justify-center">
+                                  <BeanImageExtractor bean={bean} imageSrc={image.src} />
                                 </div>
-                                {smallestBean.features?.area_mm2 && (
-                                  <>
+                                
+                                {/* Basic measurements */}
+                                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                                  <div className="text-center">
+                                    <div className="text-gray-600">Length</div>
+                                    <div className={`font-bold ${styling.valueColor}`}>
+                                      {metrics.length.toFixed(1)} mm
+                                    </div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-gray-600">Width</div>
+                                    <div className={`font-bold ${styling.valueColor}`}>
+                                      {metrics.width.toFixed(1)} mm
+                                    </div>
+                                  </div>
+                                  {metrics.area > 0 && (
                                     <div className="text-center">
                                       <div className="text-gray-600">Area</div>
-                                      <div className="font-semibold text-orange-700">{smallestBean.features.area_mm2.toFixed(1)} mm²</div>
+                                      <div className={`font-semibold ${styling.valueColor}`}>
+                                        {metrics.area.toFixed(1)} mm²
+                                      </div>
                                     </div>
+                                  )}
+                                  {metrics.perimeter > 0 && (
                                     <div className="text-center">
                                       <div className="text-gray-600">Perimeter</div>
-                                      <div className="font-semibold text-orange-700">{smallestBean.features.perimeter_mm?.toFixed(1) || 'N/A'} mm</div>
+                                      <div className={`font-semibold ${styling.valueColor}`}>
+                                        {metrics.perimeter.toFixed(1)} mm
+                                      </div>
                                     </div>
-                                  </>
-                                )}
+                                  )}
+                                </div>
+
+                                {/* Advanced metrics */}
+                                <div className="border-t border-gray-200 pt-2">
+                                  <div className="grid grid-cols-3 gap-2 text-xs">
+                                    {metrics.circularity && (
+                                      <div className="text-center">
+                                        <div className="text-gray-500">Circularity</div>
+                                        <div className="font-medium text-gray-800">
+                                          {metrics.circularity.toFixed(3)}
+                                        </div>
+                                      </div>
+                                    )}
+                                    <div className="text-center">
+                                      <div className="text-gray-500">Aspect Ratio</div>
+                                      <div className="font-medium text-gray-800">
+                                        {metrics.aspectRatio.toFixed(2)}
+                                      </div>
+                                    </div>
+                                    {metrics.solidity && (
+                                      <div className="text-center">
+                                        <div className="text-gray-500">Solidity</div>
+                                        <div className="font-medium text-gray-800">
+                                          {metrics.solidity.toFixed(3)}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          );
+                            );
+                          });
                         })()}
                       </div>
                     </div>
