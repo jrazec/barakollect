@@ -148,7 +148,7 @@ const AdminBeansMetadata: React.FC = () => {
     const handleValidateBean = async (beanId: number, updatedBean: any) => {
         try {
             // TODO: Replace with actual API endpoint
-            const response = await fetch('/api/beans/validate/', {
+            const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/beans/validate/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

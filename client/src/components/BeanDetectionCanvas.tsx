@@ -23,6 +23,7 @@ interface BeanDetectionCanvasProps {
   zoomLevel?: number;
   showZoomControls?: boolean;
   onZoomChange?: (zoom: number) => void;
+  focusBeanId?: number; // New prop to center on specific bean
 }
 
 const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
@@ -35,7 +36,8 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
   showBeanBoxes = true,
   zoomLevel = 1,
   showZoomControls = false,
-  onZoomChange
+  onZoomChange,
+  focusBeanId // New prop
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -61,6 +63,48 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
     image.src = imageSrc;
     imageRef.current = image;
   }, [imageSrc]);
+
+  // Auto-center on focused bean
+  useEffect(() => {
+    if (focusBeanId && imageLoaded && imageRef.current && canvasRef.current) {
+      const focusBean = beans.find(bean => bean.bean_id === focusBeanId);
+      if (focusBean) {
+        const canvas = canvasRef.current;
+        const image = imageRef.current;
+        
+        // Calculate scale and dimensions
+        const baseScale = Math.min(canvas.width / image.width, canvas.height / image.height);
+        const scale = baseScale * zoomLevel;
+        
+        // Get bean center coordinates
+        const [bx, by, bwidth, bheight] = focusBean.bbox;
+        const beanCenterX = bx + bwidth / 2;
+        const beanCenterY = by + bheight / 2;
+        
+        // Calculate where the bean center should be in canvas coordinates (center of canvas)
+        const canvasCenterX = canvas.width / 2;
+        const canvasCenterY = canvas.height / 2;
+        
+        // Calculate required pan offset to center the bean
+        const targetX = canvasCenterX - (beanCenterX * scale);
+        const targetY = canvasCenterY - (beanCenterY * scale);
+        
+        // Calculate base offset (where image would be centered at 1x zoom)
+        const scaledWidth = image.width * scale;
+        const scaledHeight = image.height * scale;
+        const baseOffsetX = (canvas.width - scaledWidth) / 2;
+        const baseOffsetY = (canvas.height - scaledHeight) / 2;
+        
+        // Set pan offset to center on bean
+        setPanOffset({
+          x: targetX - baseOffsetX,
+          y: targetY - baseOffsetY
+        });
+        
+        console.log(`Centered on bean #${focusBeanId} at (${beanCenterX}, ${beanCenterY})`);
+      }
+    }
+  }, [focusBeanId, zoomLevel, imageLoaded, beans]);
 
   useEffect(() => {
     if (imageLoaded) {
