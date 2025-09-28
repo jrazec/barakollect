@@ -1026,6 +1026,56 @@ export class AdminService {
     }
   }
 
+  // New method for researcher/farmer simplified farm view
+  static async getFarmView(farmId: string): Promise<{
+    id: string;
+    name: string;
+    lat?: number;
+    lng?: number;
+    users: Array<{
+      id: string;
+      name: string;
+      role: string;
+      uploads: number;
+    }>;
+    recentImages: Array<{
+      id: string;
+      url: string;
+      uploadDate: string;
+      beanCount: number;
+    }>;
+    aggregatedData: {
+      major_axis_length?: { value: number; overall: number; status: string };
+      minor_axis_length?: { value: number; overall: number; status: string };
+      area?: { value: number; overall: number; status: string };
+      perimeter?: { value: number; overall: number; status: string };
+      aspect_ratio?: { value: number; overall: number; status: string };
+      circularity?: { value: number; overall: number; status: string };
+      extent?: { value: number; overall: number; status: string };
+      eccentricity?: { value: number; overall: number; status: string };
+      solidity?: { value: number; overall: number; status: string };
+      equivalent_diameter?: { value: number; overall: number; status: string };
+    };
+    beanTypes: string[];
+    monthlyUploads: Array<{
+      month: string;
+      uploads: number;
+    }>;
+  } | null> {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_HOST_BE}/api/farms/${farmId}/view/`
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching farm view data:", error);
+      throw error;
+    }
+  }
+
   static async createFarm(farmData: {
     name: string;
     lat: number;
