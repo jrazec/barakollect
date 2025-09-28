@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from django.db import transaction
-from models.models import User, UserRole, Role, Location
+from models.models import Image, User, UserRole, Role, Location
 from django.core import serializers
 from services.supabase_service import supabase
 
@@ -210,6 +210,11 @@ def update_user(request):
 
             role = Role.objects.get(id=int(role_id))
             UserRole.objects.update_or_create(user=user, defaults={"role": role})
+            # update user image's location if location changed
+            images = Image.objects.filter(userimage__user_id=user.id)
+            for img in images:
+                img.location_id = location_id
+                img.save()
 
         return JsonResponse({"message": "User updated successfully"})
     except User.DoesNotExist:
