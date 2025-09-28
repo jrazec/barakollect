@@ -220,14 +220,32 @@ def get_farm_details(request, farm_id):
             images_columns = [col[0] for col in cursor.description]
             images_data = [dict(zip(images_columns, row)) for row in cursor.fetchall()]
 
-            # Execute the aggregated data query
+            # Execute the comprehensive morphological features query
             cursor.execute("""
               SELECT 
+                -- Individual farm averages
                 AVG(ef.major_axis_length) as avgBeanLength,
                 AVG(ef.minor_axis_length) as avgBeanWidth,
                 AVG(ef.area) as avgBeanArea,
+                AVG(ef.perimeter) as avgBeanPerimeter,
+                AVG(ef.extent) as avgBeanExtent,
+                AVG(ef.eccentricity) as avgBeanEccentricity,
+                AVG(ef.convex_area) as avgBeanConvexArea,
+                AVG(ef.solidity) as avgBeanSolidity,
+                AVG(ef.mean_intensity) as avgBeanMeanIntensity,
+                AVG(ef.equivalent_diameter) as avgBeanEquivalentDiameter,
+                -- Calculated features
+                AVG(CASE 
+                  WHEN ef.minor_axis_length > 0 
+                  THEN ef.major_axis_length / ef.minor_axis_length 
+                  ELSE 0 
+                END) as avgAspectRatio,
+                AVG(CASE 
+                  WHEN ef.perimeter > 0 
+                  THEN (4 * 3.14159 * ef.area) / (ef.perimeter * ef.perimeter) 
+                  ELSE 0 
+                END) as avgCircularity,
                 ARRAY_AGG(DISTINCT p.predicted_label->>'bean_type') AS commonBeanTypes
-                -- MODE() WITHIN GROUP (ORDER BY p.predicted_label->>'bean_type') as commonBeanTypes
               FROM 
                 public.extracted_features as ef
               JOIN 
@@ -241,14 +259,120 @@ def get_farm_details(request, farm_id):
             """, [farm_id])
 
             agg_result = cursor.fetchone()
+            
+            # Get overall database averages for comparison
+            cursor.execute("""
+              SELECT 
+                AVG(ef.major_axis_length) as overallAvgLength,
+                AVG(ef.minor_axis_length) as overallAvgWidth,
+                AVG(ef.area) as overallAvgArea,
+                AVG(ef.perimeter) as overallAvgPerimeter,
+                AVG(ef.extent) as overallAvgExtent,
+                AVG(ef.eccentricity) as overallAvgEccentricity,
+                AVG(ef.convex_area) as overallAvgConvexArea,
+                AVG(ef.solidity) as overallAvgSolidity,
+                AVG(ef.mean_intensity) as overallAvgMeanIntensity,
+                AVG(ef.equivalent_diameter) as overallAvgEquivalentDiameter,
+                AVG(CASE 
+                  WHEN ef.minor_axis_length > 0 
+                  THEN ef.major_axis_length / ef.minor_axis_length 
+                  ELSE 0 
+                END) as overallAvgAspectRatio,
+                AVG(CASE 
+                  WHEN ef.perimeter > 0 
+                  THEN (4 * 3.14159 * ef.area) / (ef.perimeter * ef.perimeter) 
+                  ELSE 0 
+                END) as overallAvgCircularity
+              FROM 
+                public.extracted_features as ef
+              JOIN 
+                public.predictions as p
+              ON p.id=ef.prediction_id
+            """)
+            
+            overall_result = cursor.fetchone()
+            
             aggregated_data = {}
-            if agg_result:
+            if agg_result and overall_result:
+              # Helper function to determine status
+              def get_status(farm_avg, overall_avg, tolerance=0.1):
+                if farm_avg is None or overall_avg is None:
+                  return 'neutral'
+                
+                lower_bound = overall_avg * (1 - tolerance)
+                upper_bound = overall_avg * (1 + tolerance)
+                
+                if farm_avg < lower_bound:
+                  return 'below'
+                elif farm_avg > upper_bound:
+                  return 'above'
+                else:
+                  return 'neutral'
+              
               aggregated_data = {
-                'avgBeanLength': float(agg_result[0]) if agg_result[0] else 0,
-                'avgBeanWidth': float(agg_result[1]) if agg_result[1] else 0,
-                'avgBeanArea': float(agg_result[2]) if agg_result[2] else 0,
-                'commonBeanTypes': [agg_result[3]] if agg_result[3] else [],
+                'area': {
+                  'value': float(agg_result[2]) if agg_result[2] else 0,
+                  'overall': float(overall_result[2]) if overall_result[2] else 0,
+                  'status': get_status(float(agg_result[2]) if agg_result[2] else 0, float(overall_result[2]) if overall_result[2] else 0)
+                },
+                'perimeter': {
+                  'value': float(agg_result[3]) if agg_result[3] else 0,
+                  'overall': float(overall_result[3]) if overall_result[3] else 0,
+                  'status': get_status(float(agg_result[3]) if agg_result[3] else 0, float(overall_result[3]) if overall_result[3] else 0)
+                },
+                'major_axis_length': {
+                  'value': float(agg_result[0]) if agg_result[0] else 0,
+                  'overall': float(overall_result[0]) if overall_result[0] else 0,
+                  'status': get_status(float(agg_result[0]) if agg_result[0] else 0, float(overall_result[0]) if overall_result[0] else 0)
+                },
+                'minor_axis_length': {
+                  'value': float(agg_result[1]) if agg_result[1] else 0,
+                  'overall': float(overall_result[1]) if overall_result[1] else 0,
+                  'status': get_status(float(agg_result[1]) if agg_result[1] else 0, float(overall_result[1]) if overall_result[1] else 0)
+                },
+                'extent': {
+                  'value': float(agg_result[4]) if agg_result[4] else 0,
+                  'overall': float(overall_result[4]) if overall_result[4] else 0,
+                  'status': get_status(float(agg_result[4]) if agg_result[4] else 0, float(overall_result[4]) if overall_result[4] else 0)
+                },
+                'eccentricity': {
+                  'value': float(agg_result[5]) if agg_result[5] else 0,
+                  'overall': float(overall_result[5]) if overall_result[5] else 0,
+                  'status': get_status(float(agg_result[5]) if agg_result[5] else 0, float(overall_result[5]) if overall_result[5] else 0)
+                },
+                'convex_area': {
+                  'value': float(agg_result[6]) if agg_result[6] else 0,
+                  'overall': float(overall_result[6]) if overall_result[6] else 0,
+                  'status': get_status(float(agg_result[6]) if agg_result[6] else 0, float(overall_result[6]) if overall_result[6] else 0)
+                },
+                'solidity': {
+                  'value': float(agg_result[7]) if agg_result[7] else 0,
+                  'overall': float(overall_result[7]) if overall_result[7] else 0,
+                  'status': get_status(float(agg_result[7]) if agg_result[7] else 0, float(overall_result[7]) if overall_result[7] else 0)
+                },
+                'mean_intensity': {
+                  'value': float(agg_result[8]) if agg_result[8] else 0,
+                  'overall': float(overall_result[8]) if overall_result[8] else 0,
+                  'status': get_status(float(agg_result[8]) if agg_result[8] else 0, float(overall_result[8]) if overall_result[8] else 0)
+                },
+                'equivalent_diameter': {
+                  'value': float(agg_result[9]) if agg_result[9] else 0,
+                  'overall': float(overall_result[9]) if overall_result[9] else 0,
+                  'status': get_status(float(agg_result[9]) if agg_result[9] else 0, float(overall_result[9]) if overall_result[9] else 0)
+                },
+                'aspect_ratio': {
+                  'value': float(agg_result[10]) if agg_result[10] else 0,
+                  'overall': float(overall_result[10]) if overall_result[10] else 0,
+                  'status': get_status(float(agg_result[10]) if agg_result[10] else 0, float(overall_result[10]) if overall_result[10] else 0)
+                },
+                'circularity': {
+                  'value': float(agg_result[11]) if agg_result[11] else 0,
+                  'overall': float(overall_result[11]) if overall_result[11] else 0,
+                  'status': get_status(float(agg_result[11]) if agg_result[11] else 0, float(overall_result[11]) if overall_result[11] else 0)
+                },
+                'commonBeanTypes': agg_result[12] if agg_result[12] else [],
                 'qualityDistribution': {},
+                'monthlyUploads': []
               }
 
             # Execute the monthly uploads query

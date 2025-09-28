@@ -9,8 +9,6 @@ import type {
   AdminPredictedImage,
   AdminImageFilters,
   PaginationData,
-  BeanImage,
-  FarmFolder,
 } from "@/interfaces/global";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -33,6 +31,12 @@ export interface Farm {
   pendingValidations?: number;
 }
 
+export interface MorphologicalFeature {
+  value: number;
+  overall: number;
+  status: 'above' | 'below' | 'neutral';
+}
+
 export interface FarmDetails extends Farm {
   users: Array<{
     id: string;
@@ -47,9 +51,18 @@ export interface FarmDetails extends Farm {
     beanCount: number;
   }>;
   aggregatedData: {
-    avgBeanLength: number;
-    avgBeanWidth: number;
-    avgBeanArea: number;
+    area: MorphologicalFeature;
+    perimeter: MorphologicalFeature;
+    major_axis_length: MorphologicalFeature;
+    minor_axis_length: MorphologicalFeature;
+    extent: MorphologicalFeature;
+    eccentricity: MorphologicalFeature;
+    convex_area: MorphologicalFeature;
+    solidity: MorphologicalFeature;
+    mean_intensity: MorphologicalFeature;
+    equivalent_diameter: MorphologicalFeature;
+    aspect_ratio: MorphologicalFeature;
+    circularity: MorphologicalFeature;
     commonBeanTypes: string[];
     qualityDistribution: Record<string, number>;
     monthlyUploads: Array<{ month: string; count: number }>;
@@ -224,167 +237,9 @@ const tempSystemStatus: SystemStatus = {
   storageTotal: "5.0 TB",
 };
 
-// Temporary farm data
-const tempFarms: Farm[] = [
-  {
-    id: "1",
-    name: "Sunrise Coffee Farm",
-    lat: 13.956626112464809,
-    lng: 121.16317033767702,
-    hasLocation: true,
-    userCount: 15,
-    imageCount: 234,
-    avgBeanSize: 13.2,
-    qualityRating: 4.2,
-    lastActivity: "2 hours ago",
-    owner: "John Smith",
-    createdDate: "2023-03-15",
-    totalUploads: 234,
-    validatedUploads: 198,
-  },
-  {
-    id: "2",
-    name: "Mountain View Plantation",
-    lat: 13.95,
-    lng: 121.15,
-    hasLocation: true,
-    userCount: 23,
-    imageCount: 456,
-    avgBeanSize: 12.8,
-    qualityRating: 4.5,
-    lastActivity: "1 day ago",
-    owner: "Maria Garcia",
-    createdDate: "2023-01-10",
-    totalUploads: 456,
-    validatedUploads: 398,
-  },
-  {
-    id: "3",
-    name: "Highland Coffee Estate",
-    lat: 13.94,
-    lng: 121.16,
-    hasLocation: true,
-    userCount: 8,
-    imageCount: 123,
-    avgBeanSize: 14.1,
-    qualityRating: 3.9,
-    lastActivity: "3 hours ago",
-    owner: "Ahmed Hassan",
-    createdDate: "2023-06-22",
-    totalUploads: 123,
-    validatedUploads: 89,
-  },
-  {
-    id: "4",
-    name: "Valley Green Farm",
-    hasLocation: false,
-    userCount: 5,
-    imageCount: 67,
-    avgBeanSize: 13.8,
-    qualityRating: 4.1,
-    lastActivity: "1 week ago",
-    owner: "Sarah Johnson",
-    createdDate: "2023-08-10",
-    totalUploads: 67,
-    validatedUploads: 45,
-  },
-  {
-    id: "5",
-    name: "Riverbank Coffee Co.",
-    hasLocation: false,
-    userCount: 12,
-    imageCount: 189,
-    avgBeanSize: 12.9,
-    qualityRating: 3.7,
-    lastActivity: "5 days ago",
-    owner: "Carlos Rodriguez",
-    createdDate: "2023-04-18",
-    totalUploads: 189,
-    validatedUploads: 156,
-  },
-];
+// Temporary farm data - now handled by backend API calls
 
-const tempFarmDetails: Record<string, FarmDetails> = {
-  "1": {
-    ...tempFarms[0],
-    users: [
-      { id: "u1", name: "John Smith", role: "Owner", uploads: 89 },
-      { id: "u2", name: "Alice Johnson", role: "Farmer", uploads: 67 },
-      { id: "u3", name: "Bob Wilson", role: "Researcher", uploads: 78 },
-    ],
-    recentImages: [
-      {
-        id: "img1",
-        url: "/api/images/recent1.jpg",
-        uploadDate: "2024-01-20",
-        beanCount: 15,
-      },
-      {
-        id: "img2",
-        url: "/api/images/recent2.jpg",
-        uploadDate: "2024-01-19",
-        beanCount: 12,
-      },
-      {
-        id: "img3",
-        url: "/api/images/recent3.jpg",
-        uploadDate: "2024-01-18",
-        beanCount: 18,
-      },
-    ],
-    aggregatedData: {
-      avgBeanLength: 8.5,
-      avgBeanWidth: 6.2,
-      avgBeanArea: 42.3,
-      commonBeanTypes: ["Arabica", "Robusta"],
-      qualityDistribution: { Excellent: 45, Good: 35, Average: 20 },
-      monthlyUploads: [
-        { month: "Jan", count: 45 },
-        { month: "Feb", count: 52 },
-        { month: "Mar", count: 38 },
-      ],
-    },
-  },
-  "2": {
-    ...tempFarms[1],
-    users: [
-      { id: "u4", name: "Maria Garcia", role: "Owner", uploads: 156 },
-      { id: "u5", name: "Pedro Santos", role: "Farmer", uploads: 123 },
-      {
-        id: "u6",
-        name: "Ana Rodriguez",
-        role: "Quality Control",
-        uploads: 177,
-      },
-    ],
-    recentImages: [
-      {
-        id: "img4",
-        url: "/api/images/recent4.jpg",
-        uploadDate: "2024-01-20",
-        beanCount: 20,
-      },
-      {
-        id: "img5",
-        url: "/api/images/recent5.jpg",
-        uploadDate: "2024-01-19",
-        beanCount: 16,
-      },
-    ],
-    aggregatedData: {
-      avgBeanLength: 9.1,
-      avgBeanWidth: 6.8,
-      avgBeanArea: 48.7,
-      commonBeanTypes: ["Arabica", "Liberica"],
-      qualityDistribution: { Excellent: 60, Good: 30, Average: 10 },
-      monthlyUploads: [
-        { month: "Jan", count: 67 },
-        { month: "Feb", count: 78 },
-        { month: "Mar", count: 65 },
-      ],
-    },
-  },
-};
+// Temporary farm data is now retrieved through the actual backend API instead of local storage
 
 // Temporary admin image data
 const tempAdminImages: AdminPredictedImage[] = [
