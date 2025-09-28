@@ -150,8 +150,8 @@ const GeographicMapSection: React.FC = () => {
                       <div className="space-y-1 text-sm">
                         <div>Users: {farm.userCount || 0}</div>
                         <div>Images: {farm.imageCount || 0}</div>
-                        <div>Avg Size: {Number(farm.avgBeanSize || 0).toFixed(1)} mm</div>
-                        <div>Quality: {Number(farm.qualityRating || 0).toFixed(1)}/5</div>
+                        {/* farm.avgBeanSize = 1.1123323mm x 12.asdasdmm */}
+                        <div>Avg Size: {(farm.avgBeanSize || 0)}</div>
                       </div>
                       <button
                         onClick={() => handleFarmClick(farm.id)}

@@ -49,7 +49,7 @@ def get_farms(request):
                 COUNT(DISTINCT us.id) AS userCount,
                 (CASE WHEN loc.location IS NULL THEN false ELSE true END) AS hasLocation,
                 COUNT(DISTINCT ui.ID) as imageCount,
-                CONCAT(AVG(ef.major_axis_length),'long x ',AVG(ef.minor_axis_length), 'wide') as avgBeanSize,
+                CONCAT(ROUND(AVG(ef.major_axis_length),2),'long x ',ROUND(AVG(ef.minor_axis_length),2), 'wide') as avgBeanSize,
                 'Good Quality' as qualityRating,
                 'Remov This' as lastActivity,
                 'Remov This' as createdDate,
