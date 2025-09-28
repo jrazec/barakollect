@@ -738,6 +738,312 @@ def get_bean_detections(request, user_id):
 
 
 @api_view(['GET'])
+def get_annotations(request):
+    """
+    Get all images for researcher annotations - similar to get_all_beans but without filters
+    Returns all images with their beans for annotation purposes
+    """
+    try:
+        print("DEBUG: Starting optimized get_annotations view")
+        
+        # Get pagination parameters only
+        page = int(request.GET.get('page', 1))
+        limit = int(request.GET.get('limit', 100))  # Higher default for annotations
+        
+        print(f"DEBUG: Parameters - page={page}, limit={limit}")
+        
+        # Calculate offset for pagination
+        offset = (page - 1) * limit
+        
+        # Simple WHERE conditions - no filtering, just get all non-deleted images
+        where_conditions = ["ui.is_deleted = false"]
+        params = []
+        
+        where_clause = " AND ".join(where_conditions)
+        
+        # Step 1: Get all images with all related data in ONE query
+        print("DEBUG: Executing main query with cursor for annotations")
+        
+        with connection.cursor() as cursor:
+            # Main query that fetches everything we need in one go
+            main_query = f"""
+                SELECT DISTINCT
+                    i.id as image_id,
+                    i.image_url,
+                    i.upload_date,
+                    u.id as user_id,
+                    u.first_name,
+                    u.last_name,
+                    r.name as role_name,
+                    loc.id as location_id,
+                    loc.name as location_name,
+                    a.label->>'is_validated' as is_validated,
+                    p.id as prediction_id,
+                    p.predicted_label->>'bean_type' as bean_type,
+                    p.predicted_label->>'confidence' as confidence,
+                    ef.area,
+                    ef.perimeter,
+                    ef.major_axis_length,
+                    ef.minor_axis_length,
+                    ef.extent,
+                    ef.eccentricity,
+                    ef.convex_area,
+                    ef.solidity,
+                    ef.mean_intensity,
+                    ef.equivalent_diameter,
+                    ef.id as extracted_feature_id
+                FROM images i
+                INNER JOIN user_images ui ON i.id = ui.image_id
+                INNER JOIN users u ON ui.user_id = u.id
+                INNER JOIN user_roles ur ON u.id = ur.user_id
+                INNER JOIN roles r ON ur.role_id = r.id
+                LEFT JOIN locations loc ON u.location_id = loc.id
+                LEFT JOIN annotations a ON i.id = a.image_id
+                LEFT JOIN predictions p ON i.id = p.image_id
+                LEFT JOIN extracted_features ef ON p.id = ef.prediction_id
+                WHERE {where_clause}
+                ORDER BY i.upload_date DESC
+            """
+            
+            print(f"DEBUG: Executing query: {main_query}")
+            print(f"DEBUG: With params: {params}")
+            
+            cursor.execute(main_query, params)
+            all_rows = cursor.fetchall()
+            
+            print(f"DEBUG: Fetched {len(all_rows)} total rows from main query")
+
+            # Also get bean detection data separately for better organization
+            if all_rows:
+                image_ids = list(set(row[0] for row in all_rows))  # Get unique image IDs
+                
+                bean_query = f"""
+                    SELECT 
+                        p.image_id,
+                        bd.bean_id,
+                        bd.length_mm,
+                        bd.width_mm,
+                        bd.bbox_x,
+                        bd.bbox_y,
+                        bd.bbox_width,
+                        bd.bbox_height,
+                        bd.comment,
+                        bd.created_at,
+                        ef.id as extracted_feature_id,
+                        p.id as prediction_id
+                    FROM bean_detections bd
+                    JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                    JOIN predictions p ON ef.prediction_id = p.id
+                    WHERE p.image_id = ANY(%s)
+                    ORDER BY p.image_id, bd.bean_id
+                """
+                
+                cursor.execute(bean_query, [image_ids])
+                bean_rows = cursor.fetchall()
+                
+                print(f"DEBUG: Fetched {len(bean_rows)} bean detection rows")
+            else:
+                bean_rows = []
+        
+        # Step 3: Process data in memory (NO database queries in this section)
+        print("DEBUG: Processing data in memory for annotations")
+        
+        # Group main data by image_id
+        images_data = {}
+        for row in all_rows:
+            image_id = row[0]
+            if image_id not in images_data:
+                images_data[image_id] = {
+                    'image_id': row[0],
+                    'image_url': row[1],
+                    'upload_date': row[2],
+                    'user_id': row[3],
+                    'first_name': row[4],
+                    'last_name': row[5],
+                    'role_name': row[6],
+                    'location_id': row[7],
+                    'location_name': row[8],
+                    'is_validated': row[9],  # Already extracted from JSON
+                    'prediction_id': row[10],
+                    'bean_type': row[11],  # Already extracted from JSON
+                    'confidence': row[12],  # Already extracted from JSON
+                    'extracted_features': {
+                        'area': row[13],
+                        'perimeter': row[14],
+                        'major_axis_length': row[15],
+                        'minor_axis_length': row[16],
+                        'extent': row[17],
+                        'eccentricity': row[18],
+                        'convex_area': row[19],
+                        'solidity': row[20],
+                        'mean_intensity': row[21],
+                        'equivalent_diameter': row[22],
+                        'extracted_feature_id': row[23]
+                    } if row[13] is not None else None
+                }
+        
+        print(f"DEBUG: Processed {len(images_data)} unique images from main query")
+    
+        # Group bean detections by image_id
+        beans_by_image = {}
+        for bean_row in bean_rows:
+            image_id = bean_row[0]
+            if image_id not in beans_by_image:
+                beans_by_image[image_id] = []
+            
+            beans_by_image[image_id].append({
+                'bean_id': bean_row[1],
+                'length_mm': float(bean_row[2]),
+                'width_mm': float(bean_row[3]),
+                'bbox_x': bean_row[4],
+                'bbox_y': bean_row[5],
+                'bbox_width': bean_row[6],
+                'bbox_height': bean_row[7],
+                'comment': bean_row[8] or "",
+                'created_at': bean_row[9],
+                'extracted_feature_id': bean_row[10]
+            })
+        
+        # Apply pagination
+        total_count = len(images_data)
+        images_list = list(images_data.values())
+        paginated_images = images_list[offset:offset + limit]
+        
+        print(f"DEBUG: Pagination - total_count={total_count}, showing {len(paginated_images)} images")
+        
+        # Step 4: Build response data (NO database queries)
+        data = []
+        print("DEBUG: Building response data from in-memory data for annotations")
+        
+        # Create extracted features lookup for efficient access
+        extracted_features_data = {}
+        for row in all_rows:
+            if row[23] is not None:  # extracted_feature_id
+                extracted_features_data[row[23]] = {
+                    'area': row[13],
+                    'perimeter': row[14],
+                    'major_axis_length': row[15],
+                    'minor_axis_length': row[16],
+                    'extent': row[17],
+                    'eccentricity': row[18],
+                    'convex_area': row[19],
+                    'solidity': row[20],
+                    'mean_intensity': row[21],
+                    'equivalent_diameter': row[22],
+                }
+        
+        for img_data in images_data.values():
+            try:
+                image_id = img_data['image_id']
+                
+                # Generate public URL for image
+                try:
+                    publicUrl = supabase.storage.from_("Beans").get_public_url(
+                        img_data['image_url']
+                    )
+                except Exception as e:
+                    print(f"DEBUG: Error generating public URL for image {image_id}: {str(e)}")
+                    publicUrl = ""
+                
+                # Get validation status from pre-extracted data
+                is_validated_str = img_data['is_validated']
+                is_validated = is_validated_str == 'true' if is_validated_str else False
+                
+                # Get bean detections from pre-fetched data
+                bean_detections = beans_by_image.get(image_id, [])
+                predictions = []
+                
+                # Process predictions using pre-extracted data
+                bean_type = img_data['bean_type'] or "Unknown"
+                confidence = float(img_data['confidence']) if img_data['confidence'] else 0.0
+
+                for detection in bean_detections:
+                    features = extracted_features_data.get(detection['extracted_feature_id'], {})
+                    
+                    predictions.append({
+                        "bean_id": detection['bean_id'],
+                        "is_validated": is_validated,
+                        "bean_type": bean_type,
+                        "confidence": confidence,
+                        "length_mm": detection['length_mm'],
+                        "width_mm": detection['width_mm'],
+                        "bbox": [detection['bbox_x'], detection['bbox_y'], 
+                                detection['bbox_width'], detection['bbox_height']],
+                        "comment": detection['comment'],
+                        "detection_date": detection['created_at'].isoformat() if hasattr(detection['created_at'], 'isoformat') else str(detection['created_at']),
+                        "features": {
+                            "area": float(features.get('area')) if features.get('area') else None,
+                            "perimeter": float(features.get('perimeter')) if features.get('perimeter') else None,
+                            "major_axis_length": float(features.get('major_axis_length')) if features.get('major_axis_length') else None,
+                            "minor_axis_length": float(features.get('minor_axis_length')) if features.get('minor_axis_length') else None,
+                            "extent": float(features.get('extent')) if features.get('extent') else None,
+                            "eccentricity": float(features.get('eccentricity')) if features.get('eccentricity') else None,
+                            "convex_area": float(features.get('convex_area')) if features.get('convex_area') else None,
+                            "solidity": float(features.get('solidity')) if features.get('solidity') else None,
+                            "mean_intensity": float(features.get('mean_intensity')) if features.get('mean_intensity') else None,
+                            "equivalent_diameter": float(features.get('equivalent_diameter')) if features.get('equivalent_diameter') else None
+                        },
+                        "extracted_feature_id": detection['extracted_feature_id']
+                    })
+                
+                # Format user name
+                user_name = f"{img_data['first_name']} {img_data['last_name']}" if img_data['first_name'] and img_data['last_name'] else "Unknown User"
+                
+                # Calculate validation statistics
+                validated_beans = sum(1 for pred in predictions if pred['is_validated'] is True)
+                total_beans = len(predictions)
+                validation_progress = (validated_beans / total_beans * 100) if total_beans > 0 else 0
+                
+                # Build the response item
+                response_item = {
+                    "id": str(img_data['image_id']),
+                    "src": publicUrl,
+                    "userName": user_name,
+                    "userRole": img_data['role_name'] or "unknown",
+                    "location": img_data['location_name'] or "",
+                    "submissionDate": img_data['upload_date'].strftime('%Y-%m-%d') if img_data['upload_date'] else "",
+                    "upload_date": img_data['upload_date'].isoformat() if img_data['upload_date'] else None,
+                    "predictions": predictions,
+                    "totalBeans": total_beans,
+                    "validatedBeans": validated_beans,
+                    "validationProgress": round(validation_progress, 1),
+                    "is_fully_validated": total_beans > 0 and validated_beans == total_beans,
+                    # Additional fields for compatibility
+                    "userId": str(img_data['user_id']),
+                    "locationId": str(img_data['location_id']) if img_data['location_id'] else None,
+                    "locationName": img_data['location_name'],
+                    "is_validated": total_beans > 0 and validated_beans == total_beans,
+                    "allegedVariety": None
+                }
+                
+                data.append(response_item)
+                
+            except Exception as e:
+                print(f"DEBUG: Error processing image {img_data.get('image_id', 'unknown')}: {str(e)}")
+                continue
+        
+        print(f"DEBUG: Finished processing. Built response with {len(data)} images")
+        
+        # Calculate pagination info
+        total_pages = (total_count + limit - 1) // limit
+        
+        return Response({
+            "images": data,
+            "pagination": {
+                "currentPage": page,
+                "totalPages": total_pages,
+                "totalItems": total_count,
+                "itemsPerPage": limit
+            }
+        })
+
+    except Exception as e:
+        print(f"DEBUG: MAIN ERROR in get_annotations: {str(e)}")
+        import traceback
+        print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['GET'])
 def get_all_beans(request):
     try:
         print("DEBUG: Starting optimized get_all_beans view with cursor")
@@ -1090,7 +1396,8 @@ def validate_beans(request):
      bean_id: selectedBeanId,
         bean_type: editingBean.bean_type,
         features: editingBean.features,
-        is_validated: true
+        is_validated: true,
+        annotated_by: {id, name, role}
 
         will return response ok
     """
@@ -1102,9 +1409,30 @@ def validate_beans(request):
     extracted_feature_id = data.get('extracted_feature_id')
     features = data.get('features', {})
     is_validated = data.get('is_validated', False)
+    annotated_by = data.get('annotated_by', {})  # New field for annotator information
     
     if not bean_id or not bean_type or not features:
         return Response({"error": "bean_id, bean_type, and features are required"}, status=400)
+    
+    # Get annotator information if provided
+    annotator_info = None
+    if annotated_by and annotated_by.get('id'):
+        try:
+            user = User.objects.select_related().get(id=annotated_by['id'])
+            user_role = UserRole.objects.select_related('role').filter(user=user).first()
+            
+            annotator_info = {
+                "id": str(user.id),
+                "name": f"{user.first_name} {user.last_name}" if user.first_name and user.last_name else user.username,
+                "role": user_role.role.name if user_role else "unknown"
+            }
+            print(f"DEBUG: Annotator info: {annotator_info}")
+        except User.DoesNotExist:
+            print(f"DEBUG: User with id {annotated_by['id']} not found")
+            annotator_info = annotated_by  # Use provided info as fallback
+    elif annotated_by:
+        # Use provided annotated_by info directly
+        annotator_info = annotated_by
     
     annotations_id = Annotation.objects.filter(image_id=image_id).extra(
         where=["label->>'bean_number' = %s"],
@@ -1113,49 +1441,70 @@ def validate_beans(request):
     print(annotations_id)
     predictions_id = Prediction.objects.filter(image_id=image_id, extractedfeature__id=extracted_feature_id).values('id').first()
     # predictions_table = Prediction.objects.filter(image_id=image_id, extractedfeature=ExtractedFeature()).values('id')
-    print(f"DEBUG: Found annotations_id: {list(annotations_id)}, predictions_id: {list(predictions_id)}")
+    print(f"DEBUG: Found annotations_id: {annotations_id}, predictions_id: {predictions_id}")
     try:
         #Update extracted features
         if extracted_feature_id:
             ExtractedFeature.objects.filter(id=extracted_feature_id).update(
-                area=features.get('area_mm2', 0),
-                perimeter=features.get('perimeter_mm', 0),
-                major_axis_length=features.get('major_axis_length_mm', 0),
-                minor_axis_length=features.get('minor_axis_length_mm', 0),
+                area=features.get('area', features.get('area_mm2', 0)),
+                perimeter=features.get('perimeter', features.get('perimeter_mm', 0)),
+                major_axis_length=features.get('major_axis_length', features.get('major_axis_length_mm', 0)),
+                minor_axis_length=features.get('minor_axis_length', features.get('minor_axis_length_mm', 0)),
                 extent=features.get('extent', 0),
                 eccentricity=features.get('eccentricity', 0),
                 convex_area=features.get('convex_area', 0),
                 solidity=features.get('solidity', 0),
                 mean_intensity=features.get('mean_intensity', 0),
-                equivalent_diameter=features.get('equivalent_diameter_mm', 0)
+                equivalent_diameter=features.get('equivalent_diameter', features.get('equivalent_diameter_mm', 0))
             )
             print(f"DEBUG: Updated ExtractedFeature {extracted_feature_id}")
         if predictions_id:
-            # Update prediction
-            Prediction.objects.filter(id=predictions_id['id']).update(
-                predicted_label={
+            # Update prediction with annotator information
+            prediction_update_data = {
+                "predicted_label": {
                     "bean_number": bean_id,
                     "bean_type": bean_type,
                     "confidence": 1.0  # Set confidence to 1.0 for validated beans
                 },
-                confidence_score=1.0,
-                model_used="human_validated"
-            )
-            print(f"DEBUG: Updated Prediction {predictions_id['id']}")
+                "confidence_score": 1.0,
+                "model_used": "human_validated"
+            }
+            
+            # Add annotated_by information if available
+            if annotator_info:
+                prediction_update_data["predicted_label"]["annotated_by"] = annotator_info
+                
+            Prediction.objects.filter(id=predictions_id['id']).update(**prediction_update_data)
+            print(f"DEBUG: Updated Prediction {predictions_id['id']} with annotator info")
         if annotations_id:
-            # Update annotation
+            # Update annotation with annotator information
+            annotation_label = {
+                "bean_number": bean_id,
+                "is_validated": is_validated,
+                "validated_label": bean_type,
+            }
+            
+            # Add annotated_by information if available
+            if annotator_info:
+                annotation_label["annotated_by"] = annotator_info
+            else:
+                annotation_label["annotated_by"] = "admin"  # Default fallback
+            
             Annotation.objects.filter(id=annotations_id['id']).update(
-                label={
-                    "bean_number": bean_id,
-                    "is_validated": is_validated,
-                    "validated_label": bean_type,
-                    "annotated_by": "admin"  
-                },
+                label=annotation_label,
                 created_at=timezone.now()
             )
-            print(f"DEBUG: Updated Annotation {annotations_id['id']}")
-            # return response true
-            return Response({"status": "success"}, status=200)
+            print(f"DEBUG: Updated Annotation {annotations_id['id']} with annotator info")
+            
+        # Return response true
+        return Response({
+            "status": "success", 
+            "message": "Bean validation updated successfully",
+            "annotated_by": annotator_info
+        }, status=200)
+        
     except Exception as e:
         print(f"DEBUG: Error during validation update: {str(e)}")
+        import traceback
+        print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
         return Response({"error": str(e)}, status=500)
