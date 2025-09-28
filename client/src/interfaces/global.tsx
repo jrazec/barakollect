@@ -24,6 +24,7 @@ export interface NotifAttributes {
 }
 
 export interface User {
+    id: string;  // Now required
     name: string,
     role: string
 }
