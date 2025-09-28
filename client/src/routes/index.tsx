@@ -23,6 +23,9 @@ import Settings from "@/pages/admin/Settings";
 import AdminBeansGallery from "../components/AdminBeansGallery";
 import AdminBeansMetadata from "@/components/AdminBeansMetadata";
 import AdminFarmMap from "@/pages/admin/AdminFarmMap";
+import ResearcherAnnotations from "@/components/ResearcherAnnotations";
+import NotificationsEnhanced from "@/components/NotificationsEnhanced";
+import TestEnhancedGallery from "@/pages/TestEnhancedGallery";
 
 
 export default function AppRoute() {
@@ -37,17 +40,19 @@ export default function AppRoute() {
                 <Route path="dashboard" element={<ResearcherDashboard />} />
                 <Route path="upload-image" element={<UploadSamples />} />
                 <Route path="gallery" element={<BeansGallery />} />
+                <Route path="test-enhanced" element={<TestEnhancedGallery />} />
+                <Route path="annotations" element={<ResearcherAnnotations />} />
                 <Route path="validation" element={<ValidationQueue />} />
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="farm-map" element={<FarmMap />} />
-                <Route path="notifications" element={<Notifications />} />
+                <Route path="notifications" element={<NotificationsEnhanced />} />
             </Route>
             <Route path="/farmer" element={<ClientLayout />}> 
                 <Route path="dashboard" element={<FarmerDashboard />} />
                 <Route path="upload-image" element={<UploadSamples />} />
                 <Route path="gallery" element={<FarmerBeansGallery />} />
                 <Route path="farm-map" element={<FarmMap />} />
-                <Route path="notifications" element={<Notifications />} />
+                <Route path="notifications" element={<NotificationsEnhanced />} />
             </Route>
             <Route path="/admin" element={<AdminLayout />}> 
                 <Route path="dashboard" element={<AdminDashboard />} />

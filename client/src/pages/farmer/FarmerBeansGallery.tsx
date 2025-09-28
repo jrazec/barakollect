@@ -5,7 +5,7 @@ import TabComponent from '@/components/TabComponent';
 import GallerySection from './sections/GallerySection';
 
 const FarmerBeansGallery: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('Predicted Images');
+  const [activeTab, setActiveTab] = useState('Validated');
 
   return (
     <PageContainer>
@@ -14,9 +14,13 @@ const FarmerBeansGallery: React.FC = () => {
         {/* Header */}
         <PageHeader
           title="Beans Gallery"
-          subtitle=""
+          subtitle="View your bean samples organized by validation status"
         />
-        <TabComponent activeTab={activeTab} onTabChange={setActiveTab} tabs={['Predicted Images','Submitted Images']} />
+        <TabComponent 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab} 
+          tabs={['Validated', 'Not Yet Validated']} 
+        />
         
         {/* bean images go here */}
         <GallerySection activeTab={activeTab} />

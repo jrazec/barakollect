@@ -125,7 +125,7 @@ const AdminMapSection: React.FC = () => {
     setShowAddFarmModal(true);
   };
 
-  const handleFarmAdded = async (farmData: { name: string; lat: number; lng: number; owner: string }) => {
+  const handleFarmAdded = async (farmData: { name: string; lat: number; lng: number; }) => {
     try {
       await AdminService.createFarm(farmData);
       await loadFarms();
@@ -136,13 +136,27 @@ const AdminMapSection: React.FC = () => {
   };
 
   const handleViewFarmDetails = async (farm: Farm) => {
+    console.log('Viewing details for farm:', farm);
     try {
+      console.log("viewing details")
       const details = await AdminService.getFarmDetails(farm.id);
       if (details) {
-        setFarmDetails(details);
+        setFarmDetails({
+          ...details,
+          id: farm.id,
+          userCount: selectedFarm?.userCount || 0,
+          imageCount: selectedFarm?.imageCount || 0,
+          owner: selectedFarm?.owner || '',
+          pendingValidations: selectedFarm?.pendingValidations || 0,
+          validatedUploads: selectedFarm?.validatedUploads || 0,
+          lat: selectedFarm?.lat,
+          lng: selectedFarm?.lng,
+          hasLocation: selectedFarm?.hasLocation || false,
+        });
         setShowFarmDetailsModal(true);
-      }
+      } 
     } catch (error) {
+      console.log("errors")
       console.error('Error fetching farm details:', error);
     }
   };
@@ -258,11 +272,10 @@ const AdminMapSection: React.FC = () => {
                       <div className="font-bold text-lg mb-2">{farm.name}</div>
                       <div className="space-y-1 text-sm">
                         <div>Users: {farm.userCount}</div>
-                        <div>Images: {farm.imageCount}</div>
-                        <div>Avg Bean Size: {farm.avgBeanSize} mm</div>
-                        <div>Quality: {farm.qualityRating}/5</div>
-                        <div>Owner: {farm.owner}</div>
-                        <div>Last Activity: {farm.lastActivity}</div>
+                        <div>Uploaded images: {farm.imageCount}</div>
+                        <div>Validated Images: {farm.validatedUploads}</div>
+                        <div>Pending: {farm.pendingValidations}</div>
+                        <div>Farmer: {farm.owner}</div>
                       </div>
                       <button
                         onClick={() => handleViewFarmDetails(farm)}
@@ -289,23 +302,25 @@ const AdminMapSection: React.FC = () => {
       </div>
 
       {/* Modals */}
-      <AddFarmModal
-        isOpen={showAddFarmModal}
-        onClose={() => setShowAddFarmModal(false)}
-        onSubmit={handleFarmAdded}
-      />
+        <AddFarmModal
+          isOpen={showAddFarmModal}
+          onClose={() => setShowAddFarmModal(false)}
+          onSubmit={handleFarmAdded}
+        />
 
-      <FarmDetailsModal
-        isOpen={showFarmDetailsModal}
-        farmDetails={farmDetails}
-        onClose={() => setShowFarmDetailsModal(false)}
-        onDelete={handleDeleteFarm}
-      />
+        <FarmDetailsModal
+          isOpen={showFarmDetailsModal}
+          farmDetails={farmDetails}
+          // Here's the farmId prop
 
-      <ConfirmationModal
-        isOpen={showConfirmationModal}
-        message={confirmationMessage}
-        onConfirm={() => {
+          onClose={() => setShowFarmDetailsModal(false)}
+          onDelete={handleDeleteFarm}
+        />
+
+        <ConfirmationModal
+          isOpen={showConfirmationModal}
+          message={confirmationMessage}
+          onConfirm={() => {
           confirmationAction();
           setShowConfirmationModal(false);
         }}

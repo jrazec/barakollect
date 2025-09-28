@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from django.db import transaction
-from models.models import User, UserRole, Role
+from models.models import User, UserRole, Role, Location
 from django.core import serializers
 from services.supabase_service import supabase
 
@@ -23,7 +23,8 @@ def login_user(request):
                 "avatar_image",
                 "registration_date",
                 "is_deleted",
-                "location",
+                "location_id",
+                "location__name",
                 "username",
                 "last_login",
                 "is_active",
@@ -45,7 +46,7 @@ def signup_user(request):
     uiid = request.POST.get("uiid")
     first_name = request.POST.get("first_name")
     last_name = request.POST.get("last_name")
-    location = request.POST.get("location")
+    location_id = request.POST.get("location_id")
     username = request.POST.get("username")
 
     role_id = request.POST.get("role_id")
@@ -60,7 +61,7 @@ def signup_user(request):
                 defaults={
                     "first_name": first_name,
                     "last_name": last_name,
-                    "location": location,
+                    "location_id": location_id,
                     "username": username,
                     "is_active": True,
                 },
@@ -69,7 +70,7 @@ def signup_user(request):
                 # Update mutable fields on repeated signup
                 user.first_name = first_name
                 user.last_name = last_name
-                user.location = location
+                user.location_id = location_id
                 user.username = username
                 user.save()
 
@@ -105,7 +106,8 @@ def get_users(req):
             "avatar_image",
             "registration_date",
             "is_deleted",
-            "location",
+            "location_id",
+            "location__name",
             "username",
             "last_login",
             "is_active",
@@ -124,18 +126,17 @@ def create_user(request):
     email = request.data.get("email")
     password = request.data.get("password")
     last_name = request.data.get("last_name")
-    location = request.data.get("location")
+    location_id = request.data.get("location_id")
     username = request.data.get("username")
     role = request.data.get("role")
     role_id = 3 # temp is farmer
 
-    match role:
-        case "farmer":
-            role_id = 3
-        case "researcher":
-            role_id = 2
-        case "admin":
-            role_id = 1
+    if role == "farmer":
+        role_id = 3
+    elif role == "researcher":
+        role_id = 2
+    elif role == "admin":
+        role_id = 1
 
     try:
         # Create the user auth here as well for supabase
@@ -159,7 +160,7 @@ def create_user(request):
                 id=uiid,
                 first_name=first_name,
                 last_name=last_name,
-                location=location,
+                location=Location(id=location_id) if location_id else None,
                 username=username,
                 is_active=True,
                 registration_date=timezone.now()
@@ -179,21 +180,19 @@ def update_user(request):
     user_id = request.data.get("id")
     first_name = request.data.get("first_name")
     last_name = request.data.get("last_name")
-    location = request.data.get("location")
+    location_id = request.data.get("location_id")
     username = request.data.get("username")
     role = request.data.get("role")
     reset_password = request.data.get("resetPassword")
 
     role_id = 3 # temp is farmer
 
-    match role:
-        case "3":
-            role_id = 3
-        case "2":
-            role_id = 2
-        case "1":
-            role_id = 1
-
+    if role == "3":
+        role_id = 3
+    elif role == "2":
+        role_id = 2
+    elif role == "1":
+        role_id = 1
     if not all([user_id, first_name, last_name, username, role]):
         return JsonResponse({"error": "Missing required fields"}, status=400)
 
@@ -202,7 +201,7 @@ def update_user(request):
             user = User.objects.get(id=user_id)
             user.first_name = first_name
             user.last_name = last_name
-            user.location = location
+            user.location_id = location_id
             user.username = username
             if reset_password == 'true':
                 # Reset password to "123456" in Supabase

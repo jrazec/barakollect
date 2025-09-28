@@ -1,17 +1,18 @@
 import GalleryComponent from '@/components/GalleryComponent';
 import React from 'react';
-import logo2 from "@/assets/images/logo.svg";
-import { storageService } from '@/services/storageService';
 import { supabase } from '@/lib/supabaseClient';
+import { AdminService } from '@/services/adminService';
+import type { BeanImage } from '@/interfaces/global';
+import {storageService} from '@/services/storageService';
+
 interface GallerySectionProps {
     activeTab: string;
 }
-// temporary placeholder images
-
 
 const GallerySection: React.FC<GallerySectionProps> = ({ activeTab }) => {
-    const [images, setImages] = React.useState<string[]>([]);
+    const [allImages, setAllImages] = React.useState<BeanImage[]>([]);
     const [userId, setUserId] = React.useState<string | null>(null);
+    const [isLoading, setIsLoading] = React.useState(false);
 
     React.useEffect(() => {
         const getUser = async () => {
@@ -22,36 +23,50 @@ const GallerySection: React.FC<GallerySectionProps> = ({ activeTab }) => {
     }, []);
 
     React.useEffect(() => {
-        const fetchImages = async () => {
+        const fetchAllImages = async () => {
             if (!userId) return;
             
+            setIsLoading(true);
             try {
-                const response = await storageService.retrieveImages(userId);
-                console.log('Fetched images:', response?.images);
-                setImages(response?.images || []);
-
+                // Fetch all user's images without validation filter
+                const userImages = await storageService.getUserImages(userId, 'farmer');
+                
+                setAllImages(userImages);
+                console.log(userImages);
             } catch (error) {
                 console.error('Error fetching images:', error);
+                setAllImages([]);
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        fetchImages();
-    }, [activeTab, userId]);
+        fetchAllImages();
+    }, [userId]);
 
-    if (activeTab === 'Predicted Images') {
-        return (
-            <GalleryComponent type='predicted' images={[]} />
+    // Filter images based on active tab
+    const filteredImages = allImages.filter(img => {
+        if (activeTab === 'Validated') {
+            return img.is_validated === true;
+        } else {
+            return img.is_validated === false || img.is_validated === null;
+        }
+    });
 
-        );
-    }
+    // Convert BeanImage to format expected by GalleryComponent (predicted type)
+    const convertedImages = filteredImages.map(img => ({
+        src: img.src,
+        is_validated: img.is_validated,
+        predictions: img.predictions
+    }));
 
-    if (activeTab === 'Submitted Images') {
-        return (
-            <GalleryComponent type='submitted' images={images} />
-        );
-    }
-
-    return null;
+    return (
+        <GalleryComponent 
+            type='predicted' 
+            images={convertedImages}
+            isLoading={isLoading}
+        />
+    );
 };
 
 export default GallerySection;

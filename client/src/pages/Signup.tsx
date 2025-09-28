@@ -1,15 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import '../assets/styles/global.css'
 import logo1 from "@/assets/images/barakollect_logo.svg";
 import { Link } from "react-router-dom";
+import { storageService } from "@/services/storageService";
+import type { Location } from "@/interfaces/global";
 
 type ProfilePayload = {
     first_name: string;
     last_name: string;
-    location: string;
+    location_id: string;
     username: string;
+    location_name: string; 
 };
+
+
 
 export default function Signup() {
     const [email, setEmail] = useState("");
@@ -17,10 +22,12 @@ export default function Signup() {
     const [profile, setProfile] = useState<ProfilePayload>({
         first_name: "",
         last_name: "",
-        location: "",
+        location_id: "",
         username: "",
+        location_name: "",
     });
     const [loading, setLoading] = useState(false);
+    const [locations, setLocations] = useState<Location[]>([]);
     const [role, setRole] = useState<'researcher' | 'farmer'>("researcher");
 
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +58,8 @@ export default function Signup() {
                 uiid,
                 first_name: profile.first_name,
                 last_name: profile.last_name,
-                location: profile.location,
+                location_id: profile.location_id,
+                location_name: profile.location_name,
                 username: profile.username,
                 role_id: roleId,
             }).toString();
@@ -78,6 +86,18 @@ export default function Signup() {
         }
     };
 
+    useEffect(() => {
+        const fetchLocations = async () => {
+            try {
+                const resp = await storageService.getLocationForSignup();
+                setLocations(resp);
+            } catch (error) {
+                console.error("Error fetching locations:", error);
+            }
+        }
+        fetchLocations();
+    }, []);
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
             <div className="w-full max-w-xl">
@@ -103,8 +123,27 @@ export default function Signup() {
                                 <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-2">Last name</label>
                             </div>
                             <div className="formFloatingLbl md:col-span-2">
-                                <input type="text" name="location" id="location" value={profile.location} onChange={handleProfileChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-barako-light focus:border-barako-light transition-colors duration-200" placeholder="" />
-                                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                                <select 
+                                    name="location_id" 
+                                    id="location" 
+                                    value={profile.location_id} 
+                                    onChange={(e) => {
+                                        const selectedOption = e.target.selectedOptions[0];
+                                        setProfile(prev => ({
+                                            ...prev,
+                                            location_id: e.target.value,
+                                            location_name: selectedOption.text
+                                        }));
+                                    }} 
+                                    required 
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-barako-light focus:border-barako-light transition-colors duration-200"
+                                >
+                                    <option value="">Select a location</option>
+                                    {/* Add your location options here */}
+                                    {locations.map(location => (
+                                        <option key={location.id} value={location.id}>{location.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="formFloatingLbl md:col-span-2">
                                 <input type="text" name="username" id="username" value={profile.username} onChange={handleProfileChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-barako-light focus:border-barako-light transition-colors duration-200" placeholder="" />

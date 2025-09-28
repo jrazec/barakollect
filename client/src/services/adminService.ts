@@ -9,7 +9,10 @@ import type {
   AdminPredictedImage,
   AdminImageFilters,
   PaginationData,
+  BeanImage,
+  FarmFolder,
 } from "@/interfaces/global";
+import { supabase } from "@/lib/supabaseClient";
 
 // Farm interface for admin GIS map
 export interface Farm {
@@ -23,10 +26,11 @@ export interface Farm {
   avgBeanSize: number;
   qualityRating: number;
   lastActivity: string;
-  owner: string;
+  owner?: string;
   createdDate: string;
   totalUploads: number;
   validatedUploads: number;
+  pendingValidations?: number;
 }
 
 export interface FarmDetails extends Farm {
@@ -223,8 +227,8 @@ const tempSystemStatus: SystemStatus = {
 // Temporary farm data
 const tempFarms: Farm[] = [
   {
-    id: '1',
-    name: 'Sunrise Coffee Farm',
+    id: "1",
+    name: "Sunrise Coffee Farm",
     lat: 13.956626112464809,
     lng: 121.16317033767702,
     hasLocation: true,
@@ -232,129 +236,254 @@ const tempFarms: Farm[] = [
     imageCount: 234,
     avgBeanSize: 13.2,
     qualityRating: 4.2,
-    lastActivity: '2 hours ago',
-    owner: 'John Smith',
-    createdDate: '2023-03-15',
+    lastActivity: "2 hours ago",
+    owner: "John Smith",
+    createdDate: "2023-03-15",
     totalUploads: 234,
-    validatedUploads: 198
+    validatedUploads: 198,
   },
   {
-    id: '2',
-    name: 'Mountain View Plantation',
-    lat: 13.950,
-    lng: 121.150,
+    id: "2",
+    name: "Mountain View Plantation",
+    lat: 13.95,
+    lng: 121.15,
     hasLocation: true,
     userCount: 23,
     imageCount: 456,
     avgBeanSize: 12.8,
     qualityRating: 4.5,
-    lastActivity: '1 day ago',
-    owner: 'Maria Garcia',
-    createdDate: '2023-01-10',
+    lastActivity: "1 day ago",
+    owner: "Maria Garcia",
+    createdDate: "2023-01-10",
     totalUploads: 456,
-    validatedUploads: 398
+    validatedUploads: 398,
   },
   {
-    id: '3',
-    name: 'Highland Coffee Estate',
-    lat: 13.940,
-    lng: 121.160,
+    id: "3",
+    name: "Highland Coffee Estate",
+    lat: 13.94,
+    lng: 121.16,
     hasLocation: true,
     userCount: 8,
     imageCount: 123,
     avgBeanSize: 14.1,
     qualityRating: 3.9,
-    lastActivity: '3 hours ago',
-    owner: 'Ahmed Hassan',
-    createdDate: '2023-06-22',
+    lastActivity: "3 hours ago",
+    owner: "Ahmed Hassan",
+    createdDate: "2023-06-22",
     totalUploads: 123,
-    validatedUploads: 89
+    validatedUploads: 89,
   },
   {
-    id: '4',
-    name: 'Valley Green Farm',
+    id: "4",
+    name: "Valley Green Farm",
     hasLocation: false,
     userCount: 5,
     imageCount: 67,
     avgBeanSize: 13.8,
     qualityRating: 4.1,
-    lastActivity: '1 week ago',
-    owner: 'Sarah Johnson',
-    createdDate: '2023-08-10',
+    lastActivity: "1 week ago",
+    owner: "Sarah Johnson",
+    createdDate: "2023-08-10",
     totalUploads: 67,
-    validatedUploads: 45
+    validatedUploads: 45,
   },
   {
-    id: '5',
-    name: 'Riverbank Coffee Co.',
+    id: "5",
+    name: "Riverbank Coffee Co.",
     hasLocation: false,
     userCount: 12,
     imageCount: 189,
     avgBeanSize: 12.9,
     qualityRating: 3.7,
-    lastActivity: '5 days ago',
-    owner: 'Carlos Rodriguez',
-    createdDate: '2023-04-18',
+    lastActivity: "5 days ago",
+    owner: "Carlos Rodriguez",
+    createdDate: "2023-04-18",
     totalUploads: 189,
-    validatedUploads: 156
-  }
+    validatedUploads: 156,
+  },
 ];
 
 const tempFarmDetails: Record<string, FarmDetails> = {
-  '1': {
+  "1": {
     ...tempFarms[0],
     users: [
-      { id: 'u1', name: 'John Smith', role: 'Owner', uploads: 89 },
-      { id: 'u2', name: 'Alice Johnson', role: 'Farmer', uploads: 67 },
-      { id: 'u3', name: 'Bob Wilson', role: 'Researcher', uploads: 78 }
+      { id: "u1", name: "John Smith", role: "Owner", uploads: 89 },
+      { id: "u2", name: "Alice Johnson", role: "Farmer", uploads: 67 },
+      { id: "u3", name: "Bob Wilson", role: "Researcher", uploads: 78 },
     ],
     recentImages: [
-      { id: 'img1', url: '/api/images/recent1.jpg', uploadDate: '2024-01-20', beanCount: 15 },
-      { id: 'img2', url: '/api/images/recent2.jpg', uploadDate: '2024-01-19', beanCount: 12 },
-      { id: 'img3', url: '/api/images/recent3.jpg', uploadDate: '2024-01-18', beanCount: 18 }
+      {
+        id: "img1",
+        url: "/api/images/recent1.jpg",
+        uploadDate: "2024-01-20",
+        beanCount: 15,
+      },
+      {
+        id: "img2",
+        url: "/api/images/recent2.jpg",
+        uploadDate: "2024-01-19",
+        beanCount: 12,
+      },
+      {
+        id: "img3",
+        url: "/api/images/recent3.jpg",
+        uploadDate: "2024-01-18",
+        beanCount: 18,
+      },
     ],
     aggregatedData: {
       avgBeanLength: 8.5,
       avgBeanWidth: 6.2,
       avgBeanArea: 42.3,
-      commonBeanTypes: ['Arabica', 'Robusta'],
-      qualityDistribution: { 'Excellent': 45, 'Good': 35, 'Average': 20 },
+      commonBeanTypes: ["Arabica", "Robusta"],
+      qualityDistribution: { Excellent: 45, Good: 35, Average: 20 },
       monthlyUploads: [
-        { month: 'Jan', count: 45 },
-        { month: 'Feb', count: 52 },
-        { month: 'Mar', count: 38 }
-      ]
-    }
+        { month: "Jan", count: 45 },
+        { month: "Feb", count: 52 },
+        { month: "Mar", count: 38 },
+      ],
+    },
   },
-  '2': {
+  "2": {
     ...tempFarms[1],
     users: [
-      { id: 'u4', name: 'Maria Garcia', role: 'Owner', uploads: 156 },
-      { id: 'u5', name: 'Pedro Santos', role: 'Farmer', uploads: 123 },
-      { id: 'u6', name: 'Ana Rodriguez', role: 'Quality Control', uploads: 177 }
+      { id: "u4", name: "Maria Garcia", role: "Owner", uploads: 156 },
+      { id: "u5", name: "Pedro Santos", role: "Farmer", uploads: 123 },
+      {
+        id: "u6",
+        name: "Ana Rodriguez",
+        role: "Quality Control",
+        uploads: 177,
+      },
     ],
     recentImages: [
-      { id: 'img4', url: '/api/images/recent4.jpg', uploadDate: '2024-01-20', beanCount: 20 },
-      { id: 'img5', url: '/api/images/recent5.jpg', uploadDate: '2024-01-19', beanCount: 16 }
+      {
+        id: "img4",
+        url: "/api/images/recent4.jpg",
+        uploadDate: "2024-01-20",
+        beanCount: 20,
+      },
+      {
+        id: "img5",
+        url: "/api/images/recent5.jpg",
+        uploadDate: "2024-01-19",
+        beanCount: 16,
+      },
     ],
     aggregatedData: {
       avgBeanLength: 9.1,
       avgBeanWidth: 6.8,
       avgBeanArea: 48.7,
-      commonBeanTypes: ['Arabica', 'Liberica'],
-      qualityDistribution: { 'Excellent': 60, 'Good': 30, 'Average': 10 },
+      commonBeanTypes: ["Arabica", "Liberica"],
+      qualityDistribution: { Excellent: 60, Good: 30, Average: 10 },
       monthlyUploads: [
-        { month: 'Jan', count: 67 },
-        { month: 'Feb', count: 78 },
-        { month: 'Mar', count: 65 }
-      ]
-    }
-  }
+        { month: "Jan", count: 67 },
+        { month: "Feb", count: 78 },
+        { month: "Mar", count: 65 },
+      ],
+    },
+  },
 };
 
 // Temporary admin image data
 const tempAdminImages: AdminPredictedImage[] = [
   {
+    id: "66",
+    src: "https://sodfcdrqpvcsblclppne.supabase.co/storage/v1/object/sign/Beans/uploads/34288323-8234-474d-9a35-713327ae5c8b/5b716e27-6456-4bf0-9e4d-0c6353218083.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8xNzRlYzA5MS0zNGY4LTRmOTItYmI1MS1hOWI3ZmQzYmM1MDYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJCZWFucy91cGxvYWRzLzM0Mjg4MzIzLTgyMzQtNDc0ZC05YTM1LTcxMzMyN2FlNWM4Yi81YjcxNmUyNy02NDU2LTRiZjAtOWU0ZC0wYzYzNTMyMTgwODMucG5nIiwiaWF0IjoxNzU3NDIwNTk2LCJleHAiOjE3NTc0MjQxOTZ9.KStS8cvheHiKb3gxc-b8lFh_Gz0ZTj2YMTt9koDuCrY",
+    userId: "34288323-8234-474d-9a35-713327ae5c8b",
+    userName: "Jiro Meru",
+    userRole: "farmer",
+    locationId: null,
+    locationName: null,
+    submissionDate: "2025-09-09T10:53:36.635Z",
+    is_validated: false,
+    allegedVariety: null,
+    predictions: [
+      {
+        bean_id: 1,
+        is_validated: false,
+        bean_type: "Alleged Liberica",
+        confidence: 0.76,
+        length_mm: 13.496,
+        width_mm: 9.403,
+        bbox: [1081, 165, 122, 85],
+        comment: "",
+        detection_date: "2025-09-09T10:53:38.722Z",
+      },
+      {
+        bean_id: 2,
+        is_validated: false,
+        bean_type: "Alleged Liberica",
+        confidence: 0.76,
+        length_mm: 12.058,
+        width_mm: 9.624,
+        bbox: [215, 787, 109, 87],
+        comment: "",
+        detection_date: "2025-09-09T10:53:38.900Z",
+      },
+      {
+        bean_id: 3,
+        is_validated: false,
+        bean_type: "Alleged Liberica",
+        confidence: 0.76,
+        length_mm: 13.496,
+        width_mm: 9.182,
+        bbox: [1094, 790, 122, 83],
+        comment: "",
+        detection_date: "2025-09-09T10:53:39.082Z",
+      },
+      {
+        bean_id: 4,
+        is_validated: false,
+        bean_type: "Alleged Liberica",
+        confidence: 0.76,
+        length_mm: 13.939,
+        width_mm: 8.296,
+        bbox: [218, 202, 126, 75],
+        comment: "",
+        detection_date: "2025-09-09T10:53:39.264Z",
+      },
+    ],
+  },
+  {
+    id: "67",
+    src: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400",
+    userId: "12345678-9abc-def0-1234-567890abcdef",
+    userName: "Maria Santos",
+    userRole: "researcher",
+    locationId: "farm1",
+    locationName: "Santos Coffee Farm",
+    submissionDate: "2025-09-08T14:30:15.123Z",
+    is_validated: true,
+    allegedVariety: "Robusta Premium",
+    predictions: [
+      {
+        bean_id: 1,
+        is_validated: true,
+        bean_type: "Robusta",
+        confidence: 0.89,
+        length_mm: 11.234,
+        width_mm: 8.567,
+        bbox: [450, 230, 98, 76],
+        comment: "Excellent specimen",
+        detection_date: "2025-09-08T14:30:17.456Z",
+      },
+      {
+        bean_id: 2,
+        is_validated: true,
+        bean_type: "Robusta",
+        confidence: 0.92,
+        length_mm: 10.875,
+        width_mm: 8.234,
+        bbox: [680, 456, 94, 72],
+        comment: "Good quality",
+        detection_date: "2025-09-08T14:30:17.789Z",
+      },
+    ],
+  },
+  // Legacy single bean prediction (for backward compatibility)
+  {
     id: "120",
     src: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400",
     userId: "12",
@@ -363,7 +492,9 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm2",
     locationName: "Kenya Coffee Farm",
     submissionDate: "2024-01-15",
-    validated: "verified",
+    is_validated: true,
+    allegedVariety: "Arabica Premium",
+    bean_type: "Arabica", // Legacy field
     predictions: {
       area: 1520.5,
       perimeter: 125.3,
@@ -379,7 +510,7 @@ const tempAdminImages: AdminPredictedImage[] = [
     },
   },
   {
-    id: "120",
+    id: "121",
     src: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400",
     userId: "12",
     userName: "Yajie Batumbakal",
@@ -387,7 +518,9 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm2",
     locationName: "Kenya Coffee Farm",
     submissionDate: "2024-01-15",
-    validated: "verified",
+    is_validated: true,
+    allegedVariety: "Arabica Classic",
+    bean_type: "Arabica", // Legacy field
     predictions: {
       area: 1520.5,
       perimeter: 125.3,
@@ -403,7 +536,7 @@ const tempAdminImages: AdminPredictedImage[] = [
     },
   },
   {
-    id: "120",
+    id: "122",
     src: "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400",
     userId: "12",
     userName: "Yajie Batumbakal",
@@ -411,7 +544,8 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm2",
     locationName: "Kenya Coffee Farm",
     submissionDate: "2024-01-15",
-    validated: "verified",
+    is_validated: true,
+    bean_type: "Arabica", // Legacy field
     predictions: {
       area: 1520.5,
       perimeter: 125.3,
@@ -435,7 +569,9 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm1",
     locationName: "Kenya Coffee Farm",
     submissionDate: "2024-01-15",
-    validated: "verified",
+    is_validated: true,
+    allegedVariety: "Liberica Premium",
+    bean_type: "Liberica", // Legacy field
     predictions: {
       area: 1520.5,
       perimeter: 125.3,
@@ -447,9 +583,10 @@ const tempAdminImages: AdminPredictedImage[] = [
       solidity: 0.95,
       mean_intensity: 128.5,
       equivalent_diameter: 43.7,
-      bean_type: "Arabica",
+      bean_type: "Liberica",
     },
   },
+
   {
     id: "2",
     src: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400",
@@ -459,7 +596,8 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm2",
     locationName: "Brazil Plantation",
     submissionDate: "2024-01-16",
-    validated: "pending",
+    is_validated: false,
+    bean_type: "Robusta", // Legacy field
     predictions: {
       area: 1480.2,
       perimeter: 120.8,
@@ -483,7 +621,9 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm3",
     locationName: "Ethiopia Highlands",
     submissionDate: "2024-01-17",
-    validated: "verified",
+    is_validated: true,
+    allegedVariety: "Ethiopian Heirloom",
+    bean_type: "Arabica", // Legacy field
     predictions: {
       area: 1620.8,
       perimeter: 130.2,
@@ -507,7 +647,8 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm4",
     locationName: "Colombian Highlands",
     submissionDate: "2024-01-18",
-    validated: "pending",
+    is_validated: false,
+    bean_type: "Liberica", // Legacy field
     predictions: {
       area: 1380.5,
       perimeter: 115.6,
@@ -531,7 +672,9 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm1",
     locationName: "Kenya Coffee Farm",
     submissionDate: "2024-01-19",
-    validated: "verified",
+    is_validated: true,
+    allegedVariety: "Robusta Supreme",
+    bean_type: "Robusta", // Legacy field
     predictions: {
       area: 1555.3,
       perimeter: 127.8,
@@ -543,7 +686,7 @@ const tempAdminImages: AdminPredictedImage[] = [
       solidity: 0.96,
       mean_intensity: 130.2,
       equivalent_diameter: 44.3,
-      bean_type: "Arabica",
+      bean_type: "Robusta",
     },
   },
   {
@@ -555,7 +698,8 @@ const tempAdminImages: AdminPredictedImage[] = [
     locationId: "farm5",
     locationName: "Uganda Cooperative",
     submissionDate: "2024-01-20",
-    validated: "pending",
+    is_validated: false,
+    bean_type: "Robusta", // Legacy field
     predictions: {
       area: 1420.7,
       perimeter: 118.4,
@@ -706,7 +850,7 @@ export class AdminService {
     username: string;
     email: string;
     role: string;
-    location: string;
+    location_id: string;
     is_active: boolean;
   }): Promise<UserLog> {
     try {
@@ -734,7 +878,7 @@ export class AdminService {
       last_name: string;
       username: string;
       role: string;
-      location: string;
+      location_id: string;
       reset_password: boolean;
     }
   ): Promise<UserLog> {
@@ -885,57 +1029,33 @@ export class AdminService {
     limit: number = 10
   ): Promise<{ images: AdminPredictedImage[]; pagination: PaginationData }> {
     try {
-      // TODO: Replace with actual API call
-      // const params = new URLSearchParams();
-      // if (status) params.append('status', status);
-      // if (filters?.farm) params.append('farm', filters.farm);
-      // if (filters?.role) params.append('role', filters.role);
-      // params.append('page', page.toString());
-      // params.append('limit', limit.toString());
-      // const response = await fetch(`/api/admin/images?${params}`);
-      // return await response.json();
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      let filteredImages = [...tempAdminImages];
-
-      // Apply status filter
-      if (status) {
-        filteredImages = filteredImages.filter(
-          (img) => img.validated === status
-        );
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (filters?.farm) params.append('farm', filters.farm);
+      if (filters?.role) params.append('role', filters.role);
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+      
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/beans/get-images?${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      // Apply farm filter
-      if (filters?.farm) {
-        filteredImages = filteredImages.filter(
-          (img) => img.locationName === filters.farm
-        );
-      }
-
-      // Apply role filter
-      if (filters?.role) {
-        filteredImages = filteredImages.filter(
-          (img) => img.userRole === filters.role
-        );
-      }
-
-      // Apply pagination
-      const totalItems = filteredImages.length;
-      const totalPages = Math.ceil(totalItems / limit);
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedImages = filteredImages.slice(startIndex, endIndex);
-
+      
+      const result = await response.json();
+      
       return {
-        images: paginatedImages,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalItems,
-          itemsPerPage: limit,
-        },
+        images: result.images || [],
+        pagination: result.pagination || {
+          current_page: page,
+          per_page: limit,
+          total: 0,
+          total_pages: 0,
+          has_next: false,
+          has_previous: false
+        }
       };
+
     } catch (error) {
       console.error("Error fetching images by status:", error);
       throw error;
@@ -1012,15 +1132,9 @@ export class AdminService {
 
   static async getUniqueLocations(): Promise<string[]> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/admin/locations');
-      // return await response.json();
-
+      const response = await supabase.from("locations").select("name");
       await new Promise((resolve) => setTimeout(resolve, 100));
-      const locations = [
-        ...new Set(tempAdminImages.map((img) => img.locationName)),
-      ];
-      return locations;
+      return (await response.data?.map((loc) => loc.name)) || [];
     } catch (error) {
       console.error("Error fetching unique locations:", error);
       throw error;
@@ -1031,27 +1145,28 @@ export class AdminService {
   static async getFarms(): Promise<Farm[]> {
     try {
       // TODO: Replace with actual API call
-      // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/admin/farms/`);
-      // return await response.json();
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-      return tempFarms;
+      const response = await fetch(
+        `${import.meta.env.VITE_HOST_BE}/api/farms/get-farms/`
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const result = await response.json();
+      return result.data;
     } catch (error) {
-      console.error('Error fetching farms:', error);
+      console.error("Error fetching farms:", error);
       throw error;
     }
   }
 
   static async getFarmDetails(farmId: string): Promise<FarmDetails | null> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/admin/farms/${farmId}/`);
-      // return await response.json();
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-      return tempFarmDetails[farmId] || null;
+      const response = await fetch(
+        `${import.meta.env.VITE_HOST_BE}/api/farms/${farmId}/`
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return await response.json();
+
     } catch (error) {
-      console.error('Error fetching farm details:', error);
+      console.error("Error fetching farm details:", error);
       throw error;
     }
   }
@@ -1060,18 +1175,9 @@ export class AdminService {
     name: string;
     lat: number;
     lng: number;
-    owner: string;
   }): Promise<Farm> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/admin/farms/`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(farmData)
-      // });
-      // return await response.json();
-      
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       const newFarm: Farm = {
         id: Date.now().toString(),
         name: farmData.name,
@@ -1082,66 +1188,73 @@ export class AdminService {
         imageCount: 0,
         avgBeanSize: 0,
         qualityRating: 0,
-        lastActivity: 'Never',
-        owner: farmData.owner,
-        createdDate: new Date().toISOString().split('T')[0],
+        lastActivity: "Never",
+        createdDate: new Date().toISOString().split("T")[0],
         totalUploads: 0,
-        validatedUploads: 0
+        validatedUploads: 0,
       };
-      
-      tempFarms.push(newFarm);
-      return newFarm;
+      const response = await fetch(
+        `${import.meta.env.VITE_HOST_BE}/api/farms/create/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newFarm),
+        }
+      );
+      return await response.json();
     } catch (error) {
-      console.error('Error creating farm:', error);
+      console.error("Error creating farm:", error);
       throw error;
     }
   }
 
-  static async updateFarmLocation(farmId: string, lat: number, lng: number): Promise<Farm> {
+  static async updateFarmLocation(
+    farmId: string,
+    lat: number,
+    lng: number
+  ): Promise<Farm> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/admin/farms/${farmId}/location/`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ lat, lng })
-      // });
-      // return await response.json();
-      
-      await new Promise(resolve => setTimeout(resolve, 200));
-      const farmIndex = tempFarms.findIndex(f => f.id === farmId);
-      if (farmIndex !== -1) {
-        tempFarms[farmIndex] = {
-          ...tempFarms[farmIndex],
-          lat,
-          lng,
-          hasLocation: true
-        };
-        return tempFarms[farmIndex];
-      }
-      throw new Error('Farm not found');
+      const response = await fetch(
+        `${import.meta.env.VITE_HOST_BE}/api/farms/${farmId}/location/`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lat, lng }),
+        }
+      );
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return await response.json();
     } catch (error) {
-      console.error('Error updating farm location:', error);
+      console.error("Error updating farm location:", error);
       throw error;
     }
   }
 
   static async deleteFarm(farmId: string): Promise<boolean> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/admin/farms/${farmId}/`, {
-      //   method: 'DELETE'
-      // });
-      // return response.ok;
-      
-      await new Promise(resolve => setTimeout(resolve, 200));
-      const farmIndex = tempFarms.findIndex(f => f.id === farmId);
-      if (farmIndex !== -1) {
-        tempFarms.splice(farmIndex, 1);
-        return true;
-      }
-      return false;
+      console.log("Deleting farm with ID:", farmId);
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/farms/delete/`, {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ farm_id: farmId })
+      });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return response.ok;
     } catch (error) {
-      console.error('Error deleting farm:', error);
+      console.error("Error deleting farm:", error);
+      throw error;
+    }
+  }
+  static async getLocations(): Promise<{ id: string; name: string }[]> {
+    try {
+      const response = await supabase.from("locations").select("id, name");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return (
+        (await response.data?.map((loc) => ({ id: loc.id, name: loc.name }))) ||
+        []
+      );
+    } catch (error) {
+      console.error("Error fetching locations:", error);
       throw error;
     }
   }
