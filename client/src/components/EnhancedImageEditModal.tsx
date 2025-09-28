@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import BeanDetectionCanvas from './BeanDetectionCanvas';
 import BeanImageExtractor from './BeanImageExtractor';
 
@@ -13,6 +13,8 @@ interface BeanDetection {
   comment?: string;
   detection_date?: string;
   features?: { [key: string]: any };
+    extracted_feature_id?: number;
+    prediction_id?: number;
 }
 
 interface EnhancedImageData {
@@ -45,6 +47,15 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
   const [selectedBeanId, setSelectedBeanId] = useState<number | undefined>();
   const [beans, setBeans] = useState<BeanDetection[]>(image.predictions || []);
   const [editingBean, setEditingBean] = useState<Partial<BeanDetection>>({});
+  
+  // Debug log for initial data
+  useEffect(() => {
+    console.log('Initial image.predictions:', image.predictions);
+    console.log('Initial beans state:', beans);
+    if (beans.length > 0) {
+      console.log('Sample bean features:', beans[0].features);
+    }
+  }, [image.predictions, beans]);
   const [isValidating, setIsValidating] = useState(false);
   const [activeTab, setActiveTab] = useState<'edit' | 'analysis'>('edit');
   const [showBeanBoxes, setShowBeanBoxes] = useState(true);
@@ -54,15 +65,25 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
 
   const selectedBean = beans.find(bean => bean.bean_id === selectedBeanId);
 
+  // Debug useEffect to track editingBean changes
+  useEffect(() => {
+    console.log('editingBean updated:', editingBean);
+    console.log('editingBean.features:', editingBean.features);
+  }, [editingBean]);
+
   const handleBeanSelect = (beanId: number) => {
     const bean = beans.find(b => b.bean_id === beanId);
+    console.log('Selected bean:', bean); // Debug log
+    console.log('Bean features:', bean?.features); // Debug log
     setSelectedBeanId(beanId);
     if (bean) {
-      setEditingBean({
+      const editingBeanData = {
         ...bean,
         bean_type: bean.bean_type || 'Others',
-        features: { ...bean.features }
-      });
+        features: bean.features ? { ...bean.features } : {}
+      };
+      console.log('Setting editingBean to:', editingBeanData); // Debug log
+      setEditingBean(editingBeanData);
     }
   };
 
@@ -73,7 +94,7 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
     }));
   };
 
-  const handleFeatureChange = (feature: string, value: number) => {
+  const handleFeatureChange = (feature: string, value: number | null) => {
     setEditingBean(prev => ({
       ...prev,
       features: {
@@ -93,11 +114,15 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
         bean_id: selectedBeanId,
         bean_type: editingBean.bean_type,
         features: editingBean.features,
-        is_validated: true
+        extracted_feature_id: editingBean.extracted_feature_id,
+        prediction_id: editingBean.prediction_id,
+        is_validated: true,
+        image_id: image.id  // Include image ID to uniquely identify the bean
       };
+      console.log('Validation Payload:', payload);
 
       // Make API call
-      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/beans/validate`, {
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/beans/validate/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,10 +139,6 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
         );
         setBeans(updatedBeans);
 
-        // Call parent callback if provided
-        if (onValidateBean) {
-          onValidateBean(selectedBeanId, { ...editingBean, is_validated: true });
-        }
 
         // Show success feedback (you could add a toast notification here)
         console.log('Bean validated successfully');
@@ -262,7 +283,7 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
                   {/* Bean Edit Form */}
                   <div className="lg:col-span-1">
                     <h3 className="text-lg font-semibold mb-4">Bean Details</h3>
-                    {beans.find(bean => bean.bean_id === selectedBeanId) && editingBean ? (
+                    {selectedBeanId && editingBean && Object.keys(editingBean).length > 0 ? (
                       <div className="bg-gray-50 rounded-lg p-4 space-y-4">
                         <div className="flex items-center justify-between">
                           <h4 className="font-medium">Bean #{beans.find(bean => bean.bean_id === selectedBeanId)?.bean_id}</h4>
@@ -344,8 +365,8 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
                               <input
                                 type="number"
                                 step="0.01"
-                                value={editingBean.features?.area_mm2 || ''}
-                                onChange={(e) => handleFeatureChange('area_mm2', parseFloat(e.target.value))}
+                                value={editingBean.features?.area_mm2 !== undefined && editingBean.features?.area_mm2 !== null ? editingBean.features.area_mm2 : ''}
+                                onChange={(e) => handleFeatureChange('area_mm2', e.target.value ? parseFloat(e.target.value) : null)}
                                 className="w-full px-2 py-1 border rounded text-gray-900"
                               />
                             </div>
@@ -354,8 +375,8 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
                               <input
                                 type="number"
                                 step="0.01"
-                                value={editingBean.features?.perimeter_mm || ''}
-                                onChange={(e) => handleFeatureChange('perimeter_mm', parseFloat(e.target.value))}
+                                value={editingBean.features?.perimeter_mm !== undefined && editingBean.features?.perimeter_mm !== null ? editingBean.features.perimeter_mm : ''}
+                                onChange={(e) => handleFeatureChange('perimeter_mm', e.target.value ? parseFloat(e.target.value) : null)}
                                 className="w-full px-2 py-1 border rounded text-gray-900"
                               />
                             </div>
@@ -364,8 +385,8 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
                               <input
                                 type="number"
                                 step="0.01"
-                                value={editingBean.features?.major_axis_length_mm || ''}
-                                onChange={(e) => handleFeatureChange('major_axis_length_mm', parseFloat(e.target.value))}
+                                value={editingBean.features?.major_axis_length_mm !== undefined && editingBean.features?.major_axis_length_mm !== null ? editingBean.features.major_axis_length_mm : ''}
+                                onChange={(e) => handleFeatureChange('major_axis_length_mm', e.target.value ? parseFloat(e.target.value) : null)}
                                 className="w-full px-2 py-1 border rounded text-gray-900"
                               />
                             </div>
@@ -374,8 +395,8 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
                               <input
                                 type="number"
                                 step="0.01"
-                                value={editingBean.features?.minor_axis_length_mm || ''}
-                                onChange={(e) => handleFeatureChange('minor_axis_length_mm', parseFloat(e.target.value))}
+                                value={editingBean.features?.minor_axis_length_mm !== undefined && editingBean.features?.minor_axis_length_mm !== null ? editingBean.features.minor_axis_length_mm : ''}
+                                onChange={(e) => handleFeatureChange('minor_axis_length_mm', e.target.value ? parseFloat(e.target.value) : null)}
                                 className="w-full px-2 py-1 border rounded text-gray-900"
                               />
                             </div>
@@ -384,8 +405,8 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
                               <input
                                 type="number"
                                 step="0.001"
-                                value={editingBean.features?.extent || ''}
-                                onChange={(e) => handleFeatureChange('extent', parseFloat(e.target.value))}
+                                value={editingBean.features?.extent !== undefined && editingBean.features?.extent !== null ? editingBean.features.extent : ''}
+                                onChange={(e) => handleFeatureChange('extent', e.target.value ? parseFloat(e.target.value) : null)}
                                 className="w-full px-2 py-1 border rounded text-gray-900"
                               />
                             </div>
@@ -394,8 +415,8 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
                               <input
                                 type="number"
                                 step="0.001"
-                                value={editingBean.features?.eccentricity || ''}
-                                onChange={(e) => handleFeatureChange('eccentricity', parseFloat(e.target.value))}
+                                value={editingBean.features?.eccentricity !== undefined && editingBean.features?.eccentricity !== null ? editingBean.features.eccentricity : ''}
+                                onChange={(e) => handleFeatureChange('eccentricity', e.target.value ? parseFloat(e.target.value) : null)}
                                 className="w-full px-2 py-1 border rounded text-gray-900"
                               />
                             </div>

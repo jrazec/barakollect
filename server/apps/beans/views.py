@@ -278,7 +278,8 @@ def get_user_beans(request, user_id):
                             "solidity": float(features.get('solidity')) if features.get('solidity') else None,
                             "mean_intensity": float(features.get('mean_intensity')) if features.get('mean_intensity') else None,
                             "equivalent_diameter_mm": float(features.get('equivalent_diameter')) if features.get('equivalent_diameter') else None
-                        }
+                        },
+                        "extracted_feature_id": detection['extracted_feature_id']
                     })
                 
                 data.append({
@@ -832,7 +833,8 @@ def get_all_beans(request):
                         bd.bbox_height,
                         bd.comment,
                         bd.created_at,
-                        ef.id as extracted_feature_id
+                        ef.id as extracted_feature_id,
+                        p.id as prediction_id
                     FROM bean_detections bd
                     JOIN extracted_features ef ON bd.extracted_features_id = ef.id
                     JOIN predictions p ON ef.prediction_id = p.id
@@ -1002,8 +1004,9 @@ def get_all_beans(request):
                             "solidity": float(extracted_features_data[detection['extracted_feature_id']]['solidity']) if extracted_features_data[detection['extracted_feature_id']] else None,
                             "mean_intensity": float(extracted_features_data[detection['extracted_feature_id']]['mean_intensity']) if extracted_features_data[detection['extracted_feature_id']] else None,
                             "equivalent_diameter_mm": float(extracted_features_data[detection['extracted_feature_id']]['equivalent_diameter']) if extracted_features_data[detection['extracted_feature_id']] else None
-                        }
-                        
+                        },
+                        "extracted_feature_id": detection['extracted_feature_id']
+
                     })
                 
                 # Process legacy predictions from pre-fetched data
@@ -1079,4 +1082,80 @@ def get_all_beans(request):
         print(f"DEBUG: MAIN ERROR in get_all_beans: {str(e)}")
         import traceback
         print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['POST'])
+def validate_beans(request):
+    """
+     bean_id: selectedBeanId,
+        bean_type: editingBean.bean_type,
+        features: editingBean.features,
+        is_validated: true
+
+        will return response ok
+    """
+    
+    data = request.data
+    image_id = data.get('image_id')
+    bean_id = data.get('bean_id')
+    bean_type = data.get('bean_type')
+    extracted_feature_id = data.get('extracted_feature_id')
+    features = data.get('features', {})
+    is_validated = data.get('is_validated', False)
+    
+    if not bean_id or not bean_type or not features:
+        return Response({"error": "bean_id, bean_type, and features are required"}, status=400)
+    
+    annotations_id = Annotation.objects.filter(image_id=image_id).extra(
+        where=["label->>'bean_number' = %s"],
+        params=[str(bean_id)]
+    ).values('id').first()
+    print(annotations_id)
+    predictions_id = Prediction.objects.filter(image_id=image_id, extractedfeature__id=extracted_feature_id).values('id').first()
+    # predictions_table = Prediction.objects.filter(image_id=image_id, extractedfeature=ExtractedFeature()).values('id')
+    print(f"DEBUG: Found annotations_id: {list(annotations_id)}, predictions_id: {list(predictions_id)}")
+    try:
+        #Update extracted features
+        if extracted_feature_id:
+            ExtractedFeature.objects.filter(id=extracted_feature_id).update(
+                area=features.get('area_mm2', 0),
+                perimeter=features.get('perimeter_mm', 0),
+                major_axis_length=features.get('major_axis_length_mm', 0),
+                minor_axis_length=features.get('minor_axis_length_mm', 0),
+                extent=features.get('extent', 0),
+                eccentricity=features.get('eccentricity', 0),
+                convex_area=features.get('convex_area', 0),
+                solidity=features.get('solidity', 0),
+                mean_intensity=features.get('mean_intensity', 0),
+                equivalent_diameter=features.get('equivalent_diameter_mm', 0)
+            )
+            print(f"DEBUG: Updated ExtractedFeature {extracted_feature_id}")
+        if predictions_id:
+            # Update prediction
+            Prediction.objects.filter(id=predictions_id['id']).update(
+                predicted_label={
+                    "bean_number": bean_id,
+                    "bean_type": bean_type,
+                    "confidence": 1.0  # Set confidence to 1.0 for validated beans
+                },
+                confidence_score=1.0,
+                model_used="human_validated"
+            )
+            print(f"DEBUG: Updated Prediction {predictions_id['id']}")
+        if annotations_id:
+            # Update annotation
+            Annotation.objects.filter(id=annotations_id['id']).update(
+                label={
+                    "bean_number": bean_id,
+                    "is_validated": is_validated,
+                    "validated_label": bean_type,
+                    "annotated_by": "admin"  
+                },
+                created_at=timezone.now()
+            )
+            print(f"DEBUG: Updated Annotation {annotations_id['id']}")
+            # return response true
+            return Response({"status": "success"}, status=200)
+    except Exception as e:
+        print(f"DEBUG: Error during validation update: {str(e)}")
         return Response({"error": str(e)}, status=500)

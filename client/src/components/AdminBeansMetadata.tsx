@@ -148,7 +148,7 @@ const AdminBeansMetadata: React.FC = () => {
     const handleValidateBean = async (beanId: number, updatedBean: any) => {
         try {
             // TODO: Replace with actual API endpoint
-            const response = await fetch('/api/beans/validate', {
+            const response = await fetch('/api/beans/validate/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -159,7 +159,7 @@ const AdminBeansMetadata: React.FC = () => {
                 })
             });
 
-            if (response.ok) {
+            if (response.status === 200) {
                 // Refresh the data after successful validation
                 loadImages();
                 console.log('Bean validated successfully');
