@@ -173,7 +173,7 @@ class BeanDetection(models.Model):
     Model to store individual bean detection results
     """
     id = models.BigAutoField(primary_key=True)
-    image = models.ForeignKey(Image, on_delete=models.CASCADE)
+    extracted_features = models.ForeignKey(ExtractedFeature, on_delete=models.CASCADE)
     bean_id = models.IntegerField()  # Bean number within the image
     length_mm = models.DecimalField(max_digits=10, decimal_places=3)
     width_mm = models.DecimalField(max_digits=10, decimal_places=3)
@@ -186,5 +186,5 @@ class BeanDetection(models.Model):
     
     class Meta:
         db_table = "bean_detections"
-        unique_together = ('image', 'bean_id')
+        unique_together = ('extracted_features', 'bean_id')
 

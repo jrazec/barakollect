@@ -171,9 +171,9 @@ const MultiImagePredictionModal: React.FC<MultiImagePredictionModalProps> = ({
                           <div className="bg-blue-50 rounded-lg p-4">
                             <h6 className="font-medium text-blue-800 mb-2">Size Summary</h6>
                             <div className="text-sm text-blue-600 space-y-1">
-                              <div>Largest: {Math.max(...selectedImage.beans.map(b => b.length_mm)).toFixed(1)} mm</div>
-                              <div>Smallest: {Math.min(...selectedImage.beans.map(b => b.length_mm)).toFixed(1)} mm</div>
-                              <div>Average: {(selectedImage.beans.reduce((sum, b) => sum + b.length_mm, 0) / selectedImage.beans.length).toFixed(1)} mm</div>
+                              <div>Largest: {Math.max(...selectedImage.beans.map(b => b.features?.area_mm2)).toFixed(1)} mm</div>
+                              <div>Smallest: {Math.min(...selectedImage.beans.map(b => b.features?.area_mm2)).toFixed(1)} mm</div>
+                              <div>Average: {(selectedImage.beans.reduce((sum, b) => sum + b.features?.area_mm2, 0) / selectedImage.beans.length).toFixed(1)} mm</div>
                             </div>
                           </div>
                         )}
@@ -235,11 +235,11 @@ const MultiImagePredictionModal: React.FC<MultiImagePredictionModalProps> = ({
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <div className="text-sm font-medium text-gray-700">Length</div>
+                                <div className="text-sm font-medium text-gray-700">Longest Side</div>
                                 <div className="text-lg font-semibold text-gray-900">{selectedBean.length_mm.toFixed(2)} mm</div>
                               </div>
                               <div>
-                                <div className="text-sm font-medium text-gray-700">Width</div>
+                                <div className="text-sm font-medium text-gray-700">Shortest Side</div>
                                 <div className="text-lg font-semibold text-gray-900">{selectedBean.width_mm.toFixed(2)} mm</div>
                               </div>
                             </div>

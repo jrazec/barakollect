@@ -3,6 +3,7 @@ import { AdminService } from '@/services/adminService';
 import type { AdminPredictedImage, AdminImageFilters } from '@/interfaces/global';
 import ImageDetailsModal from './ImageDetailsModal';
 import EnhancedImageDetailsModal from './EnhancedImageDetailsModal';
+import EnhancedImageEditModal from './EnhancedImageEditModal';
 import TableComponent, { type TableColumn } from './TableComponent';
 
 const AdminBeansMetadata: React.FC = () => {
@@ -16,6 +17,7 @@ const AdminBeansMetadata: React.FC = () => {
     const [selectedImage, setSelectedImage] = useState<AdminPredictedImage | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [imageToDelete, setImageToDelete] = useState<string | null>(null);
 
@@ -96,8 +98,14 @@ const AdminBeansMetadata: React.FC = () => {
 
     const handleEdit = (image: AdminPredictedImage) => {
         setSelectedImage(image);
-        setIsModalOpen(true);
-        setIsEditing(true);
+        // Only open the new edit modal for images with multi-bean predictions
+        if (image.predictions && Array.isArray(image.predictions)) {
+            setIsEditModalOpen(true);
+        } else {
+            // Fallback to old modal for legacy single-bean predictions
+            setIsModalOpen(true);
+            setIsEditing(true);
+        }
     };
 
     const handleDeleteClick = (id: string) => {
@@ -134,6 +142,34 @@ const AdminBeansMetadata: React.FC = () => {
         } catch (error) {
             console.error('Error saving image:', error);
             alert('Failed to save changes. Please try again.');
+        }
+    };
+
+    const handleValidateBean = async (beanId: number, updatedBean: any) => {
+        try {
+            // TODO: Replace with actual API endpoint
+            const response = await fetch('/api/beans/validate/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    bean_id: beanId,
+                    ...updatedBean
+                })
+            });
+
+            if (response.status === 200) {
+                // Refresh the data after successful validation
+                loadImages();
+                console.log('Bean validated successfully');
+            } else {
+                console.error('Failed to validate bean');
+                alert('Failed to validate bean. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error validating bean:', error);
+            alert('Error validating bean. Please try again.');
         }
     };
 
@@ -383,9 +419,32 @@ const AdminBeansMetadata: React.FC = () => {
                 )}
             </div>
 
-            {/* Edit Modal */}
+            {/* View/Edit Modals */}
             {selectedImage && (
                 <>
+                    {/* Enhanced Edit Modal for multi-bean predictions */}
+                    {selectedImage.predictions && Array.isArray(selectedImage.predictions) && (
+                        <EnhancedImageEditModal
+                            isOpen={isEditModalOpen}
+                            onClose={() => {
+                                setIsEditModalOpen(false);
+                                setSelectedImage(null);
+                            }}
+                            image={{
+                                id: selectedImage.id,
+                                src: selectedImage.src,
+                                predictions: selectedImage.predictions,
+                                submissionDate: selectedImage.submissionDate,
+                                allegedVariety: selectedImage.allegedVariety || undefined,
+                                userName: selectedImage.userName,
+                                userRole: selectedImage.userRole
+                            }}
+                            userRole="admin"
+                            onValidateBean={handleValidateBean}
+                        />
+                    )}
+
+                    {/* Enhanced View Modal for multi-bean predictions */}
                     {selectedImage.predictions && Array.isArray(selectedImage.predictions) ? (
                         <EnhancedImageDetailsModal
                             isOpen={isModalOpen}
@@ -406,6 +465,7 @@ const AdminBeansMetadata: React.FC = () => {
                             userRole="admin"
                         />
                     ) : (
+                        /* Legacy modal for single-bean predictions */
                         <ImageDetailsModal
                             isOpen={isModalOpen}
                             onClose={() => {

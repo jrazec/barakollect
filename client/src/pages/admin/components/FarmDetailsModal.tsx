@@ -152,7 +152,7 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
               {farmDetails.recentImages.map((image) => (
                 <div key={image.id} className="text-center">
                   <div className="w-full h-16 bg-gray-300 rounded mb-1 flex items-center justify-center text-xs">
-                    Image Preview
+                    <img src={image.url} alt={`Image ${image.id}`} className="object-cover h-full w-full" />
                   </div>
                   <div className="text-xs text-gray-600">{image.beanCount} beans</div>
                   <div className="text-xs text-gray-500">{image.uploadDate}</div>

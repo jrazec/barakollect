@@ -4,7 +4,7 @@ from skimage.measure import label, regionprops
 from ultralytics import YOLO
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-MODEL = os.path.join(current_dir, "my_model", "my_model.pt")
+MODEL = os.path.join(current_dir, "my_model", "cv_yolov11.pt")
 class BeanFeatureExtractor:
     def __init__(self, marker_length=20):
         """
