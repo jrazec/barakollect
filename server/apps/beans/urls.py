@@ -1,11 +1,12 @@
 from django.urls import path
-from .views import upload_beans, get_user_beans, process_bean, process_single_bean, get_bean_detections, test_database_connection, get_all_beans, validate_beans, get_annotations
+from .views import upload_beans, get_user_beans, process_bean, process_single_bean, get_bean_detections, test_database_connection, get_all_beans, validate_beans, get_annotations, delete_bean
 
 urlpatterns = [
    path('upload/', upload_beans),
    path('get-images/', get_all_beans),
    path('get-annotations/', get_annotations),
    path('validate/',validate_beans),
+   path('images/<int:image_id>',delete_bean),
    path('get-list/<str:user_id>/', get_user_beans),
    path('process/', process_bean),
    path('process-single/', process_single_bean),  # Backward compatibility

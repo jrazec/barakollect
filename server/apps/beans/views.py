@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from django.utils import timezone
 from django.db import connection
+from django.db import transaction
 import uuid
 import json
 import random
@@ -1156,7 +1157,7 @@ def get_all_beans(request):
                 bean_rows = []
         
         # Step 3: Process data in memory (NO database queries in this section)
-        print(f"DEBUG: Print Beautify all_rows {json.dumps(all_rows, indent=2, default=str)}")
+
         
         # Group main data by image_id
         images_data = {}
@@ -1192,7 +1193,7 @@ def get_all_beans(request):
                     } if row[13] is not None else None
             }
         print(f"DEBUG: Processed {len(images_data)} uique images from main query")
-        print(f"DEBUG: Print Beautify images_data {json.dumps(images_data, indent=2, default=str)}")
+
     
         # Group bean detections by image_id
         beans_by_image = {}
@@ -1284,7 +1285,6 @@ def get_all_beans(request):
                         'equivalent_diameter': row[22],
                         'extracted_feature_id': row[23]
                     }
-                print(f"Beautify extracted_features_data {json.dumps(extracted_features_data, indent=2, default=str)}")
 
                 for detection in bean_detections:
                     
@@ -1508,3 +1508,32 @@ def validate_beans(request):
         import traceback
         print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
         return Response({"error": str(e)}, status=500)
+    
+
+@api_view(['DELETE'])
+def delete_bean(request,image_id):
+    
+    print(f"DEBUG: Starting delete_bean for image_id={image_id}")
+    
+    with transaction.atomic():
+       # Start finding the image
+        image = ImageBucket.objects.filter(id=image_id).first()
+        if not image:
+              print(f"DEBUG: Image with id {image_id} not found")
+              return Response({"error": "Image not found"}, status=404)
+        print(f"DEBUG: Found image: {image.id}, URL: {image.image_url}")
+
+        # Delete the Image in the Supabase Storage First
+           # First find the img url e.g. upload/userid/imgname
+        image_path = image.image_url
+        print(f"DEBUG: Image path to delete from Supabase: {image_path}")
+        delete_image = supabase.storage.from_("Beans").remove([image_path])
+        
+        print(f"DEBUG: Successfully deleted image from Supabase storage")
+        
+        print(f"DEBUG: Supabase delete response: {delete_image}")
+        # Delete Image as it is cascade delete
+        image.delete()
+        print(f"DEBUG: Successfully deleted image record from database")
+        
+    return Response({"status": "success"}, status=200)
