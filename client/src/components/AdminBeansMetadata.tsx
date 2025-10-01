@@ -23,7 +23,7 @@ const AdminBeansMetadata: React.FC = () => {
 
     // Client-side pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const [imagesPerPage] = useState(5);
+    const [imagesPerPage] = useState(10);
 
     // Fetch data (load all data at once like UserManagement)
     useEffect(() => {
@@ -176,8 +176,26 @@ const AdminBeansMetadata: React.FC = () => {
     // Table columns definition
     const columns: TableColumn[] = [
         {
+            key: 'id',
+            label: 'ID',
+            width: 'w-1/12'
+        },
+        {
+            key: 'imagePreview',
+            label: 'Image',
+            width: 'w-1/6',
+            render: (_, row) => (
+                <img
+                    src={row.src}
+                    alt={`Bean submitted by ${row.userName}`}
+                    className="h-16 w-16 object-cover rounded-md border border-gray-200 cursor-pointer"
+                    onClick={() => handleImageClick(row)}
+                />
+            )
+        },
+        {
             key: 'userName',
-            label: 'User',
+            label: 'Owner',
             width: 'w-1/6'
         },
         {
@@ -194,7 +212,7 @@ const AdminBeansMetadata: React.FC = () => {
         },
         {
             key: 'bean_type',
-            label: 'Bean Type',
+            label: 'Bean Count/Type',
             width: 'w-1/6',
             render: (_, row) => {
                 // Handle both legacy and new formats
@@ -246,12 +264,6 @@ const AdminBeansMetadata: React.FC = () => {
             width: 'w-1/6',
             render: (_, row) => (
                 <div className="flex space-x-2">
-                    <button
-                        onClick={() => handleImageClick(row)}
-                        className="text-blue-600 hover:text-blue-900 font-accent text-sm"
-                    >
-                        View More
-                    </button>
                     <button
                         onClick={() => handleEdit(row)}
                         className="text-green-600 hover:text-green-900 font-accent text-sm"
