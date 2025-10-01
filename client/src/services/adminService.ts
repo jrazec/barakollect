@@ -919,23 +919,13 @@ export class AdminService {
 
   static async deleteImage(id: string): Promise<boolean> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/admin/images/${id}`, {
-      //   method: 'DELETE',
-      //   headers: { 'Content-Type': 'application/json' },
-      // });
-      // return response.ok;
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      console.log(`Image ${id} deleted`);
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/beans/images/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response.ok;
 
-      // Remove from temp data for simulation
-      const index = tempAdminImages.findIndex((img) => img.id === id);
-      if (index > -1) {
-        tempAdminImages.splice(index, 1);
-      }
-
-      return true;
     } catch (error) {
       console.error("Error deleting image:", error);
       throw error;

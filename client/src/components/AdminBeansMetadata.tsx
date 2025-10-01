@@ -155,6 +155,7 @@ const AdminBeansMetadata: React.FC = () => {
                 },
                 body: JSON.stringify({
                     bean_id: beanId,
+                    image_id: selectedImage?.id,
                     ...updatedBean
                 })
             });

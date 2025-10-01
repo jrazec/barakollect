@@ -25,11 +25,12 @@ interface BeanData {
 /**
  * Calculate circularity of a bean
  * Formula: 4 * π * area / perimeter²
+ * 4*a*pi /p^2 *100
  * Value ranges from 0 (infinitely elongated) to 1 (perfect circle)
  */
 export const calculateCircularity = (area: number, perimeter: number): number | null => {
   if (area <= 0 || perimeter <= 0) return null;
-  return (4 * Math.PI * area) / (perimeter ** 2);
+  return parseFloat(((4 * Math.PI * area) / (perimeter ** 2) * 100).toFixed(2));
 };
 
 /**
