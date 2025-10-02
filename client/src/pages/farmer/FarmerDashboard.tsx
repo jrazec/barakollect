@@ -4,10 +4,29 @@ import CardComponent from "@/components/CardComponent";
 import { BarChartComponent, LineChartComponent } from "@/components/ChartComponent";
 import StatCard from "@/components/StatCard";
 import type React from "react";
+import { useEffect } from "react";
 import logo1 from "@/assets/images/barakollect_logo.svg";
 import logo2 from "@/assets/images/logo.svg";
+import { supabase } from "@/lib/supabaseClient";
 
 const FarmerDashboard: React.FC = () => {
+
+    useEffect(() => {
+        const fetchData = async () => {
+            const { data: sessionData } = await supabase.auth.getSession();
+            const uiid = sessionData.session?.user?.id;
+            console.log(uiid)
+            const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/analytics/farmer/dashboard/${uiid}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            const data = await response.json();
+            console.log(data);
+        };
+        fetchData();
+    }, []);
     const statCards: Stat[] = [
         {
             label: "Overall Farm Status",
