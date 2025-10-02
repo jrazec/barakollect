@@ -7,6 +7,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import logo2 from "@/assets/images/logo.svg";
 import { supabase } from "@/lib/supabaseClient";
+import BeanImageExtractor from "@/components/BeanImageExtractor";
 
 const FarmerDashboard: React.FC = () => {
 
@@ -32,18 +33,35 @@ const FarmerDashboard: React.FC = () => {
         fetchData();
     }, []);
 
-    // 🔹 Stat cards → quick KPIs (avg size, yield, density, shape consistency)
+    //  Stat cards → quick KPIs (avg size, yield, density, shape consistency)
     const statCards: Stat[] = farmerStats
         ? [
             {
-                label: "Your Avg Bean Length",
-                value: `${farmerStats.average_size.length_mm.toFixed(1)} mm`,
-                subtext: `vs Global ${globalStats.average_size.length_mm.toFixed(1)} mm`
+                label: "Average Bean Area",
+                value: `${farmerStats.average_area.toFixed(1)} mm²`,
+                subtext: (() => {
+                    const diff = farmerStats.average_area - globalStats.average_area;
+                    const percent = ((diff / globalStats.average_area) * 100).toFixed(1);
+                    return `${Number(percent) > 0 ? "+" : ""}${percent}% vs other farms`;
+                })()
             },
             {
-                label: "Your Avg Bean Width",
+                label: "Average Bean Length",
+                value: `${farmerStats.average_size.length_mm.toFixed(1)} mm`,
+                subtext: (() => {
+                    const diff = farmerStats.average_size.length_mm - globalStats.average_size.length_mm;
+                    const percent = ((diff / globalStats.average_size.length_mm) * 100).toFixed(1);
+                    return `${Number(percent) > 0 ? "+" : ""}${percent}% vs other farms`;
+                })()
+            },
+            {
+                label: "Average Bean Width",
                 value: `${farmerStats.average_size.width_mm.toFixed(1)} mm`,
-                subtext: `vs Global ${globalStats.average_size.width_mm.toFixed(1)} mm`
+                subtext: (() => {
+                    const diff = farmerStats.average_size.width_mm - globalStats.average_size.width_mm;
+                    const percent = ((diff / globalStats.average_size.width_mm) * 100).toFixed(1);
+                    return `${Number(percent) > 0 ? "+" : ""}${percent}% vs other farms`;
+                })()
             },
             {
                 label: "Yield Potential",
@@ -63,20 +81,38 @@ const FarmerDashboard: React.FC = () => {
         ]
         : [];
 
-    // 🔹 Chart cards → interactive visual exploration
+    // Chart cards → interactive visual exploration
     const chartCards: CardAttributes[] = [
         {
             title: "Largest Bean Submitted",
             subtitle: "From your farm",
             description: (
                 <div className="text-xs text-stone-400 mt-2">
-                    Length: {farmerStats?.largest_bean.length_mm.toFixed(1)} mm, 
-                    Width: {farmerStats?.largest_bean.width_mm.toFixed(1)} mm
+                Length: {farmerStats?.largest_bean.length_mm.toFixed(1)} mm, 
+                Width: {farmerStats?.largest_bean.width_mm.toFixed(1)} mm
                 </div>
             ),
             content: (
                 <div className="flex items-center justify-center h-60">
-                    <img src={logo2} alt="Largest Bean" className="w-32 h-32" />
+                {farmerStats?.largest_bean ? (
+                    <BeanImageExtractor
+                    bean={{
+                        bean_id: farmerStats.largest_bean.bean_id,
+                        length_mm: farmerStats.largest_bean.length_mm,
+                        width_mm: farmerStats.largest_bean.width_mm,
+                        bbox: [
+                        farmerStats.largest_bean.bbox_x,
+                        farmerStats.largest_bean.bbox_y,
+                        farmerStats.largest_bean.bbox_width,
+                        farmerStats.largest_bean.bbox_height,
+                        ]
+                    }}
+                    imageSrc={farmerStats.largest_bean.image_url}
+                    size={128}
+                    />
+                ) : (
+                    <img src={logo2} alt="Largest Bean Placeholder" className="w-32 h-32" />
+                )}
                 </div>
             )
         },

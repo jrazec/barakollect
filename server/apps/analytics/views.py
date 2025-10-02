@@ -33,6 +33,17 @@ def render_farmer_dashboard(request, uiid):
 
     def fetch_stats(where_clause, params):
         with connection.cursor() as cursor:
+            #Avg area
+            cursor.execute(f"""
+                SELECT AVG(area)
+                FROM bean_detections bd
+                JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                JOIN predictions p ON ef.prediction_id = p.id
+                JOIN images i ON p.image_id = i.id
+                {where_clause}
+            """, params)
+            avg_area = cursor.fetchone()
+            
             # Avg size
             cursor.execute(f"""
                 SELECT AVG(length_mm), AVG(width_mm)
@@ -44,14 +55,19 @@ def render_farmer_dashboard(request, uiid):
             """, params)
             avg_size = cursor.fetchone()
 
-            # Largest
+            # Largest bean: include dimensions, bbox, and image_url
             cursor.execute(f"""
-                SELECT MAX(length_mm), MAX(width_mm)
+                SELECT bd.id AS bean_id,
+                    bd.length_mm, bd.width_mm,
+                    bd.bbox_x, bd.bbox_y, bd.bbox_width, bd.bbox_height,
+                    i.image_url
                 FROM bean_detections bd
                 JOIN extracted_features ef ON bd.extracted_features_id = ef.id
                 JOIN predictions p ON ef.prediction_id = p.id
                 JOIN images i ON p.image_id = i.id
                 {where_clause}
+                ORDER BY bd.length_mm DESC
+                LIMIT 1
             """, params)
             largest = cursor.fetchone()
 
@@ -89,13 +105,25 @@ def render_farmer_dashboard(request, uiid):
             density = cursor.fetchone()
 
         return {
+            "average_area": float(avg_area[0]) if avg_area[0] else 0,
             "average_size": {
                 "length_mm": float(avg_size[0]) if avg_size[0] else 0,
                 "width_mm": float(avg_size[1]) if avg_size[1] else 0,
             },
             "largest_bean": {
-                "length_mm": float(largest[0]) if largest[0] else 0,
-                "width_mm": float(largest[1]) if largest[1] else 0,
+                "bean_id": int(largest[0]) if largest and largest[0] else None,
+                "length_mm": float(largest[1]) if largest and largest[1] else 0,
+                "width_mm": float(largest[2]) if largest and largest[2] else 0,
+                "bbox_x": float(largest[3]) if largest and largest[3] else 0,
+                "bbox_y": float(largest[4]) if largest and largest[4] else 0,
+                "bbox_width": float(largest[5]) if largest and largest[5] else 0,
+                "bbox_height": float(largest[6]) if largest and largest[6] else 0,
+                # !! temporary ↴ --► largest bean is the weird amalgamation of 4 beans lol
+                "image_url": largest[7] if largest and largest[7] else None, 
+                # "image_url": (
+                #     supabase.storage.from_("Beans").get_public_url(largest[7])
+                #     if largest and largest[7] else None
+                # ),
             },
             "shape_consistency": {
                 "avg_aspect_ratio": float(shape_consistency[0]) if shape_consistency[0] else 0,
