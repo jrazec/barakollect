@@ -141,8 +141,7 @@ const AdminBeansGallery: React.FC = () => {
         <div className="p-6 bg-white h-full">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Beans Gallery Management</h1>
-                <p className="text-gray-600">Manage and review all submitted bean images across the platform</p>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Beans Gallery Management</h1>     
             </div>
 
             {/* Filters and Controls - If needed uncommnet */}

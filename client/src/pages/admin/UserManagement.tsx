@@ -392,14 +392,10 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-main font-bold text-[var(--espresso-black)] mb-2">
             User Management
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 font-accent">
-            Manage users, roles, and permissions across the platform
-          </p>
         </div>
 
         {/* Search and Filters */}

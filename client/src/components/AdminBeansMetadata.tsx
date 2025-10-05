@@ -307,9 +307,6 @@ const AdminBeansMetadata: React.FC = () => {
                     <h1 className="text-2xl sm:text-3xl font-main font-bold text-[var(--espresso-black)] mb-2">
                         Beans Metadata Management
                     </h1>
-                    <p className="text-sm sm:text-base text-gray-600 font-accent">
-                        View and manage detailed metadata for all submitted bean images
-                    </p>
                 </div>
 
                 {/* Search and Filters */}

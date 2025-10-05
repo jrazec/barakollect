@@ -11,7 +11,7 @@ const PageContainer: React.FC<PageContainerProps> = ({
 }) => {
   return (
     <div
-      className="min-h-full flex flex-col items-center py-8 px-2 md:px-8"
+      className="h-full w-full flex flex-col items-center"
       style={{ backgroundColor: bgColor }}
     >
       {children}

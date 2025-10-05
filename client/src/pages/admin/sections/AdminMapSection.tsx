@@ -218,7 +218,7 @@ const AdminMapSection: React.FC = () => {
       />
 
       {/* Map Section */}
-      <div className="bg-[var(--parchment)] rounded-lg shadow p-4">
+      <div className="bg-[var(--white)] rounded-lg shadow p-4">
         <div className="flex items-center gap-2 mb-1">
           <span className="font-main font-bold text-[var(--espresso-black)] text-lg">
             &#128506; Farm Locations Management
