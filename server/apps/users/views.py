@@ -1,6 +1,7 @@
-import email
+from django.shortcuts import render
 from django.utils import timezone
 from django.http import JsonResponse
+from django.core.paginator import Paginator
 from rest_framework.decorators import api_view
 from django.db import transaction
 from models.models import Image, User, UserRole, Role, Location
@@ -97,9 +98,32 @@ def change_to_role(list):
 @api_view(['GET'])
 def get_users(req):
     try:
-        users = (
-            User.objects
-            .values(
+        # Get pagination and search parameters
+        page = int(req.GET.get('page', 1))
+        limit = int(req.GET.get('limit', 10))
+        search_username = req.GET.get('search_username', '').strip()
+        role_filter = req.GET.get('role', '').strip()
+        location_filter = req.GET.get('location', '').strip()
+        
+        print(f"DEBUG: get_users - page={page}, limit={limit}, search_username={search_username}, role_filter={role_filter}, location_filter={location_filter}")
+        
+        # Build the base queryset
+        users_query = User.objects.all()
+        
+        # Apply search filter for username
+        if search_username:
+            users_query = users_query.filter(username__icontains=search_username)
+        
+        # Apply role filter
+        if role_filter and role_filter != 'all':
+            users_query = users_query.filter(userrole__role__name=role_filter)
+        
+        # Apply location filter
+        if location_filter and location_filter != 'all':
+            users_query = users_query.filter(location_id=location_filter)
+        
+        # Get the values with all required fields
+        users_data = users_query.values(
             "id",
             "first_name",
             "last_name",
@@ -112,11 +136,36 @@ def get_users(req):
             "last_login",
             "is_active",
             "userrole__role__name",  
-            )
-        )
-
-        return JsonResponse({"data": list(map(change_to_role,list(users)))})
+        ).order_by('-registration_date')  # Order by registration date descending
+        
+        # Apply pagination using Django's Paginator
+        paginator = Paginator(users_data, limit)
+        
+        try:
+            paginated_users = paginator.page(page)
+        except Exception as e:
+            print(f"DEBUG: Pagination error: {str(e)}")
+            # If page is out of range, return the last page
+            paginated_users = paginator.page(paginator.num_pages)
+        
+        # Transform the data
+        users_list = list(map(change_to_role, list(paginated_users)))
+        
+        print(f"DEBUG: get_users - returning {len(users_list)} users, page {paginated_users.number} of {paginator.num_pages}")
+        
+        return JsonResponse({
+            "data": users_list,
+            "pagination": {
+                "currentPage": paginated_users.number,
+                "totalPages": paginator.num_pages,
+                "totalItems": paginator.count,
+                "itemsPerPage": limit,
+                "hasNext": paginated_users.has_next(),
+                "hasPrevious": paginated_users.has_previous()
+            }
+        })
     except Exception as e:
+        print(f"DEBUG: Error in get_users: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -139,10 +188,11 @@ def create_user(request):
         role_id = 1
 
     try:
-        # Create the user auth here as well for supabase
+        # Create the user auth here as well for supabases
         userAuth = supabase.auth.admin.create_user({
             "email": email,
             "password": password,
+            "email_confirm": True
         })
        
     except Exception as e:
@@ -205,7 +255,7 @@ def update_user(request):
             user.username = username
             if reset_password == 'true':
                 # Reset password to "123456" in Supabase
-                supabase.auth.api.update_user(user.id, {"password": "123456"})
+                supabase.auth.update_user(user.id, {"password": "123456"})
             user.save()
 
             role = Role.objects.get(id=int(role_id))
@@ -244,12 +294,25 @@ def activate_user(request):
 @api_view(['DELETE'])
 def delete_user(request, user_id):
     try:
-       with transaction.atomic():
-        supabase.auth.admin.delete_user(user_id)
-        User.objects.filter(id=user_id).delete()
+        print(f"Starting permanent deletion for user_id: {user_id}")
+        with transaction.atomic():
+            User.objects.filter(id=user_id).delete()
+            print(f"Successfully deleted user from database: {user_id}")
+
+            try:
+                supabase.auth.admin.delete_user(user_id)
+                print(f"Successfully deleted user from Supabase auth: {user_id}")
+            except Exception as supabase_error:
+                print(f"Warning: Failed to delete user from Supabase auth: {str(supabase_error)}")
+                # Continue execution - database deletion was successful
+            
+            print(f"Deleting user from database: {user_id}")
+            
     except Exception as e:
+        print(f"Error deleting user {user_id}: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
-    # Log the deletion event
+    # Log the deletion even
+    print(f"User {user_id} deleted permanently")
     
     return JsonResponse({"message": "User deleted permanently"})
 

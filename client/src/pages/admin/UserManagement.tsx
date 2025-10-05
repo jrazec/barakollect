@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import TableComponent from '@/components/TableComponent';
 import type { TableColumn } from '@/components/TableComponent';
 import AdminService from '@/services/adminService';
-import type { UserManagementUser } from '@/interfaces/global';
+import type { UserManagementUser, PaginationData } from '@/interfaces/global';
 
 
 
@@ -10,7 +10,14 @@ interface UserManagementProps { }
 
 const UserManagement: React.FC<UserManagementProps> = () => {
   const [users, setUsers] = useState<UserManagementUser[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserManagementUser[]>([]);
+  const [pagination, setPagination] = useState<PaginationData>({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10,
+    hasNext: false,
+    hasPrevious: false
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]); 
@@ -19,10 +26,6 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'farmer' | 'researcher' | 'admin'>('all');
   const [locationFilter, setLocationFilter] = useState('all');
-
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage] = useState(10);
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -50,60 +53,78 @@ const UserManagement: React.FC<UserManagementProps> = () => {
 
   // Fetch users data
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        // TODO: Replace with actual API call
-        const users = await AdminService.getUsers();
-        const locations = await AdminService.getLocations();
-        setUsers(users);
-        setFilteredUsers(users);
-        setLocations(locations);
-        console.log(users)
-      } catch (err) {
-        console.error('Error fetching users:', err);
-        setError('Failed to load users. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
+    loadUsers();
+  }, [pagination.currentPage]);
 
-    fetchUsers();
+  // Debounced search effect for username
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadUsers();
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, roleFilter, locationFilter]);
+
+  // Load locations only once on mount
+  useEffect(() => {
+    loadLocations();
   }, []);
 
-
-  // Filter users based on search and filters
-  useEffect(() => {
-    let filtered = users;
-
-    // Search by name
-    if (searchTerm) {
-      filtered = filtered.filter(user =>
-        `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      
+      // Build search parameters
+      const searchParams: any = {};
+      if (searchTerm.trim()) searchParams.search_username = searchTerm.trim();
+      if (roleFilter !== 'all') searchParams.role = roleFilter;
+      if (locationFilter !== 'all') searchParams.location = locationFilter;
+      
+      const result = await AdminService.getUsers(
+        pagination.currentPage,
+        pagination.itemsPerPage,
+        Object.keys(searchParams).length > 0 ? searchParams : undefined
       );
+      
+      setUsers(result.data);
+      setPagination(result.pagination);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError('Failed to load users. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Filter by role
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(user => user.role === roleFilter);
+  const loadLocations = async () => {
+    try {
+      const locations = await AdminService.getLocations();
+      setLocations(locations);
+    } catch (err) {
+      console.error('Error fetching locations:', err);
     }
+  };
 
-    // Filter by location
-    if (locationFilter !== 'all') {
-      filtered = filtered.filter(user => `${user.location_id}` === locationFilter);
-    }
+  // Handle pagination
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, currentPage: page }));
+  };
 
-    setFilteredUsers(filtered);
-    setCurrentPage(1); // Reset to first page when filtering
-  }, [users, searchTerm, roleFilter, locationFilter]);
+  // Handle search changes with pagination reset
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  };
 
-  // Get unique locations for filter
-  const uniqueLocations = locations;
-  // Pagination
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const handleRoleFilterChange = (value: 'all' | 'farmer' | 'researcher' | 'admin') => {
+    setRoleFilter(value);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  };
+
+  const handleLocationFilterChange = (value: string) => {
+    setLocationFilter(value);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+  };
 
   // // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,12 +138,12 @@ const UserManagement: React.FC<UserManagementProps> = () => {
           role: formData.role,
           location_id: formData.location_id,
           is_active: formData.is_active,
-          email: formData.email
+          email: formData.email,
+          password: formData.password,
         });
 
-        // Refresh the users list after creating a new user
-        const updatedUsers = await AdminService.getUsers();
-        setUsers(updatedUsers);
+        // Refresh only the users data
+        await loadUsers();
         setShowAddModal(false);
       } else if (showEditModal && selectedUser) {
         // Edit existing user
@@ -135,9 +156,8 @@ const UserManagement: React.FC<UserManagementProps> = () => {
           reset_password: formData.resetPassword
         });
 
-        // Refresh user lists after editing
-        const updatedUsers = await AdminService.getUsers();
-        setUsers(updatedUsers);
+        // Refresh only the users data
+        await loadUsers();
         setShowEditModal(false);
       }
       resetForm();
@@ -179,8 +199,8 @@ const UserManagement: React.FC<UserManagementProps> = () => {
 
     try {
       await AdminService.deleteUser(selectedUser.id);
-      const updatedUsers = users.filter(user => user.id !== selectedUser.id);
-      setUsers(updatedUsers);
+      // Refresh only the users data instead of filtering locally
+      await loadUsers();
       setShowDeleteModal(false);
       setSelectedUser(null);
       setDeleteConfirmUsername('');
@@ -387,12 +407,12 @@ const UserManagement: React.FC<UserManagementProps> = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search */}
             <div>
-              <label className="block text-sm font-accent text-gray-600 mb-2">Search by Name</label>
+              <label className="block text-sm font-accent text-gray-600 mb-2">Search by Username</label>
               <input
                 type="text"
-                placeholder="Search users..."
+                placeholder="Search users by username..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
               />
             </div>
@@ -402,7 +422,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
               <label className="block text-sm font-accent text-gray-600 mb-2">Filter by Role</label>
               <select
                 value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value as any)}
+                onChange={(e) => handleRoleFilterChange(e.target.value as any)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
               >
                 <option value="all">All Roles</option>
@@ -417,11 +437,11 @@ const UserManagement: React.FC<UserManagementProps> = () => {
               <label className="block text-sm font-accent text-gray-600 mb-2">Filter by Location</label>
               <select
                 value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
+                onChange={(e) => handleLocationFilterChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
               >
                 <option value="all">All Locations</option>
-                {uniqueLocations.map(location => (
+                {locations.map(location => (
                   <option key={location.id} value={location.id}>{location.name}</option>
                 ))}
               </select>
@@ -443,57 +463,27 @@ const UserManagement: React.FC<UserManagementProps> = () => {
         </div>
 
         {/* Results Count */}
-        <div className="mb-4">
-          <p className="text-sm font-accent text-gray-600">
-            Showing {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users
-          </p>
-        </div>
+
 
         {/* Users Table */}
         <div className="bg-[var(--parchment)] rounded-lg shadow overflow-hidden">
           <TableComponent
             columns={columns}
-            data={currentUsers}
+            data={users}
             className="min-h-[400px]"
             rowClassName={(row) => row.is_deleted ? 'bg-[var(--fadin-gray)]' : ''}
+            pagination={{
+              currentPage: pagination.currentPage,
+              totalPages: pagination.totalPages,
+              totalItems: pagination.totalItems,
+              itemsPerPage: pagination.itemsPerPage,
+              hasNext: pagination.hasNext,
+              hasPrevious: pagination.hasPrevious,
+              onPageChange: handlePageChange
+            }}
+            showPaginationTop={true}
           />
         </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6 flex justify-center">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-accent disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                Previous
-              </button>
-
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-2 border rounded-lg text-sm font-accent ${currentPage === page
-                    ? 'bg-[var(--arabica-brown)] text-[var(--parchment)] border-[var(--arabica-brown)]'
-                    : 'border-gray-300 hover:bg-gray-50'
-                    }`}
-                >
-                  {page}
-                </button>
-              ))}
-
-              <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-accent disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Add/Edit User Modal */}
         {(showAddModal || showEditModal) && (
