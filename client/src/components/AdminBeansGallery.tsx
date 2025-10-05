@@ -11,7 +11,7 @@ const AdminBeansGallery: React.FC = () => {
         currentPage: 1,
         totalPages: 1,
         totalItems: 0,
-        itemsPerPage: 100
+        itemsPerPage: 2000
     });
     const [locations, setLocations] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);

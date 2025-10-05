@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminService } from '@/services/adminService';
-import type { AdminPredictedImage, AdminImageFilters } from '@/interfaces/global';
+import type { AdminPredictedImage, AdminImageFilters, PaginationData } from '@/interfaces/global';
 import ImageDetailsModal from './ImageDetailsModal';
 import EnhancedImageDetailsModal from './EnhancedImageDetailsModal';
 import EnhancedImageEditModal from './EnhancedImageEditModal';
@@ -9,9 +9,19 @@ import TableComponent, { type TableColumn } from './TableComponent';
 const AdminBeansMetadata: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<'verified' | 'pending' | 'all'>('all');
     const [filters, setFilters] = useState<AdminImageFilters>({});
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQueries, setSearchQueries] = useState({
+        search_owner: '',
+        search_image_id: ''
+    });
     const [images, setImages] = useState<AdminPredictedImage[]>([]);
-    const [filteredImages, setFilteredImages] = useState<AdminPredictedImage[]>([]);
+    const [pagination, setPagination] = useState<PaginationData>({
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+        hasNext: false,
+        hasPrevious: false
+    });
     const [locations, setLocations] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState<AdminPredictedImage | null>(null);
@@ -21,50 +31,45 @@ const AdminBeansMetadata: React.FC = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [imageToDelete, setImageToDelete] = useState<string | null>(null);
 
-    // Client-side pagination
-    const [currentPage, setCurrentPage] = useState(1);
-    const [imagesPerPage] = useState(10);
-
-    // Fetch data (load all data at once like UserManagement)
+    // Load data on pagination change only
     useEffect(() => {
         loadImages();
-        loadLocations();
-    }, [statusFilter, filters]);
+    }, [pagination.currentPage]);
 
-    // Filter images based on search query and filters
+    // Debounced search effect
     useEffect(() => {
-        let filtered = images;
+        const timeoutId = setTimeout(() => {
+            loadImages();
+        }, 500); // 500ms debounce
 
-        // Search by user name
-        if (searchQuery.trim() !== '') {
-            filtered = filtered.filter(image => 
-                image.userName.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-        }
+        return () => clearTimeout(timeoutId);
+    }, [statusFilter, filters, searchQueries]);
 
-        // Apply other filters if needed (they're already applied on server side)
-        setFilteredImages(filtered);
-        setCurrentPage(1); // Reset to first page when filtering
-    }, [images, searchQuery]);
-
-    // Client-side pagination calculations
-    const indexOfLastImage = currentPage * imagesPerPage;
-    const indexOfFirstImage = indexOfLastImage - imagesPerPage;
-    const currentImages = filteredImages.slice(indexOfFirstImage, indexOfLastImage);
-    const totalPages = Math.ceil(filteredImages.length / imagesPerPage);
+    // Load locations only once on mount
+    useEffect(() => {
+        loadLocations();
+    }, []);
 
     const loadImages = async () => {
         setIsLoading(true);
         try {
             const status = statusFilter === 'all' ? undefined : statusFilter;
-            // Load all images at once for client-side pagination and search
+            
+            // Build search parameters - only include non-empty search values
+            const searchParams: any = {};
+            if (searchQueries.search_owner.trim()) searchParams.search_owner = searchQueries.search_owner.trim();
+            if (searchQueries.search_image_id.trim()) searchParams.search_image_id = searchQueries.search_image_id.trim();
+            
             const result = await AdminService.getImagesByStatus(
                 status, 
                 filters, 
-                1, // Always load from first page
-                1000 // Load a large number to get all images
+                pagination.currentPage, 
+                pagination.itemsPerPage,
+                Object.keys(searchParams).length > 0 ? searchParams : undefined
             );
+            
             setImages(result.images);
+            setPagination(result.pagination);
         } catch (error) {
             console.error('Error loading images:', error);
         } finally {
@@ -82,12 +87,22 @@ const AdminBeansMetadata: React.FC = () => {
     };
 
     const handlePageChange = (page: number) => {
-        setCurrentPage(page);
+        setPagination(prev => ({ ...prev, currentPage: page }));
     };
 
     const handleFilterChange = (key: keyof AdminImageFilters, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value || undefined }));
-        setCurrentPage(1);
+        setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to first page
+    };
+
+    const handleSearchChange = (searchType: keyof typeof searchQueries, value: string) => {
+        setSearchQueries(prev => ({ ...prev, [searchType]: value }));
+        setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to first page when searching
+    };
+
+    const handleStatusFilterChange = (status: 'verified' | 'pending' | 'all') => {
+        setStatusFilter(status);
+        setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to first page
     };
 
     const handleImageClick = (image: AdminPredictedImage) => {
@@ -117,7 +132,8 @@ const AdminBeansMetadata: React.FC = () => {
         if (imageToDelete) {
             try {
                 await AdminService.deleteImage(imageToDelete);
-                loadImages(); // Refresh the list
+                // Refresh only the table data
+                await loadImages();
                 setShowDeleteModal(false);
                 setImageToDelete(null);
             } catch (error) {
@@ -135,7 +151,8 @@ const AdminBeansMetadata: React.FC = () => {
     const handleSaveEdit = async (updatedImage: AdminPredictedImage) => {
         try {
             await AdminService.editImage(updatedImage.id, updatedImage);
-            loadImages(); // Refresh the list
+            // Refresh only the table data
+            await loadImages();
             setIsModalOpen(false);
             setSelectedImage(null);
             setIsEditing(false);
@@ -161,8 +178,8 @@ const AdminBeansMetadata: React.FC = () => {
             });
 
             if (response.status === 200) {
-                // Refresh the data after successful validation
-                loadImages();
+                // Refresh only the table data after successful validation
+                await loadImages();
                 console.log('Bean validated successfully');
             } else {
                 console.error('Failed to validate bean');
@@ -297,16 +314,16 @@ const AdminBeansMetadata: React.FC = () => {
 
                 {/* Search and Filters */}
                 <div className="bg-[var(--parchment)] rounded-lg shadow p-4 sm:p-6 mb-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Search */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {/* Search Owner */}
                         <div>
-                            <label className="block text-sm font-accent text-gray-600 mb-2">Search User</label>
+                            <label className="block text-sm font-accent text-gray-600 mb-2">Search Owner</label>
                             <div className="relative">
                                 <input
                                     type="text"
                                     placeholder="Search by user name..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    value={searchQueries.search_owner}
+                                    onChange={(e) => handleSearchChange('search_owner', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent pl-8"
                                 />
                                 <svg 
@@ -320,12 +337,24 @@ const AdminBeansMetadata: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Search Image ID */}
+                        <div>
+                            <label className="block text-sm font-accent text-gray-600 mb-2">Search Image ID</label>
+                            <input
+                                type="text"
+                                placeholder="Enter image ID..."
+                                value={searchQueries.search_image_id}
+                                onChange={(e) => handleSearchChange('search_image_id', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
+                            />
+                        </div>
+
                         {/* Status Filter */}
                         <div>
                             <label className="block text-sm font-accent text-gray-600 mb-2">Filter by Status</label>
                             <select
                                 value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value as 'verified' | 'pending' | 'all')}
+                                onChange={(e) => handleStatusFilterChange(e.target.value as 'verified' | 'pending' | 'all')}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
                             >
                                 <option value="all">All Statuses</option>
@@ -363,7 +392,7 @@ const AdminBeansMetadata: React.FC = () => {
                             </select>
                         </div>
                     </div>
-                    </div>
+                </div>
 
                 {/* Loading State */}
                 {isLoading && (
@@ -375,59 +404,24 @@ const AdminBeansMetadata: React.FC = () => {
                     </div>
                 )}
 
-                {/* Results Count */}
-                {!isLoading && (
-                    <div className="mb-4">
-                        <p className="text-sm font-accent text-gray-600">
-                            Showing {indexOfFirstImage + 1}-{Math.min(indexOfLastImage, filteredImages.length)} of {filteredImages.length} images
-                        </p>
-                    </div>
-                )}
-
-                {/* Images Table */}
+                {/* Images Table with integrated pagination */}
                 {!isLoading && (
                     <div className="bg-[var(--parchment)] rounded-lg shadow overflow-hidden">
                         <TableComponent
                             columns={columns}
-                            data={currentImages}
+                            data={images}
                             className="min-h-[400px]"
+                            pagination={{
+                                currentPage: pagination.currentPage,
+                                totalPages: pagination.totalPages,
+                                totalItems: pagination.totalItems,
+                                itemsPerPage: pagination.itemsPerPage,
+                                hasNext: pagination.hasNext,
+                                hasPrevious: pagination.hasPrevious,
+                                onPageChange: handlePageChange
+                            }}
+                            showPaginationTop={true}
                         />
-                    </div>
-                )}
-
-                {/* Pagination */}
-                {!isLoading && totalPages > 1 && (
-                    <div className="mt-6 flex justify-center">
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage === 1}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-accent disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                            >
-                                Previous
-                            </button>
-
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                <button
-                                    key={page}
-                                    onClick={() => handlePageChange(page)}
-                                    className={`px-3 py-2 border rounded-lg text-sm font-accent ${currentPage === page
-                                        ? 'bg-[var(--arabica-brown)] text-[var(--parchment)] border-[var(--arabica-brown)]'
-                                        : 'border-gray-300 hover:bg-gray-50'
-                                        }`}
-                                >
-                                    {page}
-                                </button>
-                            ))}
-
-                            <button
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-accent disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                            >
-                                Next
-                            </button>
-                        </div>
                     </div>
                 )}
             </div>
