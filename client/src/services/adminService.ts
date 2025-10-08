@@ -70,12 +70,6 @@ export interface FarmDetails extends Farm {
 }
 
 // Temporary data - replace with actual API calls
-const tempAdminStats: AdminStats = {
-  totalUsers: 1247,
-  activeUsers: 892,
-  totalUploads: 3456,
-  pendingValidations: 23,
-};
 
 const tempUserActivity: UserActivity[] = [
   { date: "Jan", farmers: 45, researchers: 12, total: 57 },
@@ -576,13 +570,17 @@ export class AdminService {
   // Get admin dashboard statistics
   static async getAdminStats(): Promise<AdminStats> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/admin/stats');
-      // return await response.json();
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      return tempAdminStats;
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/analytics/admin/dashboard/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const result = await response.json();
+      console.log("Admin stats fetched:", result);
+      return result.data;
+
     } catch (error) {
       console.error("Error fetching admin stats:", error);
       throw error;
@@ -685,14 +683,45 @@ export class AdminService {
   }
 
   // User Management Methods
-  static async getUsers(): Promise<UserManagementUser[]> {
+  static async getUsers(
+    page: number = 1,
+    limit: number = 10,
+    searchParams?: {
+      search_username?: string;
+      role?: string;
+      location?: string;
+    }
+  ): Promise<{ data: UserManagementUser[]; pagination: PaginationData }> {
     try {
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+      
+      if (searchParams?.search_username) params.append('search_username', searchParams.search_username);
+      if (searchParams?.role && searchParams.role !== 'all') params.append('role', searchParams.role);
+      if (searchParams?.location && searchParams.location !== 'all') params.append('location', searchParams.location);
+      
       const res = await fetch(
-        `${import.meta.env.VITE_HOST_BE}/api/users/get-users/`
+        `${import.meta.env.VITE_HOST_BE}/api/users/get-users/?${params}`
       );
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const result = await res.json();
-      return result.data;
+      
+      return {
+        data: result.data || [],
+        pagination: result.pagination || {
+          currentPage: page,
+          totalPages: 1,
+          totalItems: 0,
+          itemsPerPage: limit,
+          hasNext: false,
+          hasPrevious: false
+        }
+      };
     } catch (error) {
       console.error("Error fetching users:", error);
       throw error;
@@ -707,6 +736,7 @@ export class AdminService {
     role: string;
     location_id: string;
     is_active: boolean;
+    password: string;
   }): Promise<UserLog> {
     try {
       const response = await fetch(
@@ -881,7 +911,11 @@ export class AdminService {
     status?: "verified" | "pending",
     filters?: AdminImageFilters,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    searchParams?: {
+      search_owner?: string;
+      search_image_id?: string;
+    }
   ): Promise<{ images: AdminPredictedImage[]; pagination: PaginationData }> {
     try {
       const params = new URLSearchParams();
@@ -890,6 +924,10 @@ export class AdminService {
       if (filters?.role) params.append('role', filters.role);
       params.append('page', page.toString());
       params.append('limit', limit.toString());
+      
+      // Add search parameters
+      if (searchParams?.search_owner) params.append('search_owner', searchParams.search_owner);
+      if (searchParams?.search_image_id) params.append('search_image_id', searchParams.search_image_id);
       
       const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/beans/get-images?${params}`);
       
@@ -902,12 +940,12 @@ export class AdminService {
       return {
         images: result.images || [],
         pagination: result.pagination || {
-          current_page: page,
-          per_page: limit,
-          total: 0,
-          total_pages: 0,
-          has_next: false,
-          has_previous: false
+          currentPage: page,
+          totalPages: 1,
+          totalItems: 0,
+          itemsPerPage: limit,
+          hasNext: false,
+          hasPrevious: false
         }
       };
 

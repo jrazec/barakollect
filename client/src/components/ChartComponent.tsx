@@ -1,5 +1,5 @@
 
-import { PieChart,Area, Tooltip, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Pie, LineChart, Line, BarChart, Bar, ScatterChart, Scatter } from 'recharts';
+import {  PieChart,Area, Tooltip, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Pie, LineChart, Line, BarChart, Bar, ScatterChart, Scatter } from 'recharts';
 const data = [
   { name: 'Page A', uv: 1000, pv: 2400, amt: 2400 },
   { name: 'Page B', uv: 5300, pv: 2400, amt: 2400 },
