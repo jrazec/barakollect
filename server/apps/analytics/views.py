@@ -118,12 +118,12 @@ def render_farmer_dashboard(request, uiid):
                 "bbox_y": float(largest[4]) if largest and largest[4] else 0,
                 "bbox_width": float(largest[5]) if largest and largest[5] else 0,
                 "bbox_height": float(largest[6]) if largest and largest[6] else 0,
-                # !! temporary ↴ --► largest bean is the weird amalgamation of 4 beans lol
-                "image_url": largest[7] if largest and largest[7] else None, 
-                # "image_url": (
-                #     supabase.storage.from_("Beans").get_public_url(largest[7])
-                #     if largest and largest[7] else None
-                # ),
+                # !! temporary ↴
+                # "image_url": largest[7] if largest and largest[7] else None, 
+                "image_url": (
+                    supabase.storage.from_("Beans").get_public_url(largest[7])
+                    if largest and largest[7] else None
+                ),
             },
             "shape_consistency": {
                 "avg_aspect_ratio": float(shape_consistency[0]) if shape_consistency[0] else 0,
