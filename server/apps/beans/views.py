@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.db import connection
 from django.db import transaction
+from django.core.paginator import Paginator
 import uuid
 import json
 import random
@@ -1047,7 +1048,7 @@ def get_annotations(request):
 @api_view(['GET'])
 def get_all_beans(request):
     try:
-        print("DEBUG: Starting optimized get_all_beans view with cursor")
+        print("DEBUG: Starting optimized get_all_beans view with search and Django pagination")
         
         # Get URL parameters
         status = request.GET.get('status')  # 'verified', 'pending', or None for all
@@ -1056,7 +1057,12 @@ def get_all_beans(request):
         page = int(request.GET.get('page', 1))
         limit = int(request.GET.get('limit', 10))
         
+        # Get search parameters
+        search_owner = request.GET.get('search_owner', '').strip()
+        search_image_id = request.GET.get('search_image_id', '').strip()
+        
         print(f"DEBUG: Parameters - status={status}, farm={farm}, role={role}, page={page}, limit={limit}")
+        print(f"DEBUG: Search parameters - owner={search_owner}, image_id={search_image_id}")
         
         # Calculate offset for pagination
         offset = (page - 1) * limit
@@ -1072,6 +1078,16 @@ def get_all_beans(request):
         if farm:
             where_conditions.append("loc.name ILIKE %s")
             params.append(f"%{farm}%")
+            
+        # Add search conditions
+        if search_owner:
+            where_conditions.append("(u.first_name ILIKE %s OR u.last_name ILIKE %s OR CONCAT(u.first_name, ' ', u.last_name) ILIKE %s)")
+            search_pattern = f"%{search_owner}%"
+            params.extend([search_pattern, search_pattern, search_pattern])
+            
+        if search_image_id:
+            where_conditions.append("CAST(i.id AS TEXT) ILIKE %s")
+            params.append(f"%{search_image_id}%")
         
         where_clause = " AND ".join(where_conditions)
         
@@ -1235,12 +1251,19 @@ def get_all_beans(request):
             images_data = filtered_images_data
             print(f"DEBUG: After status filtering, {len(images_data)} images remain")
         
-        # Apply pagination
-        total_count = len(images_data)
+        # Use Django Paginator for pagination
         images_list = list(images_data.values())
-        paginated_images = images_list[offset:offset + limit]
+        paginator = Paginator(images_list, limit)
         
-        print(f"DEBUG: Pagination - total_count={total_count}, showing {len(paginated_images)} images")
+        try:
+            paginated_images = paginator.page(page)
+        except Exception as e:
+            print(f"DEBUG: Pagination error: {str(e)}")
+            # If page is out of range, return the last page
+            paginated_images = paginator.page(paginator.num_pages)
+        
+        print(f"DEBUG: Django Pagination - total_count={paginator.count}, showing page {paginated_images.number} of {paginator.num_pages}")
+        
         
         # Step 4: Build response data (NO database queries)
         data = []
@@ -1371,16 +1394,16 @@ def get_all_beans(request):
         
         print(f"DEBUG: Finished processing. Built response with {len(data)} images")
         
-        # Calculate pagination info
-        total_pages = (total_count + limit - 1) // limit
-        
+        # Use Django pagination info
         return Response({
             "images": data,
             "pagination": {
-                "currentPage": page,
-                "totalPages": total_pages,
-                "totalItems": total_count,
-                "itemsPerPage": limit
+                "currentPage": paginated_images.number,
+                "totalPages": paginator.num_pages,
+                "totalItems": paginator.count,
+                "itemsPerPage": limit,
+                "hasNext": paginated_images.has_next(),
+                "hasPrevious": paginated_images.has_previous()
             }
         })
 

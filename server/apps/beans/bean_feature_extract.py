@@ -111,7 +111,9 @@ class BeanFeatureExtractor:
         predictions = []
         results = self.model(img, conf=0.6)
         for result in results:
-          if result.boxes is not None:
+            # Print confidence level of each result in results
+            print(f"Result: {result.boxes.conf.tolist()}")
+            if result.boxes is not None:
               for box in result.boxes:
                   x1, y1, x2, y2 = map(int, box.xyxy[0])
                   confidence = float(box.conf[0])
@@ -123,7 +125,6 @@ class BeanFeatureExtractor:
                       "class_id": class_id
                   })
                   bean_mask[y1:y2, x1:x2] = 255
-
         # Apply ArUco mask
         bean_mask = cv2.bitwise_and(bean_mask, aruco_mask)
 
