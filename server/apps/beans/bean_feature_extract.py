@@ -4,7 +4,7 @@ from skimage.measure import label, regionprops
 from ultralytics import YOLO
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-MODEL = os.path.join(current_dir, "my_model", "my_model.pt")
+MODEL = os.path.join(current_dir, "my_model", "cv_yolov11.pt")
 class BeanFeatureExtractor:
     def __init__(self, marker_length=20):
         """
@@ -96,13 +96,14 @@ class BeanFeatureExtractor:
         # Step 1: YOLO detections → coarse bean mask
         results = self.model(img)
         bean_mask = np.zeros_like(gray, dtype=np.uint8)
-
+                    
         for result in results:
+            # Print confidence level of each result in results
+            print(f"Result: {result.boxes.conf.tolist()}")
             if result.boxes is not None:
                 for box in result.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     cv2.rectangle(bean_mask, (x1, y1), (x2, y2), 255, -1)
-
         # Step 2: Clean up mask
         bean_mask = cv2.bitwise_and(bean_mask, aruco_mask)
         bean_mask = cv2.morphologyEx(bean_mask, cv2.MORPH_OPEN, np.ones((5,5), np.uint8))

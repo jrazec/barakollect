@@ -1,6 +1,14 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { User } from "@/interfaces/global";
+
+interface User {
+  id: string;
+  name: string;
+  role: string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+}
 
 type AuthContextValue = {
   user: User | null;
@@ -18,7 +26,15 @@ const AuthContext = createContext<AuthContextValue>({
   signOut: async () => {},
 });
 
-async function fetchAppUserRole(uiid: string): Promise<string> {
+interface UserData {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  username: string;
+  userrole__role__name: string;
+}
+
+async function fetchAppUserData(uiid: string): Promise<{ role: string; userData: UserData | null }> {
   const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/login/`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -26,8 +42,10 @@ async function fetchAppUserRole(uiid: string): Promise<string> {
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "Failed to fetch user data");
-  const user = result.data && result.data[0];
-  return (user && user["userrole__role__name"] ? user["userrole__role__name"] : "").toLowerCase();
+  const userData = result.data && result.data[0];
+  const role = (userData && userData["userrole__role__name"] ? userData["userrole__role__name"] : "").toLowerCase();
+  
+  return { role, userData };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -46,9 +64,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
-      const resolvedRole = await fetchAppUserRole(uiid);
-      const name = data.session?.user?.email || "User";
-      setUser({ name, role: resolvedRole });
+      
+      const { role: resolvedRole, userData } = await fetchAppUserData(uiid);
+      
+      let name = data.session?.user?.email || "User";
+      if (userData?.first_name && userData?.last_name) {
+        name = `${userData.first_name} ${userData.last_name}`;
+      } else if (userData?.username) {
+        name = userData.username;
+      }
+      
+      const userInfo: User = {
+        id: uiid,
+        name,
+        role: resolvedRole,
+        first_name: userData?.first_name,
+        last_name: userData?.last_name,
+        username: userData?.username
+      };
+      
+      setUser(userInfo);
       setRole(resolvedRole);
     } catch {
       setUser(null);

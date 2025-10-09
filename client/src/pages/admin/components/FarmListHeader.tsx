@@ -21,7 +21,7 @@ const FarmListHeader: React.FC<FarmListHeaderProps> = ({
   onActionButtonClick
 }) => {
   return (
-    <div className="bg-[var(--parchment)] rounded-lg shadow p-4">
+    <div className="bg-[var(--white)] rounded-lg shadow p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-main font-bold text-[var(--espresso-black)] text-lg">
           Available Farms
@@ -34,7 +34,7 @@ const FarmListHeader: React.FC<FarmListHeaderProps> = ({
         </button>
       </div>
 
-      <div className="bg-white border border-gray-300 rounded-lg p-4">
+      <div className="bg-[var(--parchment)] border border-gray-300 rounded-lg p-4">
         <div className="mb-3">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Select a Farm to Manage

@@ -25,6 +25,7 @@ import AdminBeansMetadata from "@/components/AdminBeansMetadata";
 import AdminFarmMap from "@/pages/admin/AdminFarmMap";
 import ResearcherAnnotations from "@/components/ResearcherAnnotations";
 import TestEnhancedGallery from "@/pages/TestEnhancedGallery";
+import Annotations from "@/pages/researcher/Annotations";
 
 
 export default function AppRoute() {
@@ -40,7 +41,7 @@ export default function AppRoute() {
                 <Route path="upload-image" element={<UploadSamples />} />
                 <Route path="gallery" element={<BeansGallery />} />
                 <Route path="test-enhanced" element={<TestEnhancedGallery />} />
-                <Route path="annotations" element={<ResearcherAnnotations />} />
+                <Route path="annotations" element={<Annotations />} />
                 <Route path="validation" element={<ValidationQueue />} />
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="farm-map" element={<FarmMap />} />

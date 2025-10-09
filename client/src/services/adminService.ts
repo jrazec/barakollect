@@ -9,8 +9,6 @@ import type {
   AdminPredictedImage,
   AdminImageFilters,
   PaginationData,
-  BeanImage,
-  FarmFolder,
 } from "@/interfaces/global";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -33,6 +31,12 @@ export interface Farm {
   pendingValidations?: number;
 }
 
+export interface MorphologicalFeature {
+  value: number;
+  overall: number;
+  status: 'above' | 'below' | 'neutral';
+}
+
 export interface FarmDetails extends Farm {
   users: Array<{
     id: string;
@@ -47,9 +51,18 @@ export interface FarmDetails extends Farm {
     beanCount: number;
   }>;
   aggregatedData: {
-    avgBeanLength: number;
-    avgBeanWidth: number;
-    avgBeanArea: number;
+    area: MorphologicalFeature;
+    perimeter: MorphologicalFeature;
+    major_axis_length: MorphologicalFeature;
+    minor_axis_length: MorphologicalFeature;
+    extent: MorphologicalFeature;
+    eccentricity: MorphologicalFeature;
+    convex_area: MorphologicalFeature;
+    solidity: MorphologicalFeature;
+    mean_intensity: MorphologicalFeature;
+    equivalent_diameter: MorphologicalFeature;
+    aspect_ratio: MorphologicalFeature;
+    circularity: MorphologicalFeature;
     commonBeanTypes: string[];
     qualityDistribution: Record<string, number>;
     monthlyUploads: Array<{ month: string; count: number }>;
@@ -57,12 +70,6 @@ export interface FarmDetails extends Farm {
 }
 
 // Temporary data - replace with actual API calls
-const tempAdminStats: AdminStats = {
-  totalUsers: 1247,
-  activeUsers: 892,
-  totalUploads: 3456,
-  pendingValidations: 23,
-};
 
 const tempUserActivity: UserActivity[] = [
   { date: "Jan", farmers: 45, researchers: 12, total: 57 },
@@ -224,167 +231,9 @@ const tempSystemStatus: SystemStatus = {
   storageTotal: "5.0 TB",
 };
 
-// Temporary farm data
-const tempFarms: Farm[] = [
-  {
-    id: "1",
-    name: "Sunrise Coffee Farm",
-    lat: 13.956626112464809,
-    lng: 121.16317033767702,
-    hasLocation: true,
-    userCount: 15,
-    imageCount: 234,
-    avgBeanSize: 13.2,
-    qualityRating: 4.2,
-    lastActivity: "2 hours ago",
-    owner: "John Smith",
-    createdDate: "2023-03-15",
-    totalUploads: 234,
-    validatedUploads: 198,
-  },
-  {
-    id: "2",
-    name: "Mountain View Plantation",
-    lat: 13.95,
-    lng: 121.15,
-    hasLocation: true,
-    userCount: 23,
-    imageCount: 456,
-    avgBeanSize: 12.8,
-    qualityRating: 4.5,
-    lastActivity: "1 day ago",
-    owner: "Maria Garcia",
-    createdDate: "2023-01-10",
-    totalUploads: 456,
-    validatedUploads: 398,
-  },
-  {
-    id: "3",
-    name: "Highland Coffee Estate",
-    lat: 13.94,
-    lng: 121.16,
-    hasLocation: true,
-    userCount: 8,
-    imageCount: 123,
-    avgBeanSize: 14.1,
-    qualityRating: 3.9,
-    lastActivity: "3 hours ago",
-    owner: "Ahmed Hassan",
-    createdDate: "2023-06-22",
-    totalUploads: 123,
-    validatedUploads: 89,
-  },
-  {
-    id: "4",
-    name: "Valley Green Farm",
-    hasLocation: false,
-    userCount: 5,
-    imageCount: 67,
-    avgBeanSize: 13.8,
-    qualityRating: 4.1,
-    lastActivity: "1 week ago",
-    owner: "Sarah Johnson",
-    createdDate: "2023-08-10",
-    totalUploads: 67,
-    validatedUploads: 45,
-  },
-  {
-    id: "5",
-    name: "Riverbank Coffee Co.",
-    hasLocation: false,
-    userCount: 12,
-    imageCount: 189,
-    avgBeanSize: 12.9,
-    qualityRating: 3.7,
-    lastActivity: "5 days ago",
-    owner: "Carlos Rodriguez",
-    createdDate: "2023-04-18",
-    totalUploads: 189,
-    validatedUploads: 156,
-  },
-];
+// Temporary farm data - now handled by backend API calls
 
-const tempFarmDetails: Record<string, FarmDetails> = {
-  "1": {
-    ...tempFarms[0],
-    users: [
-      { id: "u1", name: "John Smith", role: "Owner", uploads: 89 },
-      { id: "u2", name: "Alice Johnson", role: "Farmer", uploads: 67 },
-      { id: "u3", name: "Bob Wilson", role: "Researcher", uploads: 78 },
-    ],
-    recentImages: [
-      {
-        id: "img1",
-        url: "/api/images/recent1.jpg",
-        uploadDate: "2024-01-20",
-        beanCount: 15,
-      },
-      {
-        id: "img2",
-        url: "/api/images/recent2.jpg",
-        uploadDate: "2024-01-19",
-        beanCount: 12,
-      },
-      {
-        id: "img3",
-        url: "/api/images/recent3.jpg",
-        uploadDate: "2024-01-18",
-        beanCount: 18,
-      },
-    ],
-    aggregatedData: {
-      avgBeanLength: 8.5,
-      avgBeanWidth: 6.2,
-      avgBeanArea: 42.3,
-      commonBeanTypes: ["Arabica", "Robusta"],
-      qualityDistribution: { Excellent: 45, Good: 35, Average: 20 },
-      monthlyUploads: [
-        { month: "Jan", count: 45 },
-        { month: "Feb", count: 52 },
-        { month: "Mar", count: 38 },
-      ],
-    },
-  },
-  "2": {
-    ...tempFarms[1],
-    users: [
-      { id: "u4", name: "Maria Garcia", role: "Owner", uploads: 156 },
-      { id: "u5", name: "Pedro Santos", role: "Farmer", uploads: 123 },
-      {
-        id: "u6",
-        name: "Ana Rodriguez",
-        role: "Quality Control",
-        uploads: 177,
-      },
-    ],
-    recentImages: [
-      {
-        id: "img4",
-        url: "/api/images/recent4.jpg",
-        uploadDate: "2024-01-20",
-        beanCount: 20,
-      },
-      {
-        id: "img5",
-        url: "/api/images/recent5.jpg",
-        uploadDate: "2024-01-19",
-        beanCount: 16,
-      },
-    ],
-    aggregatedData: {
-      avgBeanLength: 9.1,
-      avgBeanWidth: 6.8,
-      avgBeanArea: 48.7,
-      commonBeanTypes: ["Arabica", "Liberica"],
-      qualityDistribution: { Excellent: 60, Good: 30, Average: 10 },
-      monthlyUploads: [
-        { month: "Jan", count: 67 },
-        { month: "Feb", count: 78 },
-        { month: "Mar", count: 65 },
-      ],
-    },
-  },
-};
+// Temporary farm data is now retrieved through the actual backend API instead of local storage
 
 // Temporary admin image data
 const tempAdminImages: AdminPredictedImage[] = [
@@ -721,13 +570,17 @@ export class AdminService {
   // Get admin dashboard statistics
   static async getAdminStats(): Promise<AdminStats> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/admin/stats');
-      // return await response.json();
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      return tempAdminStats;
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/analytics/admin/dashboard/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const result = await response.json();
+      console.log("Admin stats fetched:", result);
+      return result.data;
+
     } catch (error) {
       console.error("Error fetching admin stats:", error);
       throw error;
@@ -830,14 +683,45 @@ export class AdminService {
   }
 
   // User Management Methods
-  static async getUsers(): Promise<UserManagementUser[]> {
+  static async getUsers(
+    page: number = 1,
+    limit: number = 10,
+    searchParams?: {
+      search_username?: string;
+      role?: string;
+      location?: string;
+    }
+  ): Promise<{ data: UserManagementUser[]; pagination: PaginationData }> {
     try {
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
+      
+      if (searchParams?.search_username) params.append('search_username', searchParams.search_username);
+      if (searchParams?.role && searchParams.role !== 'all') params.append('role', searchParams.role);
+      if (searchParams?.location && searchParams.location !== 'all') params.append('location', searchParams.location);
+      
       const res = await fetch(
-        `${import.meta.env.VITE_HOST_BE}/api/users/get-users/`
+        `${import.meta.env.VITE_HOST_BE}/api/users/get-users/?${params}`
       );
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const result = await res.json();
-      return result.data;
+      
+      return {
+        data: result.data || [],
+        pagination: result.pagination || {
+          currentPage: page,
+          totalPages: 1,
+          totalItems: 0,
+          itemsPerPage: limit,
+          hasNext: false,
+          hasPrevious: false
+        }
+      };
     } catch (error) {
       console.error("Error fetching users:", error);
       throw error;
@@ -852,6 +736,7 @@ export class AdminService {
     role: string;
     location_id: string;
     is_active: boolean;
+    password: string;
   }): Promise<UserLog> {
     try {
       const response = await fetch(
@@ -1026,7 +911,11 @@ export class AdminService {
     status?: "verified" | "pending",
     filters?: AdminImageFilters,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    searchParams?: {
+      search_owner?: string;
+      search_image_id?: string;
+    }
   ): Promise<{ images: AdminPredictedImage[]; pagination: PaginationData }> {
     try {
       const params = new URLSearchParams();
@@ -1035,6 +924,10 @@ export class AdminService {
       if (filters?.role) params.append('role', filters.role);
       params.append('page', page.toString());
       params.append('limit', limit.toString());
+      
+      // Add search parameters
+      if (searchParams?.search_owner) params.append('search_owner', searchParams.search_owner);
+      if (searchParams?.search_image_id) params.append('search_image_id', searchParams.search_image_id);
       
       const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/beans/get-images?${params}`);
       
@@ -1047,12 +940,12 @@ export class AdminService {
       return {
         images: result.images || [],
         pagination: result.pagination || {
-          current_page: page,
-          per_page: limit,
-          total: 0,
-          total_pages: 0,
-          has_next: false,
-          has_previous: false
+          currentPage: page,
+          totalPages: 1,
+          totalItems: 0,
+          itemsPerPage: limit,
+          hasNext: false,
+          hasPrevious: false
         }
       };
 
@@ -1064,23 +957,13 @@ export class AdminService {
 
   static async deleteImage(id: string): Promise<boolean> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/admin/images/${id}`, {
-      //   method: 'DELETE',
-      //   headers: { 'Content-Type': 'application/json' },
-      // });
-      // return response.ok;
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      console.log(`Image ${id} deleted`);
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/beans/images/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response.ok;
 
-      // Remove from temp data for simulation
-      const index = tempAdminImages.findIndex((img) => img.id === id);
-      if (index > -1) {
-        tempAdminImages.splice(index, 1);
-      }
-
-      return true;
     } catch (error) {
       console.error("Error deleting image:", error);
       throw error;
@@ -1167,6 +1050,56 @@ export class AdminService {
 
     } catch (error) {
       console.error("Error fetching farm details:", error);
+      throw error;
+    }
+  }
+
+  // New method for researcher/farmer simplified farm view
+  static async getFarmView(farmId: string): Promise<{
+    id: string;
+    name: string;
+    lat?: number;
+    lng?: number;
+    users: Array<{
+      id: string;
+      name: string;
+      role: string;
+      uploads: number;
+    }>;
+    recentImages: Array<{
+      id: string;
+      url: string;
+      uploadDate: string;
+      beanCount: number;
+    }>;
+    aggregatedData: {
+      major_axis_length?: { value: number; overall: number; status: string };
+      minor_axis_length?: { value: number; overall: number; status: string };
+      area?: { value: number; overall: number; status: string };
+      perimeter?: { value: number; overall: number; status: string };
+      aspect_ratio?: { value: number; overall: number; status: string };
+      circularity?: { value: number; overall: number; status: string };
+      extent?: { value: number; overall: number; status: string };
+      eccentricity?: { value: number; overall: number; status: string };
+      solidity?: { value: number; overall: number; status: string };
+      equivalent_diameter?: { value: number; overall: number; status: string };
+    };
+    beanTypes: string[];
+    monthlyUploads: Array<{
+      month: string;
+      uploads: number;
+    }>;
+  } | null> {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_HOST_BE}/api/farms/${farmId}/view/`
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching farm view data:", error);
       throw error;
     }
   }

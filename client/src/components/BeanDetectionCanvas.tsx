@@ -9,6 +9,7 @@ interface BeanDetection {
   width_mm: number;
   bbox: [number, number, number, number];
   comment?: string;
+  features?: { [key: string]: any };
 }
 
 interface BeanDetectionCanvasProps {
@@ -18,6 +19,11 @@ interface BeanDetectionCanvasProps {
   onBeanSelect?: (beanId: number) => void;
   highlightBestCandidate?: boolean;
   className?: string;
+  showBeanBoxes?: boolean;
+  zoomLevel?: number;
+  showZoomControls?: boolean;
+  onZoomChange?: (zoom: number) => void;
+  focusBeanId?: number; // New prop to center on specific bean
 }
 
 const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
@@ -26,16 +32,25 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
   selectedBeanId,
   onBeanSelect,
   highlightBestCandidate = false,
-  className = ""
+  className = "",
+  showBeanBoxes = true,
+  zoomLevel = 1,
+  showZoomControls = false,
+  onZoomChange,
+  focusBeanId // New prop
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 });
 
   // Find the best candidate (largest bean by length)
   const bestCandidateId = highlightBestCandidate && beans.length > 0 
     ? beans.reduce((prev, current) => 
-        (prev.length_mm > current.length_mm) ? prev : current
+        (prev.features?.area_mm2 > current?.features?.area_mm2) ? prev : current
       ).bean_id 
     : null;
 
@@ -49,11 +64,53 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
     imageRef.current = image;
   }, [imageSrc]);
 
+  // Auto-center on focused bean
+  useEffect(() => {
+    if (focusBeanId && imageLoaded && imageRef.current && canvasRef.current) {
+      const focusBean = beans.find(bean => bean.bean_id === focusBeanId);
+      if (focusBean) {
+        const canvas = canvasRef.current;
+        const image = imageRef.current;
+        
+        // Calculate scale and dimensions
+        const baseScale = Math.min(canvas.width / image.width, canvas.height / image.height);
+        const scale = baseScale * zoomLevel;
+        
+        // Get bean center coordinates
+        const [bx, by, bwidth, bheight] = focusBean.bbox;
+        const beanCenterX = bx + bwidth / 2;
+        const beanCenterY = by + bheight / 2;
+        
+        // Calculate where the bean center should be in canvas coordinates (center of canvas)
+        const canvasCenterX = canvas.width / 2;
+        const canvasCenterY = canvas.height / 2;
+        
+        // Calculate required pan offset to center the bean
+        const targetX = canvasCenterX - (beanCenterX * scale);
+        const targetY = canvasCenterY - (beanCenterY * scale);
+        
+        // Calculate base offset (where image would be centered at 1x zoom)
+        const scaledWidth = image.width * scale;
+        const scaledHeight = image.height * scale;
+        const baseOffsetX = (canvas.width - scaledWidth) / 2;
+        const baseOffsetY = (canvas.height - scaledHeight) / 2;
+        
+        // Set pan offset to center on bean
+        setPanOffset({
+          x: targetX - baseOffsetX,
+          y: targetY - baseOffsetY
+        });
+        
+        console.log(`Centered on bean #${focusBeanId} at (${beanCenterX}, ${beanCenterY})`);
+      }
+    }
+  }, [focusBeanId, zoomLevel, imageLoaded, beans]);
+
   useEffect(() => {
     if (imageLoaded) {
       drawCanvas();
     }
-  }, [beans, selectedBeanId, imageLoaded, bestCandidateId]);
+  }, [beans, selectedBeanId, imageLoaded, bestCandidateId, showBeanBoxes, zoomLevel, panOffset]);
 
   const drawCanvas = () => {
     const canvas = canvasRef.current;
@@ -72,11 +129,12 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
     }
 
     // Calculate scale to fit image in canvas while maintaining aspect ratio
-    const scale = Math.min(canvas.width / image.width, canvas.height / image.height);
+    const baseScale = Math.min(canvas.width / image.width, canvas.height / image.height);
+    const scale = baseScale * zoomLevel;
     const scaledWidth = image.width * scale;
     const scaledHeight = image.height * scale;
-    const offsetX = (canvas.width - scaledWidth) / 2;
-    const offsetY = (canvas.height - scaledHeight) / 2;
+    const offsetX = (canvas.width - scaledWidth) / 2 + panOffset.x;
+    const offsetY = (canvas.height - scaledHeight) / 2 + panOffset.y;
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -84,101 +142,103 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
     // Draw image
     ctx.drawImage(image, offsetX, offsetY, scaledWidth, scaledHeight);
 
-    // Draw bounding boxes and labels
-    beans.forEach((bean) => {
-      const [x, y, width, height] = bean.bbox;
-      
-      // Scale coordinates
-      const scaledX = offsetX + (x * scale);
-      const scaledY = offsetY + (y * scale);
-      const scaledWidth = width * scale;
-      const scaledHeight = height * scale;
-
-      // Determine box color based on validation status and selection
-      let boxColor = '#3B82F6'; // Blue default
-      let lineWidth = 2;
-      
-      if (bean.bean_id === bestCandidateId) {
-        boxColor = '#10B981'; // Green for best candidate
-        lineWidth = 3;
-      } else if (bean.is_validated === true) {
-        boxColor = '#059669'; // Green for validated
-      } else if (bean.is_validated === false) {
-        boxColor = '#F59E0B'; // Yellow for pending
-      }
-
-      if (bean.bean_id === selectedBeanId) {
-        boxColor = '#DC2626'; // Red for selected
-        lineWidth = 3;
-      }
-
-      // Draw bounding box
-      ctx.strokeStyle = boxColor;
-      ctx.lineWidth = lineWidth;
-      ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
-
-      // Prepare label text
-      const labelParts = [];
-      labelParts.push(`#${bean.bean_id}`);
-      
-      if (bean.bean_type) {
-        labelParts.push(bean.bean_type);
-      }
-      
-      if (bean.confidence !== null && bean.confidence !== undefined) {
-        labelParts.push(`${(bean.confidence * 100).toFixed(0)}%`);
-      }
-
-      if (bean.bean_id === bestCandidateId) {
-        labelParts.push('BEST');
-      }
-
-      const labelText = labelParts.join(' • ');
-
-      // Calculate label dimensions
-      ctx.font = '12px Inter, sans-serif';
-      const labelMetrics = ctx.measureText(labelText);
-      const labelWidth = labelMetrics.width + 12;
-      const labelHeight = 20;
-
-      // Position label above or below the box depending on space
-      const labelX = scaledX;
-      const labelY = scaledY - labelHeight < 0 ? scaledY + scaledHeight + labelHeight : scaledY;
-
-      // Draw label background
-      ctx.fillStyle = boxColor;
-      ctx.fillRect(labelX, labelY - labelHeight, labelWidth, labelHeight);
-
-      // Draw label text
-      ctx.fillStyle = 'white';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(labelText, labelX + 6, labelY - labelHeight / 2);
-
-      // Draw validation status indicator
-      if (bean.is_validated !== null && bean.is_validated !== undefined) {
-        const indicatorSize = 8;
-        const indicatorX = scaledX + scaledWidth - indicatorSize - 2;
-        const indicatorY = scaledY + 2;
+    // Draw bounding boxes and labels only if showBeanBoxes is true
+    if (showBeanBoxes) {
+      beans.forEach((bean) => {
+        const [x, y, width, height] = bean.bbox;
         
-        ctx.fillStyle = bean.is_validated ? '#10B981' : '#F59E0B';
-        ctx.fillRect(indicatorX, indicatorY, indicatorSize, indicatorSize);
+        // Scale coordinates
+        const scaledX = offsetX + (x * scale);
+        const scaledY = offsetY + (y * scale);
+        const scaledWidth = width * scale;
+        const scaledHeight = height * scale;
+
+        // Determine box color based on validation status and selection
+        let boxColor = '#3B82F6'; // Blue default
+        let lineWidth = 2 * zoomLevel;
         
-        // Add checkmark or question mark
+        if (bean.bean_id === bestCandidateId) {
+          boxColor = '#10B981'; // Green for best candidate
+          lineWidth = 3 * zoomLevel;
+        } else if (bean.is_validated === true) {
+          boxColor = '#059669'; // Green for validated
+        } else if (bean.is_validated === false) {
+          boxColor = '#F59E0B'; // Yellow for pending
+        }
+
+        if (bean.bean_id === selectedBeanId) {
+          boxColor = '#DC2626'; // Red for selected
+          lineWidth = 3 * zoomLevel;
+        }
+
+        // Draw bounding box
+        ctx.strokeStyle = boxColor;
+        ctx.lineWidth = lineWidth;
+        ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+
+        // Prepare label text
+        const labelParts = [];
+        labelParts.push(`#${bean.bean_id}`);
+        
+        if (bean.bean_type) {
+          labelParts.push(bean.bean_type);
+        }
+        
+        if (bean.confidence !== null && bean.confidence !== undefined) {
+          labelParts.push(`${(bean.confidence * 100).toFixed(0)}%`);
+        }
+
+        if (bean.bean_id === bestCandidateId) {
+          labelParts.push('BEST');
+        }
+
+        const labelText = labelParts.join(' • ');
+
+        // Calculate label dimensions
+        ctx.font = `${12 * Math.min(zoomLevel, 2)}px Inter, sans-serif`;
+        const labelMetrics = ctx.measureText(labelText);
+        const labelWidth = labelMetrics.width + 12 * zoomLevel;
+        const labelHeight = 20 * zoomLevel;
+
+        // Position label above or below the box depending on space
+        const labelX = scaledX;
+        const labelY = scaledY - labelHeight < 0 ? scaledY + scaledHeight + labelHeight : scaledY;
+
+        // Draw label background
+        ctx.fillStyle = boxColor;
+        ctx.fillRect(labelX, labelY - labelHeight, labelWidth, labelHeight);
+
+        // Draw label text
         ctx.fillStyle = 'white';
-        ctx.font = '8px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(
-          bean.is_validated ? '✓' : '?', 
-          indicatorX + indicatorSize / 2, 
-          indicatorY + indicatorSize / 2 + 1
-        );
-      }
-    });
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(labelText, labelX + 6 * zoomLevel, labelY - labelHeight / 2);
+
+        // Draw validation status indicator
+        if (bean.is_validated !== null && bean.is_validated !== undefined) {
+          const indicatorSize = 8 * zoomLevel;
+          const indicatorX = scaledX + scaledWidth - indicatorSize - 2 * zoomLevel;
+          const indicatorY = scaledY + 2 * zoomLevel;
+          
+          ctx.fillStyle = bean.is_validated ? '#10B981' : '#F59E0B';
+          ctx.fillRect(indicatorX, indicatorY, indicatorSize, indicatorSize);
+          
+          // Add checkmark or question mark
+          ctx.fillStyle = 'white';
+          ctx.font = `${8 * Math.min(zoomLevel, 2)}px Inter, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.fillText(
+            bean.is_validated ? '✓' : '?', 
+            indicatorX + indicatorSize / 2, 
+            indicatorY + indicatorSize / 2 + 1
+          );
+        }
+      });
+    }
   };
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!onBeanSelect || !imageRef.current || !imageLoaded) return;
+    if (!onBeanSelect || !imageRef.current || !imageLoaded || isPanning) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -188,11 +248,12 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
     const y = event.clientY - rect.top;
 
     // Calculate scale and offset
-    const scale = Math.min(canvas.width / imageRef.current.width, canvas.height / imageRef.current.height);
+    const baseScale = Math.min(canvas.width / imageRef.current.width, canvas.height / imageRef.current.height);
+    const scale = baseScale * zoomLevel;
     const scaledWidth = imageRef.current.width * scale;
     const scaledHeight = imageRef.current.height * scale;
-    const offsetX = (canvas.width - scaledWidth) / 2;
-    const offsetY = (canvas.height - scaledHeight) / 2;
+    const offsetX = (canvas.width - scaledWidth) / 2 + panOffset.x;
+    const offsetY = (canvas.height - scaledHeight) / 2 + panOffset.y;
 
     // Check which bean was clicked
     for (const bean of beans) {
@@ -211,6 +272,51 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
     }
   };
 
+  const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (zoomLevel > 1) {
+      setIsPanning(true);
+      setLastPanPoint({ x: event.clientX, y: event.clientY });
+    }
+  };
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isPanning) {
+      const deltaX = event.clientX - lastPanPoint.x;
+      const deltaY = event.clientY - lastPanPoint.y;
+      setPanOffset(prev => ({
+        x: prev.x + deltaX,
+        y: prev.y + deltaY
+      }));
+      setLastPanPoint({ x: event.clientX, y: event.clientY });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  const handleZoomIn = () => {
+    if (onZoomChange) {
+      onZoomChange(Math.min(zoomLevel * 1.2, 5));
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (onZoomChange) {
+      onZoomChange(Math.max(zoomLevel / 1.2, 0.5));
+      if (zoomLevel <= 1) {
+        setPanOffset({ x: 0, y: 0 });
+      }
+    }
+  };
+
+  const handleZoomReset = () => {
+    if (onZoomChange) {
+      onZoomChange(1);
+      setPanOffset({ x: 0, y: 0 });
+    }
+  };
+
   const handleResize = () => {
     if (imageLoaded) {
       // Debounce resize
@@ -226,37 +332,73 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
   }, [imageLoaded]);
 
   return (
-    <div className={`relative w-full h-full ${className}`}>
+    <div ref={containerRef} className={`relative w-full h-full ${className}`}>
       <canvas
         ref={canvasRef}
         onClick={handleCanvasClick}
-        className="absolute inset-0 w-full h-full cursor-pointer"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        className={`absolute inset-0 w-full h-full ${isPanning ? 'cursor-grabbing' : zoomLevel > 1 ? 'cursor-grab' : 'cursor-pointer'}`}
         style={{ maxWidth: '100%', maxHeight: '100%' }}
       />
       
-      {/* Legend */}
-      <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white text-xs p-2 rounded">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 border-2 border-green-500"></div>
-            <span>Validated</span>
+      {/* Zoom Controls */}
+      {showZoomControls && (
+        <div className="absolute top-2 left-2 bg-[rgba(0,0,0,0.35)] bg-opacity-75 text-white text-xs p-2 rounded flex flex-col gap-1">
+          <button
+            onClick={handleZoomIn}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            title="Zoom In"
+          >
+            +
+          </button>
+          <button
+            onClick={handleZoomOut}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            title="Zoom Out"
+          >
+            -
+          </button>
+          <button
+            onClick={handleZoomReset}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+            title="Reset Zoom"
+          >
+            1:1
+          </button>
+          <div className="text-center text-xs mt-1">
+            {Math.round(zoomLevel * 100)}%
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 border-2 border-yellow-500"></div>
-            <span>Pending</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 border-2 border-blue-500"></div>
-            <span>Default</span>
-          </div>
-          {highlightBestCandidate && (
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 border-2 border-green-600 bg-green-600"></div>
-              <span>Best Candidate</span>
-            </div>
-          )}
         </div>
-      </div>
+      )}
+      
+      {/* Legend */}
+      {/* {showBeanBoxes && (
+        <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white text-xs p-2 rounded">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-green-500"></div>
+              <span>Validated</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-yellow-500"></div>
+              <span>Pending</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-blue-500"></div>
+              <span>Default</span>
+            </div>
+            {highlightBestCandidate && (
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 border-2 border-green-600 bg-green-600"></div>
+                <span>Best Candidate</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )} */}
     </div>
   );
 };

@@ -22,6 +22,7 @@ export interface NotifAttributes {
 }
 
 export interface User {
+    id: string;  // Now required
     name: string,
     role: string
 }
@@ -98,10 +99,38 @@ export interface UserActivity {
 }
 
 export interface AdminStats {
-  totalUsers: number;
-  activeUsers: number;
-  totalUploads: number;
-  pendingValidations: number;
+  users: number;
+  validated: number;
+  uploads: number;
+  pending: number;
+  scatter_ratio_roundness: [{
+    aspect_ratio: number;
+    roundness: number;
+  }];
+  hist_aspect: {value: number, count: number}[];
+  hist_roundness: {value: number, count: number}[];
+  bean_types: { [key: string]: number };
+  top_uploaders: Array<{
+    user_id: number;
+    name: string;
+    upload_count: number;
+  }>;
+  farms: { [key: string]: { pending: number; validated: number } };
+  corr_feats: Array<{
+    id: string;
+    data: Array<{ x: string; y: number }>;
+  }>;
+  total_predictions: number;
+  avg_confidence: number;
+  min_confidence: number;
+  max_confidence: number;
+  feature_stats: {
+    [featureName: string]: {
+      mean: Array<{ farm: string; value: number }>;
+      median: Array<{ farm: string; value: number }>;
+      mode: Array<{ farm: string; value: number }>;
+    };
+  };
 }
 
 export interface UserManagementUser {
@@ -185,6 +214,8 @@ export interface PaginationData {
   totalPages: number;
   totalItems: number;
   itemsPerPage: number;
+  hasNext?: boolean;
+  hasPrevious?: boolean;
 }
 
 // New interfaces for bean validation features
@@ -276,4 +307,9 @@ export interface MultiImageProcessingResponse {
 export type Location = {
     id: string;
     name: string;
+};
+
+export type ScatterRatioRoundness = {
+    aspect_ratio: number;
+    roundness: number;
 };

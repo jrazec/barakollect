@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import StatCard from '@/components/StatCard';
 import CardComponent from '@/components/CardComponent';
 import UserActivityChart from '@/components/admin/UserActivityChart';
+import ScatterRatioRoundnessChart from '@/components/admin/ScatterRatioRoundnessChart';
 import BeanSubmissionsChart from '@/components/admin/BeanSubmissionsChart';
 import UserLogsComponent from '@/components/admin/UserLogsComponent';
 import SystemStatusComponent from '@/components/admin/SystemStatusComponent';
+import UploadStatisticsChart from '@/components/admin/UploadStatisticsChart';
+import CorrelationMatrixChart from '@/components/admin/CorrelationMatrixChart';
+import BeanAnalyticsChart from '@/components/admin/BeanAnalyticsChart';
 import AdminService from '@/services/adminService';
 import type { 
   AdminStats, 
@@ -97,33 +101,31 @@ export default function AdminDashboard() {
           <h1 className="text-2xl sm:text-3xl font-main font-bold text-[var(--espresso-black)] mb-2">
             Admin Dashboard
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 font-accent">
-            Monitor system performance, user activity, and manage platform operations
-          </p>
+         
         </div>
-
-        {/* Stats Cards */}
+       {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <StatCard
             label="Total Users"
-            value={adminStats.totalUsers.toLocaleString()}
+            value={adminStats.users}
             subtext="Registered users across all roles"
           />
           <StatCard
-            label="Active Users"
-            value={adminStats.activeUsers.toLocaleString()}
-            subtext="Users active in the last 30 days"
-          />
-          <StatCard
             label="Total Uploads"
-            value={adminStats.totalUploads.toLocaleString()}
+            value={adminStats.uploads}
             subtext="Bean samples uploaded to date"
           />
           <StatCard
+            label="Validated Images"
+            value={adminStats.validated}
+            subtext="Images reviewed by researchers"
+          />
+          <StatCard
             label="Pending Validations"
-            value={adminStats.pendingValidations.toString()}
+            value={adminStats.pending}
             subtext="Samples awaiting researcher review"
           />
+
         </div>
 
         {/* Main Content Grid */}
@@ -149,6 +151,63 @@ export default function AdminDashboard() {
                 content: <BeanSubmissionsChart data={beanSubmissions} />,
                 description: "View submissions by type and status with role filtering"
               }}
+            />
+          </div>
+          
+        </div>
+        
+        {/* Upload Statistics Grid */}
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="min-h-[400px]">
+            <CardComponent
+              item={{
+                title: "Upload Statistics",
+                subtitle: "Farm data, top uploaders, and bean type distribution",
+                content: <UploadStatisticsChart 
+                  farmData={adminStats.farms} 
+                  topUploaderData={adminStats.top_uploaders} 
+                  beanTypeData={adminStats.bean_types} 
+                />,
+                description: "Comprehensive upload analytics across farms and users"
+              }}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          {/* Scatter Ratio and Roundness */}
+          <div className="min-h-[400px]">
+            <CardComponent
+              item={{
+                title: "Scatter Ratio and Roundness",
+                subtitle: "Analysis of bean shape characteristics",
+                content: <ScatterRatioRoundnessChart data={adminStats.scatter_ratio_roundness} data2={adminStats.hist_aspect} data3={adminStats.hist_roundness} />,
+                description: "Explore the relationship between scatter ratio and roundness"
+              }}
+            />
+          </div>
+          
+          {/* Correlation Matrix */}
+          <div className="min-h-[400px]">
+            <CardComponent
+              item={{
+                title: "Feature Correlation Matrix",
+                subtitle: "Correlation analysis of bean features",
+                content: <CorrelationMatrixChart data={adminStats.corr_feats} />,
+                description: "Heat map showing correlations between different bean features"
+              }}
+            />
+          </div>
+        </div>
+        
+        {/* Bean Analytics Section */}
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="min-h-[500px]">
+            <BeanAnalyticsChart 
+              totalPredictions={adminStats.total_predictions}
+              avgConfidence={adminStats.avg_confidence}
+              minConfidence={adminStats.min_confidence}
+              maxConfidence={adminStats.max_confidence}
+              featureStats={adminStats.feature_stats}
             />
           </div>
         </div>
