@@ -1,37 +1,91 @@
 import DashboardHeader from "@/components/DashboardHeader";
 import type { Stat, CardAttributes } from "@/interfaces/global";
 import CardComponent from "@/components/CardComponent";
-import { BarChartComponent, LineChartComponent } from "@/components/ChartComponent";
 import StatCard from "@/components/StatCard";
 import type React from "react";
 import { useEffect, useState } from "react";
 import logo2 from "@/assets/images/logo.svg";
 import { supabase } from "@/lib/supabaseClient";
 import BeanImageExtractor from "@/components/BeanImageExtractor";
+import {
+    BeanSizeDistribution,
+    YieldQualityScatter,
+    FarmComparison
+} from "@/components/farmer/FarmerCharts";
 
 const FarmerDashboard: React.FC = () => {
 
     const [farmerStats, setFarmerStats] = useState<any>(null);
     const [globalStats, setGlobalStats] = useState<any>(null);
+    const [sizeDistribution, setSizeDistribution] = useState<any[]>([]);
+    const [sizeThresholds, setSizeThresholds] = useState<any>(null);
+    const [yieldQuality, setYieldQuality] = useState<any[]>([]);
+    const [farmComparison, setFarmComparison] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
-            const { data: sessionData } = await supabase.auth.getSession();
-            const uiid = sessionData.session?.user?.id;
+            try {
+                setLoading(true);
+                const { data: sessionData } = await supabase.auth.getSession();
+                const uiid = sessionData.session?.user?.id;
 
-            const response = await fetch(
-                `${import.meta.env.VITE_HOST_BE}/api/analytics/farmer/dashboard/${uiid}`
-            );
-            const data = await response.json();
+                if (!uiid) {
+                    console.error('No user ID found in session');
+                    return;
+                }
 
-            console.log("📊 Dashboard Data:", data); // 🔹 log JSON for debugging
+                const apiUrl = `${import.meta.env.VITE_HOST_BE}/api/analytics/farmer/dashboard/${uiid}`;
+                console.log('Fetching from:', apiUrl);
 
-            setFarmerStats(data.farmer);
-            setGlobalStats(data.global);
+                const response = await fetch(apiUrl);
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server error response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const responseText = await response.text();
+                    console.error('Non-JSON response received:', responseText.substring(0, 200));
+                    throw new Error('Server returned non-JSON response');
+                }
+
+                const data = await response.json();
+
+                console.log("📊 Dashboard Data:", data); // log JSON for debugging
+
+                setFarmerStats(data.farmer);
+                setGlobalStats(data.global);
+                setSizeDistribution(data.size_distribution || []);
+                setSizeThresholds(data.size_thresholds || null);
+                setYieldQuality(data.yield_quality || []);
+                setFarmComparison(data.farm_comparison || null);
+            } catch (err) {
+                console.error('Error fetching dashboard data:', err);
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchData();
     }, []);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen p-4 sm:p-6 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
+                    <p className="text-gray-600 font-accent">Loading dashboard...</p>
+                </div>
+            </div>
+        );
+    }
 
     //  Stat cards → quick KPIs (avg size, yield, density, shape consistency)
     const statCards: Stat[] = farmerStats
@@ -82,7 +136,7 @@ const FarmerDashboard: React.FC = () => {
         : [];
 
     // Chart cards → interactive visual exploration
-    const chartCards: CardAttributes[] = [
+    const chartCards: CardAttributes[] = farmerStats ? [
         {
             title: "Largest Bean Submitted",
             subtitle: "From your farm",
@@ -108,35 +162,15 @@ const FarmerDashboard: React.FC = () => {
                         ]
                     }}
                     imageSrc={farmerStats.largest_bean.image_url}
-                    size={128}
+                    size={240}
                     />
                 ) : (
                     <img src={logo2} alt="Largest Bean Placeholder" className="w-32 h-32" />
                 )}
                 </div>
             )
-        },
-        {
-            title: "Bean Size Distribution",
-            subtitle: "Compare farm vs global",
-            description: (
-                <div className="flex justify-center gap-2 mt-2 text-xs text-stone-400">
-                    <span>Length & Width</span>
-                </div>
-            ),
-            content: <BarChartComponent />,
-        },
-        {
-            title: "Shape & Consistency",
-            subtitle: "Aspect Ratio Spread",
-            description: (
-                <div className="flex justify-center gap-2 mt-2 text-xs text-stone-400">
-                    <span>Farmer vs Global Aspect Ratios</span>
-                </div>
-            ),
-            content: <LineChartComponent />, // could be line or scatter
         }
-    ];
+    ] : [];
 
     return (
         <div className="min-h-screen bg-[var(--mocha-beige)] pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
@@ -161,16 +195,67 @@ const FarmerDashboard: React.FC = () => {
                 ))}
             </div>
 
-            {/* Charts */}
-            <div className="flex gap-4 mb-6">
-                <div className="flex-1 height-full">
+            {/* Row 1: Largest Bean (1/3) + Bean Size Distribution (2/3) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                <div className="lg:col-span-1">
                     <CardComponent item={chartCards[0]} />
                 </div>
-                <div className="flex-2 height-full">
-                    <CardComponent item={chartCards[1]} />
+                <div className="lg:col-span-2">
+                    <CardComponent 
+                        item={{
+                            title: "Bean Size Distribution",
+                            subtitle: "How your beans compare to other farms",
+                            description: sizeThresholds ? (
+                                <div className="text-xs text-stone-400 mt-2">
+                                    <p>Small: &lt; {sizeThresholds.small_max}mm | Medium: {sizeThresholds.medium_min}-{sizeThresholds.medium_max}mm | Large: &gt; {sizeThresholds.large_min}mm</p>
+                                    <p className="mt-1 text-stone-500">Based on data: Min {sizeThresholds.min_length}mm, Median {sizeThresholds.median_length}mm, Max {sizeThresholds.max_length}mm</p>
+                                </div>
+                            ) : (
+                                <div className="text-xs text-stone-400 mt-2">Dynamic size categories based on your data</div>
+                            ),
+                            content: sizeDistribution.length > 0 ? (
+                                <BeanSizeDistribution data={sizeDistribution} thresholds={sizeThresholds} />
+                            ) : (
+                                <div className="flex items-center justify-center h-[300px] text-gray-500">
+                                    No size distribution data available
+                                </div>
+                            )
+                        }}
+                    />
                 </div>
             </div>
-            <CardComponent item={chartCards[2]} />
+            {/* !! TO REPLACE with smth else mayhaps*/}
+            {/* Charts Grid - Row 2: Yield vs Quality & Farm Comparison */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                <CardComponent 
+                    item={{
+                        title: "Yield vs. Quality Analysis",
+                        subtitle: "Find the sweet spot between quantity and quality",
+                        description: "Explore the relationship between yield and bean characteristics",
+                        content: yieldQuality.length > 0 ? (
+                            <YieldQualityScatter data={yieldQuality} />
+                        ) : (
+                            <div className="flex items-center justify-center h-[300px] text-gray-500">
+                                No yield-quality data available
+                            </div>
+                        )
+                    }}
+                />
+                <CardComponent 
+                    item={{
+                        title: "Farm Benchmarking",
+                        subtitle: "Compare your beans against other farms",
+                        description: "See how your farm performs across key quality metrics",
+                        content: farmComparison ? (
+                            <FarmComparison data={farmComparison} />
+                        ) : (
+                            <div className="flex items-center justify-center h-[300px] text-gray-500">
+                                No comparison data available
+                            </div>
+                        )
+                    }}
+                />
+            </div>
         </div>
     );
 };

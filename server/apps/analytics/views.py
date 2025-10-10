@@ -9,18 +9,6 @@ import pandas as pd
 from collections import Counter
 
 # Create your views here.
-# @api_view(['GET'])
-# def render_farmer_dashboard(request, uiid):
-#     # query here
-#     # Get the location_id of the current user
-#     location_id = User.objects.filter(id=uiid).values('location_id').first()
-#     # Print the values in beautification
-#     print(location_id)
-#     with connection.cursor() as cursor:
-#         cursor.execute("SELECT major_axis_length,area FROM extracted_features JOIN predictions ON extracted_features.prediction_id = predictions.id JOIN images ON predictions.image_id = images.id WHERE images.location_id = %s;", [location_id['location_id']])
-#         data = cursor.fetchall()
-#     return JsonResponse({'data': (data[0][0] if data[0][0] is not None else 0)})
-
 @api_view(['GET'])
 def render_farmer_dashboard(request, uiid):
     """
@@ -145,9 +133,219 @@ def render_farmer_dashboard(request, uiid):
     # Global (all farms) stats
     global_stats = fetch_stats("", [])
 
+    # Additional analytics for charts
+    with connection.cursor() as cursor:
+        # First, calculate dynamic thresholds based on data distribution
+        # Using 33rd and 67th percentiles for Small/Medium/Large categories
+        cursor.execute("""
+            SELECT 
+                PERCENTILE_CONT(0.33) WITHIN GROUP (ORDER BY bd.length_mm) as p33_length,
+                PERCENTILE_CONT(0.67) WITHIN GROUP (ORDER BY bd.length_mm) as p67_length,
+                MIN(bd.length_mm) as min_length,
+                MAX(bd.length_mm) as max_length,
+                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY bd.length_mm) as median_length
+            FROM bean_detections bd
+            JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+            JOIN predictions p ON ef.prediction_id = p.id
+            JOIN images i ON p.image_id = i.id
+        """)
+        thresholds = cursor.fetchone()
+        
+        if thresholds and thresholds[0]:
+            p33_length, p67_length = float(thresholds[0]), float(thresholds[1])
+            min_length, max_length, median_length = float(thresholds[2]), float(thresholds[3]), float(thresholds[4])
+        else:
+            # Fallback to default values if no data
+            p33_length, p67_length = 8.0, 12.0
+            min_length, max_length, median_length = 5.0, 15.0, 10.0
+
+        # 1. Bean Size Distribution (for bar chart comparison) - Dynamic categorization
+        cursor.execute("""
+            SELECT 
+                size_category,
+                COUNT(*) as farmer_count
+            FROM (
+                SELECT 
+                    CASE 
+                        WHEN bd.length_mm < %s THEN 'Small'
+                        WHEN bd.length_mm BETWEEN %s AND %s THEN 'Medium'
+                        ELSE 'Large'
+                    END AS size_category
+                FROM bean_detections bd
+                JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                JOIN predictions p ON ef.prediction_id = p.id
+                JOIN images i ON p.image_id = i.id
+                WHERE i.location_id = %s
+            ) AS categorized
+            GROUP BY size_category
+            ORDER BY 
+                CASE size_category
+                    WHEN 'Small' THEN 1
+                    WHEN 'Medium' THEN 2
+                    WHEN 'Large' THEN 3
+                END
+        """, [p33_length, p33_length, p67_length, location_id])
+        farmer_size_dist = cursor.fetchall()
+
+        cursor.execute("""
+            SELECT 
+                size_category,
+                COUNT(*) as global_count
+            FROM (
+                SELECT 
+                    CASE 
+                        WHEN bd.length_mm < %s THEN 'Small'
+                        WHEN bd.length_mm BETWEEN %s AND %s THEN 'Medium'
+                        ELSE 'Large'
+                    END AS size_category
+                FROM bean_detections bd
+                JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                JOIN predictions p ON ef.prediction_id = p.id
+                JOIN images i ON p.image_id = i.id
+            ) AS categorized
+            GROUP BY size_category
+            ORDER BY 
+                CASE size_category
+                    WHEN 'Small' THEN 1
+                    WHEN 'Medium' THEN 2
+                    WHEN 'Large' THEN 3
+                END
+        """, [p33_length, p33_length, p67_length])
+        global_size_dist = cursor.fetchall()
+
+        # Combine distributions
+        size_distribution = {}
+        for category, count in farmer_size_dist:
+            if category not in size_distribution:
+                size_distribution[category] = {"category": category, "farmer": 0, "global": 0}
+            size_distribution[category]["farmer"] = int(count)
+        
+        for category, count in global_size_dist:
+            if category not in size_distribution:
+                size_distribution[category] = {"category": category, "farmer": 0, "global": 0}
+            size_distribution[category]["global"] = int(count)
+
+        # 2. Yield vs Quality (scatter plot data)
+        cursor.execute("""
+            SELECT 
+                i.id as image_id,
+                DATE(i.upload_date) as date,
+                COUNT(bd.id) as yield,
+                AVG(ef.area) as avg_area,
+                AVG(ef.solidity) as avg_solidity
+            FROM images i
+            JOIN predictions p ON i.id = p.image_id
+            JOIN extracted_features ef ON p.id = ef.prediction_id
+            JOIN bean_detections bd ON ef.id = bd.extracted_features_id
+            WHERE i.location_id = %s
+            GROUP BY i.id, i.upload_date
+            ORDER BY i.upload_date DESC
+            LIMIT 50
+        """, [location_id])
+        yield_quality = cursor.fetchall()
+
+        # 3. Enhanced Farm Comparison (compare with top farms and province average)
+        cursor.execute("""
+            SELECT 
+                AVG(bd.length_mm) as avg_length,
+                AVG(bd.width_mm) as avg_width,
+                AVG(ef.solidity) as avg_solidity,
+                AVG(bd.length_mm / NULLIF(bd.width_mm, 0)) as avg_aspect_ratio,
+                AVG(ef.eccentricity) as avg_eccentricity
+            FROM bean_detections bd
+            JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+            JOIN predictions p ON ef.prediction_id = p.id
+            JOIN images i ON p.image_id = i.id
+            WHERE i.location_id = %s
+        """, [location_id])
+        farmer_comparison = cursor.fetchone()
+
+        cursor.execute("""
+            SELECT 
+                AVG(bd.length_mm) as avg_length,
+                AVG(bd.width_mm) as avg_width,
+                AVG(ef.solidity) as avg_solidity,
+                AVG(bd.length_mm / NULLIF(bd.width_mm, 0)) as avg_aspect_ratio,
+                AVG(ef.eccentricity) as avg_eccentricity
+            FROM bean_detections bd
+            JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+            JOIN predictions p ON ef.prediction_id = p.id
+            JOIN images i ON p.image_id = i.id
+        """)
+        province_comparison = cursor.fetchone()
+
+        # Get top 5 farms by bean count for comparison
+        cursor.execute("""
+            SELECT 
+                i.location_id,
+                l.name,
+                AVG(bd.length_mm) as avg_length,
+                AVG(bd.width_mm) as avg_width,
+                AVG(ef.solidity) as avg_solidity,
+                AVG(ef.area) as avg_area,
+                COUNT(bd.id) as bean_count
+            FROM bean_detections bd
+            JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+            JOIN predictions p ON ef.prediction_id = p.id
+            JOIN images i ON p.image_id = i.id
+            JOIN locations l ON i.location_id = l.id
+            GROUP BY i.location_id, l.name
+            ORDER BY bean_count DESC
+            LIMIT 5
+        """)
+        top_farms = cursor.fetchall()
+
     return JsonResponse({
         "farmer": farmer_stats,
-        "global": global_stats
+        "global": global_stats,
+        "size_distribution": list(size_distribution.values()),
+        "size_thresholds": {
+            "small_max": round(p33_length, 2),
+            "medium_min": round(p33_length, 2),
+            "medium_max": round(p67_length, 2),
+            "large_min": round(p67_length, 2),
+            "min_length": round(min_length, 2),
+            "max_length": round(max_length, 2),
+            "median_length": round(median_length, 2)
+        },
+        "yield_quality": [
+            {
+                "image_id": image_id,
+                "date": str(date),
+                "yield": int(yield_val),
+                "avg_area": float(avg_area) if avg_area else 0,
+                "avg_solidity": float(avg_solidity) if avg_solidity else 0
+            }
+            for image_id, date, yield_val, avg_area, avg_solidity in yield_quality
+        ],
+        "farm_comparison": {
+            "farmer": {
+                "length": float(farmer_comparison[0]) if farmer_comparison[0] else 0,
+                "width": float(farmer_comparison[1]) if farmer_comparison[1] else 0,
+                "solidity": float(farmer_comparison[2]) if farmer_comparison[2] else 0,
+                "aspect_ratio": float(farmer_comparison[3]) if farmer_comparison[3] else 0,
+                "eccentricity": float(farmer_comparison[4]) if farmer_comparison[4] else 0
+            },
+            "province": {
+                "length": float(province_comparison[0]) if province_comparison[0] else 0,
+                "width": float(province_comparison[1]) if province_comparison[1] else 0,
+                "solidity": float(province_comparison[2]) if province_comparison[2] else 0,
+                "aspect_ratio": float(province_comparison[3]) if province_comparison[3] else 0,
+                "eccentricity": float(province_comparison[4]) if province_comparison[4] else 0
+            },
+            "top_farms": [
+                {
+                    "farm_id": int(location_id),
+                    "farm_name": farm_name if farm_name else f"Farm {location_id}",
+                    "avg_length": float(avg_length) if avg_length else 0,
+                    "avg_width": float(avg_width) if avg_width else 0,
+                    "avg_solidity": float(avg_solidity) if avg_solidity else 0,
+                    "avg_area": float(avg_area) if avg_area else 0,
+                    "bean_count": int(bean_count)
+                }
+                for location_id, farm_name, avg_length, avg_width, avg_solidity, avg_area, bean_count in top_farms
+            ]
+        }
     })
 
 
