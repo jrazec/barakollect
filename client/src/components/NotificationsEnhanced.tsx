@@ -315,7 +315,7 @@ const Notifications: React.FC = () => {
 
   return (
     <PageContainer>
-      <div className="w-full max-w-6xl bg-[var(--mocha-beige)] rounded-xl shadow p-6">
+      <div className="w-full max-w-6xl bg-white rounded-xl shadow p-6">
         <PageHeader
           title="Notifications"
           subtitle={userRole === 'researcher' 

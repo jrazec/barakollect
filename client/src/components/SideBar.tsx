@@ -163,7 +163,7 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                                             if (lblNav) lblNav.style.display = "none";
                                         }}>
                                         <a>
-                                            <span className="icon">{item.icon}</span>
+                                            <span className="icon" style={{ color: '#646464', opacity: 1 }}>{item.icon}</span>
                                             <span className={`lblNav ${show ? "" : "collapsed"}`}>{item.label}</span>
                                         </a>
                                     </Link>
@@ -173,7 +173,7 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                                     <Link to={`${item.route}`} className={`navigationBtn ${show ? "" : "collapsed"} ${item.route === location.pathname ? "active" : ""}`} key={index}
                                     >
                                         <a>
-                                            <span className="icon">{item.icon}</span>
+                                            <span className="icon" style={{ color: '#646464', opacity: 0.4 }}>{item.icon}</span>
                                             <span className={`lblNav`} style={{ display: "block" }}>{item.label}</span>
                                         </a>
                                     </Link>

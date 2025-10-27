@@ -178,13 +178,13 @@ const FarmerDashboard: React.FC = () => {
             <DashboardHeader 
                 title='Farmer Dashboard'
                 subtitle='Manage your farm and view analytics'
-                actions={
-                    <div className="flex flex-col gap-2 mt-2 md:mt-0">
-                        <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-2 rounded">Predict Images</button>
-                        <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-2 rounded">Submit Images</button>
-                        <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-2 rounded">Find Largest Bean</button>
-                    </div>
-                }
+                // actions={
+                //     <div className="flex flex-col gap-2 mt-2 md:mt-0">
+                //         <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-2 rounded">Predict Images</button>
+                //         <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-2 rounded">Submit Images</button>
+                //         <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-2 rounded">Find Largest Bean</button>
+                //     </div>
+                // }
                 image={logo2}
             />
 
