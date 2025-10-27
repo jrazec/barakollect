@@ -8,7 +8,7 @@ import math
 import pandas as pd
 from collections import Counter
 
-# Create your views here.
+# === Farmer Dashboard ファルマー　❘ 農家
 @api_view(['GET'])
 def render_farmer_dashboard(request, uiid):
     """
@@ -348,7 +348,22 @@ def render_farmer_dashboard(request, uiid):
         }
     })
 
+# === Researcher Dashboard　リサーチャー　｜　研究者
+def render_researcher_dashboard(request, uiid):
+    # query for researcher dashboard data
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT ...
+            FROM ...
+            WHERE user_id = %s
+        """, [uiid])
+        researcher_data = cursor.fetchall()
 
+    return JsonResponse({
+        "researcher": researcher_data
+    })
+
+# === Admin Dashboard　アドミン　
 @api_view(['GET'])
 def render_admin_dashboard(request):
     # query 
