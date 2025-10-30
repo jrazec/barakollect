@@ -142,7 +142,7 @@ const ResearcherDashboard: React.FC = () => {
       </div>
 
       {/* Footer Actions */}
-      <div className="flex flex-wrap gap-2 justify-center">
+      {/* <div className="flex flex-wrap gap-2 justify-center">
         <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded font-main text-xs shadow hover:bg-opacity-90 transition-colors">
           Upload Bean
         </button>
@@ -155,7 +155,7 @@ const ResearcherDashboard: React.FC = () => {
         <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded font-main text-xs shadow hover:bg-opacity-90 transition-colors">
           Export Report
         </button>
-      </div>
+      </div> */}
     </div>
   );
 };

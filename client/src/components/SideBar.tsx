@@ -186,9 +186,9 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
             <div className="bottomSection">
                 <ul>
                     <li className={`navigationBtn ${show ? "" : "collapsed"}`}>
-                        <button onClick={signOut} className="w-full text-left">
-                            <span className="icon"><LogOutIcon /></span>
-                            {<span className={`lblNav ${show ? "" : "collapsed"}`}>Logout</span>}
+                        <button onClick={signOut} className="w-full text-left flex items-center justify-center gap-2 text-sm" style={{ opacity: 1 }}>
+                            <LogOutIcon style={{ opacity: 0.4 }} />
+                            {show && <span>Logout</span>}
                         </button>
                     </li>
                 </ul>
