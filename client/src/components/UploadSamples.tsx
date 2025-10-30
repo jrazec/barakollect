@@ -19,7 +19,7 @@ const UploadSamples: React.FC = () => {
           title="Upload Bean Images"
           subtitle="Upload coffee bean images for analysis and contribute to our research database"
         />
-        <TabComponent activeTab={activeTab} onTabChange={setActiveTab} tabs={['Predict Image','Submit Image','Find Largest Bean']} />
+        <TabComponent activeTab={activeTab} onTabChange={setActiveTab} tabs={['Predict Image','Find Largest Bean']} />
         <UploadBodySection activeTab={activeTab} onFilesSelected={handleFiles} />
       </div>
     </PageContainer>
