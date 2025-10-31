@@ -125,13 +125,13 @@ const ShapeSizeDistribution: React.FC<ShapeSizeDistributionProps> = ({ data, far
           <div className="font-semibold mb-1 text-gray-700">Size Classification:</div>
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <span className="font-medium">Small:</span> &lt; {thresholds.small_max.toFixed(1)} px²
+              <span className="font-medium">Small:</span> &lt; {thresholds.small_max.toFixed(1)} mm²
             </div>
             <div>
-              <span className="font-medium">Medium:</span> {thresholds.medium_min.toFixed(1)} - {thresholds.medium_max.toFixed(1)} px²
+              <span className="font-medium">Medium:</span> {thresholds.medium_min.toFixed(1)} - {thresholds.medium_max.toFixed(1)} mm²
             </div>
             <div>
-              <span className="font-medium">Large:</span> &gt; {thresholds.large_min.toFixed(1)} px²
+              <span className="font-medium">Large:</span> &gt; {thresholds.large_min.toFixed(1)} mm²
             </div>
           </div>
           <div className="mt-2 pt-2 border-t border-gray-300">

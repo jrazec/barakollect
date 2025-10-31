@@ -88,15 +88,15 @@ const BeanAnalyticsChart: React.FC<BeanAnalyticsChartProps> = ({
           <div className="flex flex-wrap gap-2 mb-4">
             {featureNames.map((feature) => (
               <button
-                key={feature}
-                onClick={() => setSelectedFeature(feature)}
-                className={`px-2 sm:px-3 py-1 rounded-full text-xs font-accent transition-colors ${
-                  selectedFeature === feature
-                    ? 'bg-[var(--arabica-brown)] text-[var(--parchment)]'
-                    : 'bg-gray-200 text-gray-600'
-                }`}
+          key={feature}
+          onClick={() => setSelectedFeature(feature)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors !border-2 ${
+            selectedFeature === feature
+              ? 'bg-[var(--arabica-brown)] text-white shadow-md border-[var(--arabica-brown)]'
+              : '!bg-gray-100 !text-gray-700 !hover:bg-gray-200 !border-[var(--arabica-brown)]'
+          }`}
               >
-                {displayNames[feature] || feature}
+          {displayNames[feature] || feature}
               </button>
             ))}
           </div>

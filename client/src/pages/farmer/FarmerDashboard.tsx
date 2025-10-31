@@ -118,9 +118,9 @@ const FarmerDashboard: React.FC = () => {
                 })()
             },
             {
-                label: "Yield Potential",
-                value: farmerStats.yield_potential.toString(),
-                subtext: "Beans detected"
+                label: "Total Bean Count",
+                value: farmerStats.total_bean_count.toString(),
+                subtext: "Total beans submitted"
             },
             {
                 label: "Density (Solidity)",
@@ -207,8 +207,8 @@ const FarmerDashboard: React.FC = () => {
                             subtitle: "How your beans compare to other farms",
                             description: sizeThresholds ? (
                                 <div className="text-xs text-stone-400 mt-2">
-                                    <p>Small: &lt; {sizeThresholds.small_max}mm | Medium: {sizeThresholds.medium_min}-{sizeThresholds.medium_max}mm | Large: &gt; {sizeThresholds.large_min}mm</p>
-                                    <p className="mt-1 text-stone-500">Based on data: Min {sizeThresholds.min_length}mm, Median {sizeThresholds.median_length}mm, Max {sizeThresholds.max_length}mm</p>
+                                    <p>Small: &lt; {sizeThresholds.small_max.toFixed(1)} mm² | Medium: {sizeThresholds.medium_min.toFixed(1)}-{sizeThresholds.medium_max.toFixed(1)} mm² | Large: &gt; {sizeThresholds.large_min.toFixed(1)} mm²</p>
+                                    <p className="mt-1 text-stone-500">Based on data: Min {sizeThresholds.min_area.toFixed(1)} mm², Median {sizeThresholds.median_area.toFixed(1)} mm², Max {sizeThresholds.max_area.toFixed(1)} mm²</p>
                                 </div>
                             ) : (
                                 <div className="text-xs text-stone-400 mt-2">Dynamic size categories based on your data</div>

@@ -74,16 +74,13 @@ def render_farmer_dashboard(request, uiid):
             """, params)
             shape_consistency = cursor.fetchone()
 
-            # Yield potential
+            # Total submitted image count (number of images uploaded by user)
             cursor.execute(f"""
-                SELECT COUNT(*)
-                FROM bean_detections bd
-                JOIN extracted_features ef ON bd.extracted_features_id = ef.id
-                JOIN predictions p ON ef.prediction_id = p.id
-                JOIN images i ON p.image_id = i.id
+                SELECT COUNT(DISTINCT i.id)
+                FROM images i
                 {where_clause}
             """, params)
-            yield_count = cursor.fetchone()
+            total_bean_count = cursor.fetchone()
 
             # Density indicators
             cursor.execute(f"""
@@ -120,7 +117,7 @@ def render_farmer_dashboard(request, uiid):
                 "avg_aspect_ratio": float(shape_consistency[0]) if shape_consistency[0] else 0,
                 "std_aspect_ratio": float(shape_consistency[1]) if shape_consistency[1] else 0,
             },
-            "yield_potential": int(yield_count[0]) if yield_count[0] else 0,
+            "total_bean_count": int(total_bean_count[0]) if total_bean_count[0] else 0,
             "density_fullness": {
                 "solidity": float(density[0]) if density[0] else 0,
                 "extent": float(density[1]) if density[1] else 0,
@@ -136,14 +133,14 @@ def render_farmer_dashboard(request, uiid):
     # Additional analytics for charts
     with connection.cursor() as cursor:
         # First, calculate dynamic thresholds based on data distribution
-        # Using 33rd and 67th percentiles for Small/Medium/Large categories
+        # Using 33rd and 67th percentiles for Small/Medium/Large categories based on area
         cursor.execute("""
             SELECT 
-                PERCENTILE_CONT(0.33) WITHIN GROUP (ORDER BY bd.length_mm) as p33_length,
-                PERCENTILE_CONT(0.67) WITHIN GROUP (ORDER BY bd.length_mm) as p67_length,
-                MIN(bd.length_mm) as min_length,
-                MAX(bd.length_mm) as max_length,
-                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY bd.length_mm) as median_length
+                PERCENTILE_CONT(0.33) WITHIN GROUP (ORDER BY ef.area) as p33_area,
+                PERCENTILE_CONT(0.67) WITHIN GROUP (ORDER BY ef.area) as p67_area,
+                MIN(ef.area) as min_area,
+                MAX(ef.area) as max_area,
+                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.area) as median_area
             FROM bean_detections bd
             JOIN extracted_features ef ON bd.extracted_features_id = ef.id
             JOIN predictions p ON ef.prediction_id = p.id
@@ -152,14 +149,14 @@ def render_farmer_dashboard(request, uiid):
         thresholds = cursor.fetchone()
         
         if thresholds and thresholds[0]:
-            p33_length, p67_length = float(thresholds[0]), float(thresholds[1])
-            min_length, max_length, median_length = float(thresholds[2]), float(thresholds[3]), float(thresholds[4])
+            p33_area, p67_area = float(thresholds[0]), float(thresholds[1])
+            min_area, max_area, median_area = float(thresholds[2]), float(thresholds[3]), float(thresholds[4])
         else:
             # Fallback to default values if no data
-            p33_length, p67_length = 8.0, 12.0
-            min_length, max_length, median_length = 5.0, 15.0, 10.0
+            p33_area, p67_area = 200.0, 400.0
+            min_area, max_area, median_area = 100.0, 600.0, 300.0
 
-        # 1. Bean Size Distribution (for bar chart comparison) - Dynamic categorization
+        # 1. Bean Size Distribution (for bar chart comparison) - Dynamic categorization based on area
         cursor.execute("""
             SELECT 
                 size_category,
@@ -167,8 +164,8 @@ def render_farmer_dashboard(request, uiid):
             FROM (
                 SELECT 
                     CASE 
-                        WHEN bd.length_mm < %s THEN 'Small'
-                        WHEN bd.length_mm BETWEEN %s AND %s THEN 'Medium'
+                        WHEN ef.area < %s THEN 'Small'
+                        WHEN ef.area BETWEEN %s AND %s THEN 'Medium'
                         ELSE 'Large'
                     END AS size_category
                 FROM bean_detections bd
@@ -184,7 +181,7 @@ def render_farmer_dashboard(request, uiid):
                     WHEN 'Medium' THEN 2
                     WHEN 'Large' THEN 3
                 END
-        """, [p33_length, p33_length, p67_length, location_id])
+        """, [p33_area, p33_area, p67_area, location_id])
         farmer_size_dist = cursor.fetchall()
 
         cursor.execute("""
@@ -194,8 +191,8 @@ def render_farmer_dashboard(request, uiid):
             FROM (
                 SELECT 
                     CASE 
-                        WHEN bd.length_mm < %s THEN 'Small'
-                        WHEN bd.length_mm BETWEEN %s AND %s THEN 'Medium'
+                        WHEN ef.area < %s THEN 'Small'
+                        WHEN ef.area BETWEEN %s AND %s THEN 'Medium'
                         ELSE 'Large'
                     END AS size_category
                 FROM bean_detections bd
@@ -210,7 +207,7 @@ def render_farmer_dashboard(request, uiid):
                     WHEN 'Medium' THEN 2
                     WHEN 'Large' THEN 3
                 END
-        """, [p33_length, p33_length, p67_length])
+        """, [p33_area, p33_area, p67_area])
         global_size_dist = cursor.fetchall()
 
         # Combine distributions
@@ -300,13 +297,13 @@ def render_farmer_dashboard(request, uiid):
         "global": global_stats,
         "size_distribution": list(size_distribution.values()),
         "size_thresholds": {
-            "small_max": round(p33_length, 2),
-            "medium_min": round(p33_length, 2),
-            "medium_max": round(p67_length, 2),
-            "large_min": round(p67_length, 2),
-            "min_length": round(min_length, 2),
-            "max_length": round(max_length, 2),
-            "median_length": round(median_length, 2)
+            "small_max": round(p33_area, 2),
+            "medium_min": round(p33_area, 2),
+            "medium_max": round(p67_area, 2),
+            "large_min": round(p67_area, 2),
+            "min_area": round(min_area, 2),
+            "max_area": round(max_area, 2),
+            "median_area": round(median_area, 2)
         },
         "yield_quality": [
             {

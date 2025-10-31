@@ -194,10 +194,10 @@ const BoxPlotChart: React.FC<BoxPlotChartProps> = ({ data, yAxisLabel = 'Value' 
             <button
               key={item.group}
               onClick={() => setSelectedFeature(item.group)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                selectedFeature === item.group
-                  ? 'bg-[var(--arabica-brown)] text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors !border-2 ${
+              selectedFeature === item.group
+                ? 'bg-[var(--arabica-brown)] text-white shadow-md border-[var(--arabica-brown)]'
+                : '!bg-gray-100 !text-gray-700 !hover:bg-gray-200 !border-[var(--arabica-brown)]'
               }`}
             >
               {item.group}

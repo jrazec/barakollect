@@ -400,46 +400,46 @@ export const FarmComparison: React.FC<FarmComparisonProps> = ({ data }) => {
         <div className="w-full">
             {/* Metric Selector */}
             <div className="flex flex-wrap gap-2 mb-4">
-                <button
-                    onClick={() => setSelectedMetric('avg_area')}
-                    className={`px-3 py-1 rounded text-sm ${
-                        selectedMetric === 'avg_area'
-                            ? 'bg-[#8B4513] text-white'
-                            : 'bg-[#F5E6D3] text-[#4A2511] hover:bg-[#D2B48C]'
-                    }`}
-                >
-                    Area
-                </button>
-                <button
-                    onClick={() => setSelectedMetric('avg_solidity')}
-                    className={`px-3 py-1 rounded text-sm ${
-                        selectedMetric === 'avg_solidity'
-                            ? 'bg-[#8B4513] text-white'
-                            : 'bg-[#F5E6D3] text-[#4A2511] hover:bg-[#D2B48C]'
-                    }`}
-                >
-                    Solidity
-                </button>
-                <button
-                    onClick={() => setSelectedMetric('avg_length')}
-                    className={`px-3 py-1 rounded text-sm ${
-                        selectedMetric === 'avg_length'
-                            ? 'bg-[#8B4513] text-white'
-                            : 'bg-[#F5E6D3] text-[#4A2511] hover:bg-[#D2B48C]'
-                    }`}
-                >
-                    Length
-                </button>
-                <button
-                    onClick={() => setSelectedMetric('avg_width')}
-                    className={`px-3 py-1 rounded text-sm ${
-                        selectedMetric === 'avg_width'
-                            ? 'bg-[#8B4513] text-white'
-                            : 'bg-[#F5E6D3] text-[#4A2511] hover:bg-[#D2B48C]'
-                    }`}
-                >
-                    Width
-                </button>
+            <button
+                onClick={() => setSelectedMetric('avg_area')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors !border-2 ${
+                selectedMetric === 'avg_area'
+                    ? 'bg-[var(--arabica-brown)] text-white shadow-md !border-[var(--arabica-brown)]'
+                    : '!bg-gray-100 !text-gray-700 !hover:bg-gray-200 !border-[var(--arabica-brown)]'
+                }`}
+            >
+                Area
+            </button>
+            <button
+                onClick={() => setSelectedMetric('avg_solidity')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors !border-2 ${
+                selectedMetric === 'avg_solidity'
+                    ? 'bg-[var(--arabica-brown)] text-white shadow-md !border-[var(--arabica-brown)]'
+                    : '!bg-gray-100 !text-gray-700 !hover:bg-gray-200 !border-[var(--arabica-brown)]'
+                }`}
+            >
+                Solidity
+            </button>
+            <button
+                onClick={() => setSelectedMetric('avg_length')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors !border-2 ${
+                selectedMetric === 'avg_length'
+                    ? 'bg-[var(--arabica-brown)] text-white shadow-md !border-[var(--arabica-brown)]'
+                    : '!bg-gray-100 !text-gray-700 !hover:bg-gray-200 !border-[var(--arabica-brown)]'
+                }`}
+            >
+                Length
+            </button>
+            <button
+                onClick={() => setSelectedMetric('avg_width')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors !border-2 ${
+                selectedMetric === 'avg_width'
+                    ? 'bg-[var(--arabica-brown)] text-white shadow-md !border-[var(--arabica-brown)]'
+                    : '!bg-gray-100 !text-gray-700 !hover:bg-gray-200 !border-[var(--arabica-brown)]'
+                }`}
+            >
+                Width
+            </button>
             </div>
 
             <ResponsiveContainer width="100%" height={300}>
@@ -500,10 +500,6 @@ export const FarmComparison: React.FC<FarmComparisonProps> = ({ data }) => {
                     </Bar>
                 </BarChart>
             </ResponsiveContainer>
-            
-            <p className="text-xs text-gray-600 text-center mt-2">
-                💡 Your farm is highlighted in darker brown. Compare with top performing farms!
-            </p>
         </div>
     );
 };
