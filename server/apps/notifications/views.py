@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from models.models import Notification, User
+from services.activity_logger import log_user_activity
 
 # Temporary email sending function - placeholder for future implementation
 def send_email_notification(user_email, title, message, notification_type):
@@ -98,9 +99,24 @@ def send_broadcast_notification(request):
         user_emails = get_all_user_emails()
         for email in user_emails:
             send_email_notification(email, title, message, notification_type)
+        # Log success
+        log_user_activity(
+                user_id=None,
+                action="CREATE",
+                details=f"Broadcast notification sent: {title}",
+                resource="Notification",
+                status="success"
+        )
     except Exception as e:
         print(f"Email sending failed: {e}")
         # Don't fail the entire operation if email sending fails
+        log_user_activity(
+                user_id=None,
+                action="CREATE",
+                details=f"Broadcast notification sent with email failures: {title}; Error: {str(e)}",
+                resource="Notification",
+                status="failed"
+        )
     
     return Response({'status': 'success', 'message': 'Broadcast notification sent to all users.'})
 
@@ -122,13 +138,35 @@ def send_personal_notification(request):
         try:
             if user.email:
                 send_email_notification(user.email, title, message, notification_type)
+                log_user_activity(
+                    user_id=user_id,
+                    action="CREATE",
+                    details=f"Personal notification sent: {title}",
+                    resource="Notification",
+                    status="success"
+                )
         except Exception as e:
             print(f"Email sending failed for user {user_id}: {e}")
+            log_user_activity(
+                user_id=user_id,
+                action="CREATE",
+                details=f"Personal notification sent with email failure: {title}; Error: {str(e)}",
+                resource="Notification",
+                status="failed"
+            )
             # Don't fail the entire operation if email sending fails
         
         return Response({'status': 'success', 'message': 'Notification sent to user.'})
     except User.DoesNotExist:
+        log_user_activity(
+            user_id=user_id,
+            action="CREATE",
+            details=f"Personal notification failed: {title}; Error: User not found.",
+            resource="Notification",
+            status="failed"
+        )
         return Response({'status': 'error', 'message': 'User not found.'}, status=404)
+
 
 @api_view(['DELETE'])
 def clear_notifications(request):

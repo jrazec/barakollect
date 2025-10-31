@@ -4,6 +4,8 @@ from rest_framework.decorators import api_view
 from models.models import Location, User
 from django.db import connection
 
+from services.activity_logger import log_user_activity
+
 # Create your views here.
 """
   id: string;
@@ -139,10 +141,24 @@ def create_farm(request):
                 "INSERT INTO public.locations (name) VALUES (%s)",
                 [name]
             )
-        
+        log_user_activity(
+            user_id=request.data.get('user_id', None),
+            action="CREATE",
+            details=f"Created farm {name}",
+            resource=f"Farm ID: {cursor.lastrowid}",
+            status="success"
+        )
+
         return JsonResponse({"success": True}, status=201)
 
     except Exception as e:
+        log_user_activity(
+            user_id=request.data.get('user_id', None),
+            action="CREATE",
+            details=f"Failed to create farm {name}",
+            resource="Farm",
+            status="error"
+        )
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -161,10 +177,24 @@ def update_farm_location(request, farm_id):
                 "UPDATE public.locations SET location = ST_SetSRID(ST_MakePoint(%s, %s), 4326) WHERE id = %s",
                 [lng, lat, farm_id]
             )
+        log_user_activity(
+            user_id=request.data.get('user_id', None),
+            action="UPDATE",
+            details=f"Updated location for farm ID {farm_id} to ({lat}, {lng})",
+            resource=f"Farm ID: {farm_id}",
+            status="success"
+        )
         
         return JsonResponse({"success": True}, status=200)
 
     except Exception as e:
+        log_user_activity(
+            user_id=request.data.get('user_id', None),
+            action="UPDATE",
+            details=f"Failed to update location for farm ID {farm_id}",
+            resource=f"Farm ID: {farm_id}",
+            status="error"
+        )
         return JsonResponse({"error": str(e)}, status=500)
     
 @api_view(['GET'])
@@ -434,10 +464,24 @@ def delete_farm(request):
                 "DELETE FROM public.locations WHERE id = %s",
                 [farm_id]
             )
+        log_user_activity(
+            user_id=request.data.get('user_id', None),
+            action="DELETE",
+            details=f"Deleted farm ID {farm_id}",
+            resource=f"Farm ID: {farm_id}",
+            status="success"
+        )
         
         return JsonResponse({"success": True}, status=200)
 
     except Exception as e:
+        log_user_activity(
+            user_id=request.data.get('user_id', None),
+            action="DELETE",
+            details=f"Failed to delete farm ID {farm_id}",
+            resource=f"Farm ID: {farm_id}",
+            status="error"
+        )
         return JsonResponse({"error": str(e)}, status=500)
 
 

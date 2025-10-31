@@ -2,14 +2,14 @@ from django.urls import path
 from .views import upload_beans, get_user_beans, process_bean, process_single_bean, get_bean_detections, test_database_connection, get_all_beans, validate_beans, get_annotations, delete_bean
 
 urlpatterns = [
-   path('upload/', upload_beans),
-   path('get-images/', get_all_beans),
+   path('upload/', upload_beans), 
+   path('get-images/', get_all_beans), 
    path('get-annotations/', get_annotations),
-   path('validate/',validate_beans),
-   path('images/<int:image_id>',delete_bean),
+   path('validate/',validate_beans), # Add activity Logs - done
+   path('images/<int:image_id>',delete_bean), # Add activity Logs - done
    path('get-list/<str:user_id>/', get_user_beans),
-   path('process/', process_bean),
-   path('process-single/', process_single_bean),  # Backward compatibility
-   path('detections/<str:user_id>/', get_bean_detections),
+   path('process/', process_bean), # Add activity Logs - done
+   path('process-single/', process_single_bean),  # Add activity Logs - done
+   path('detections/<str:user_id>/', get_bean_detections), 
    path('test-db/', test_database_connection),
 ]

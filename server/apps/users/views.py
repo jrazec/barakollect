@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view
 from django.db import transaction
 from models.models import Image, User, UserRole, Role, Location
 from django.core import serializers
+from services.activity_logger import log_user_activity
 from services.supabase_service import supabase
 
 # USER SIGNUP AND LOGIN
@@ -32,6 +33,17 @@ def login_user(request):
                 "userrole__role__name",  
             )
         )
+        # check if userrole__role_name == 'admin', if so, create activity log for admin login
+
+        # user = users.first()
+        # if user.get("userrole__role__name") == "admin":
+        #     log_user_activity(
+        #         user_id=uiid,
+        #         action="LOGIN",
+        #         details="Admin login attempt was successful.",
+        #         resource="N/A",
+        #         status="success"
+        #     )
 
         if not users.exists():
             return JsonResponse({"error": "Cannot find user"}, status=404)
@@ -39,6 +51,7 @@ def login_user(request):
         return JsonResponse({"data": list(users)}, safe=False)
 
     except Exception as e:
+        
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -83,6 +96,13 @@ def signup_user(request):
                 role = Role.objects.get(name="researcher")
 
             UserRole.objects.get_or_create(user=user, role=role)
+            log_user_activity(
+                user_id=uiid,
+                action="CREATE",
+                details="User signup successful.",
+                resource=f"User {user.id}",
+                status="success"
+            )
 
         return JsonResponse({"message": "Signup successful", "role": role.name})
     except Exception as e:
@@ -218,11 +238,24 @@ def create_user(request):
 
             role = Role.objects.get(id=int(role_id))
             UserRole.objects.create(user=user, role=role)
-            
+            log_user_activity(
+                user_id=userAuth.user.id,
+                action="CREATE",
+                details="User account created in Supabase auth.",
+                resource=f"User {userAuth.user.id}",
+                status="success"
+            )
 
 
         return JsonResponse({"message": "User created successfully", "user": user.id}, status=201)
     except Exception as e:
+        log_user_activity(
+            user_id=userAuth.user.id,
+            action="CREATE",
+            details=f"User account creation failed in Supabase auth; Error: {str(e)}",
+            resource=f"User {userAuth.user.id}",
+            status="failed"
+        )
         return JsonResponse({"error": str(e)}, status=500)
 
 @api_view(['POST'])
@@ -265,11 +298,32 @@ def update_user(request):
             for img in images:
                 img.location_id = location_id
                 img.save()
+            log_user_activity(
+                user_id=user.id,
+                action="UPDATE",
+                details=f"User information updated: {user_id} {first_name} {last_name} {username} {location_id} {role}",
+                resource=f"User {user.id}",
+                status="success"
+            )
 
         return JsonResponse({"message": "User updated successfully"})
     except User.DoesNotExist:
+        log_user_activity(
+            user_id=None,
+            action="UPDATE",
+            details=f"User not found: {user_id}",
+            resource=f"User {None}",
+            status="failed"
+        )
         return JsonResponse({"error": "User not found"}, status=404)
     except Exception as e:
+        log_user_activity(
+            user_id=user_id,
+            action="UPDATE",
+            details=f"User update failed: {str(e)}",
+            resource=f"User {user_id}",
+            status="failed"
+        )
         return JsonResponse({"error": str(e)}, status=500)
 
 @api_view(['POST'])
@@ -279,7 +333,21 @@ def deactivate_user(request):
     try:
         response = User.objects.filter(id=id).update(is_deleted=True)
     except Exception as e:
+        log_user_activity(
+            user_id=id,
+            action="DEACTIVATE",
+            details=f"User deactivation failed: {str(e)}",
+            resource=f"User {id}",
+            status="failed"
+        )
         return JsonResponse({"error": str(e)}, status=500)
+    log_user_activity(
+        user_id=id,
+        action="DEACTIVATE",
+        details="User soft deleted.",
+        resource=f"User {id}",
+        status="success"
+    )
     return JsonResponse({"message": "User soft deleted successfully"})
 
 @api_view(['POST'])
@@ -287,7 +355,21 @@ def activate_user(request):
     id = request.data.get("userId")
     try:
         response = User.objects.filter(id=id).update(is_deleted=False)
+        log_user_activity(
+            user_id=id,
+            action="ACTIVATE",
+            details="User activated.",
+            resource=f"User {id}",
+            status="success"
+        )
     except Exception as e:
+        log_user_activity(
+            user_id=id,
+            action="ACTIVATE",
+            details=f"User activation failed: {str(e)}",
+            resource=f"User {id}",
+            status="failed"
+        )
         return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"message": "User activated successfully"})
 
@@ -302,7 +384,21 @@ def delete_user(request, user_id):
             try:
                 supabase.auth.admin.delete_user(user_id)
                 print(f"Successfully deleted user from Supabase auth: {user_id}")
+                log_user_activity(
+                    user_id=user_id,
+                    action="DELETE",
+                    details="User permanently deleted from database and Supabase auth.",
+                    resource=f"User {user_id}",
+                    status="success"
+                )
             except Exception as supabase_error:
+                log_user_activity(
+                    user_id=user_id,
+                    action="DELETE",
+                    details=f"User deleted from database but failed to delete from Supabase auth; Error: {str(supabase_error)}",
+                    resource=f"User {user_id}",
+                    status="partial_success"
+                )
                 print(f"Warning: Failed to delete user from Supabase auth: {str(supabase_error)}")
                 # Continue execution - database deletion was successful
             
@@ -310,6 +406,13 @@ def delete_user(request, user_id):
             
     except Exception as e:
         print(f"Error deleting user {user_id}: {str(e)}")
+        log_user_activity(
+            user_id=user_id,
+            action="DELETE",
+            details=f"User permanent deletion failed: {str(e)}",
+            resource=f"User {user_id}",
+            status="failed"
+        )
         return JsonResponse({"error": str(e)}, status=500)
     # Log the deletion even
     print(f"User {user_id} deleted permanently")

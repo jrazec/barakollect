@@ -8,8 +8,9 @@ from django.core.paginator import Paginator
 import uuid
 import json
 import random
+from services.activity_logger import log_user_activity
 from services.supabase_service import supabase
-from models.models import Annotation, User, UserImage, BeanDetection, Prediction, ExtractedFeature,UserRole, Location
+from models.models import ActivityLog, Annotation, User, UserImage, BeanDetection, Prediction, ExtractedFeature,UserRole, Location
 from models.models import Image as ImageBucket
 
 from rest_framework.decorators import api_view, parser_classes
@@ -590,6 +591,16 @@ def process_bean(request):
                     pass
             
             results.append(image_result)
+
+            # ACTIVITY LOG
+            if save_to_db and user_id:
+                log_user_activity(
+                    user_id=user_id,
+                    action="UPLOAD",
+                    details=f"Processed image {image_id} with {len(all_beans)} beans detected",
+                    resource=ImageBucket.objects.filter(id=image_id).first().image_url.split("/")[-1] if ImageBucket.objects.filter(id=image_id).exists() else None,
+                status="success"
+                )
             
         except Exception as e:
             results.append({
@@ -597,6 +608,15 @@ def process_bean(request):
                 "error": f"Processing failed: {str(e)}",
                 "beans": []
             })
+            # ACTIVITY LOG for failure
+
+            log_user_activity(
+                    user_id=user_id,
+                    action="UPLOAD",
+                    details=f"Failed to process image: {str(e)}",
+                    resource=None,
+                    status="failed"
+                )
     
     # Step 9: Return segregated results
     return Response({
@@ -613,6 +633,7 @@ def process_single_bean(request):
         file_obj = request.data['image']
     except KeyError:
         return Response({"error": "No image provided"}, status=400)
+    user_id = request.data.get('user_id', None)
 
     # Convert uploaded image → OpenCV format
     img = Image.open(file_obj)
@@ -652,6 +673,14 @@ def process_single_bean(request):
     cv2.imwrite(filepath2, img_debug)
 
     img_debug_str = f"{base_url}{settings.MEDIA_URL}processed/debug_{filename}"
+
+    log_user_activity(
+        user_id=user_id,
+        action="UPLOAD",
+        details=f"Uploaded and processed image {filename}",
+        resource=img_str,
+        status="success"
+    )
 
     return Response({
         "features": features,
@@ -1519,6 +1548,23 @@ def validate_beans(request):
             )
             print(f"DEBUG: Updated Annotation {annotations_id['id']} with annotator info")
             
+        # Activity Log here
+        activity_description = f"Bean ID {bean_id} in Image ID {image_id} validated as '{bean_type}'"
+        if annotator_info:
+            activity_description += f" by {annotator_info['name']} ({annotator_info['role']})"
+        if not annotator_info['id']:
+            annotator_info['id'] = "admin"  # Ensure user_id is None if not provided
+        
+        # LOG UPDATE VALIDATION ACTIVITY
+        log_user_activity(
+            user_id=annotator_info['id'] if annotator_info and annotator_info.get('id') else None,
+            action="UPDATE",
+            details=activity_description,
+            resource=ImageBucket.objects.filter(id=image_id).first().image_url.split("/")[-1] if ImageBucket.objects.filter(id=image_id).exists() else None,
+            status="success"
+        )
+
+        print(f"DEBUG: Created activity log entry")
         # Return response true
         return Response({
             "status": "success", 
@@ -1530,6 +1576,14 @@ def validate_beans(request):
         print(f"DEBUG: Error during validation update: {str(e)}")
         import traceback
         print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
+        # LOG UPDATE VALIDATION ACTIVITY
+        log_user_activity(
+            user_id=annotator_info['id'] if annotator_info and annotator_info.get('id') else None,
+            action="UPDATE",
+            details=f"Failed to validate Bean ID {bean_id} in Image ID {image_id}: {str(e)}",
+            resource=ImageBucket.objects.filter(id=image_id).first().image_url.split("/")[-1] if ImageBucket.objects.filter(id=image_id).exists() else None,
+            status="failed"
+        )
         return Response({"error": str(e)}, status=500)
     
 
@@ -1558,5 +1612,23 @@ def delete_bean(request,image_id):
         # Delete Image as it is cascade delete
         image.delete()
         print(f"DEBUG: Successfully deleted image record from database")
-        
+
+        # Log deletion activity
+        if image:
+            log_user_activity(
+                user_id=request.user.id if request.user and request.user.is_authenticated else None,
+                action="DELETE",
+                details=f"Deleted Image ID {image_id}",
+                resource=ImageBucket.objects.filter(id=image_id).first().image_url.split("/")[-1] if ImageBucket.objects.filter(id=image_id).exists() else None,
+                status="success"
+            )
+        else:
+            log_user_activity(
+                user_id=request.user.id if request.user and request.user.is_authenticated else None,
+                action="DELETE",
+                details=f"Failed to delete Image ID {image_id} - not found after deletion attempt",
+                resource=None,
+                status="failed"
+        )
+        print(f"DEBUG: Created activity log entry for deletion")
     return Response({"status": "success"}, status=200)
