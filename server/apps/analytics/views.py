@@ -779,6 +779,114 @@ def render_admin_dashboard(request):
             boxplot_features_by_farm['convex_area'][farm_name].append(float(row[10]) if row[10] is not None else 0)
             boxplot_features_by_farm['equivalent_diameter'][farm_name].append(float(row[11]) if row[11] is not None else 0)
             
+        # Calculate size thresholds based on area
+        cursor.execute("""
+            SELECT 
+                PERCENTILE_CONT(0.33) WITHIN GROUP (ORDER BY ef.area) as p33_area,
+                PERCENTILE_CONT(0.67) WITHIN GROUP (ORDER BY ef.area) as p67_area
+            FROM extracted_features ef
+            JOIN predictions p ON ef.prediction_id = p.id
+            JOIN images ON p.image_id = images.id
+            JOIN users ON images.location_id = users.location_id
+            JOIN user_roles ON users.id = user_roles.user_id
+            JOIN roles ON user_roles.role_id = roles.id
+        """)
+        thresholds = cursor.fetchone()
+        p33_area = thresholds[0] if thresholds and thresholds[0] else 200.0
+        p67_area = thresholds[1] if thresholds and thresholds[1] else 400.0
+
+        # Shape-Size Distribution Query
+        # Classify beans by shape (Round vs Teardrop) and size (Small, Medium, Large)
+        # Grouped by farm for detailed analysis
+        # Shape formula: aspect_ratio < 1.3 AND eccentricity < 0.6 AND extent > 0.75 = Round
+        # Size classification based on area
+        shape_size_dist_query = """
+        SELECT 
+            l.name as farm_name,
+            CASE 
+                WHEN ef.area < %s THEN 'Small'
+                WHEN ef.area BETWEEN %s AND %s THEN 'Medium'
+                ELSE 'Large'
+            END AS size_category,
+            CASE 
+                WHEN (ef.major_axis_length / NULLIF(ef.minor_axis_length, 0)) < 1.5 
+                     AND ef.eccentricity < 0.8 
+                     AND ef.extent > 0.75 THEN 'Round'
+                ELSE 'Teardrop'
+            END AS shape_category,
+            COUNT(*) as count
+        FROM extracted_features ef
+        JOIN predictions p ON ef.prediction_id = p.id
+        JOIN images ON p.image_id = images.id
+        JOIN locations l ON images.location_id = l.id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        WHERE ef.major_axis_length IS NOT NULL 
+          AND ef.minor_axis_length IS NOT NULL 
+          AND ef.minor_axis_length > 0
+          AND ef.eccentricity IS NOT NULL
+          AND ef.extent IS NOT NULL
+          AND ef.area IS NOT NULL
+        """
+        
+        if location_id or role or year:
+            conditions = []
+            params = [p33_area, p33_area, p67_area]
+            if location_id:
+                conditions.append(" AND images.location_id = %s")
+                params.append(location_id)
+            if role:
+                conditions.append(" AND roles.name = %s")
+                params.append(role)
+            if year:
+                conditions.append(" AND EXTRACT(YEAR FROM images.upload_date) = %s")
+                params.append(year)
+            shape_size_dist_query += "".join(conditions)
+            shape_size_dist_query += " GROUP BY l.name, size_category, shape_category ORDER BY l.name, size_category, shape_category"
+            cursor.execute(shape_size_dist_query, params)
+        else:
+            shape_size_dist_query += " GROUP BY l.name, size_category, shape_category ORDER BY l.name, size_category, shape_category"
+            cursor.execute(shape_size_dist_query, [p33_area, p33_area, p67_area])
+        
+        shape_size_results = cursor.fetchall()
+        
+        # Structure data for grouped bar chart with farm filtering
+        # Format: { 'Farm A': [{ size: 'Small', Round: count, Teardrop: count }, ...], 'Overall': [...] }
+        shape_size_by_farm = {}
+        overall_distribution = {}
+        
+        for farm_name, size, shape, count in shape_size_results:
+            # Per-farm data
+            if farm_name not in shape_size_by_farm:
+                shape_size_by_farm[farm_name] = {}
+            if size not in shape_size_by_farm[farm_name]:
+                shape_size_by_farm[farm_name][size] = {'size': size, 'Round': 0, 'Teardrop': 0}
+            shape_size_by_farm[farm_name][size][shape] = int(count)
+            
+            # Overall aggregated data
+            if size not in overall_distribution:
+                overall_distribution[size] = {'size': size, 'Round': 0, 'Teardrop': 0}
+            overall_distribution[size][shape] += int(count)
+        
+        # Convert to lists and ensure proper ordering
+        size_order = {'Small': 1, 'Medium': 2, 'Large': 3}
+        
+        shape_size_dist_by_farm = {}
+        for farm_name, sizes in shape_size_by_farm.items():
+            shape_size_dist_by_farm[farm_name] = sorted(
+                sizes.values(), 
+                key=lambda x: size_order.get(x['size'], 4)
+            )
+        
+        # Add overall distribution
+        shape_size_dist_by_farm['Overall'] = sorted(
+            overall_distribution.values(), 
+            key=lambda x: size_order.get(x['size'], 4)
+        )
+        
+        # Get list of farm names for filter
+        farm_names = sorted([farm for farm in shape_size_by_farm.keys()])
 
         # Data to be returned
         data = {
@@ -798,7 +906,15 @@ def render_admin_dashboard(request):
             "min_confidence": float(confidence_stats[1]) if confidence_stats[1] is not None else 0,
             "max_confidence": float(confidence_stats[2]) if confidence_stats[2] is not None else 0,
             "feature_stats": feature_stats_data,
-            "boxplot_features": boxplot_features_by_farm
+            "boxplot_features": boxplot_features_by_farm,
+            "shape_size_distribution": shape_size_dist_by_farm,
+            "shape_size_farm_names": farm_names,
+            "size_thresholds": {
+                "small_max": round(p33_area, 2),
+                "medium_min": round(p33_area, 2),
+                "medium_max": round(p67_area, 2),
+                "large_min": round(p67_area, 2)
+            }
         }
 
 

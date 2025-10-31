@@ -138,6 +138,20 @@ export interface AdminStats {
       [farmName: string]: number[];
     };
   };
+  shape_size_distribution: {
+    [farmName: string]: Array<{
+      size: string;
+      Round: number;
+      Teardrop: number;
+    }>;
+  };
+  shape_size_farm_names: string[];
+  size_thresholds: {
+    small_max: number;
+    medium_min: number;
+    medium_max: number;
+    large_min: number;
+  };
 }
 
 export interface UserManagementUser {

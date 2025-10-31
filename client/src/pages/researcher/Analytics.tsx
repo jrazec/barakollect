@@ -6,6 +6,7 @@ import CorrelationMatrixChart from '@/components/admin/CorrelationMatrixChart';
 import AdminService from '@/services/adminService';
 import type { AdminStats } from '@/interfaces/global';
 import BoxPlotChart from '@/components/admin/BoxPlotChart';
+import ShapeSizeDistribution from '@/components/admin/ShapeSizeDistribution';
 
 
 const Analytics: React.FC = () => {
@@ -109,6 +110,44 @@ const Analytics: React.FC = () => {
             <div className="flex items-center justify-center h-[400px] text-gray-500">
               <div className="text-center">
                 <p>No feature data available for outlier analysis</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Shape-Size Distribution Section */}
+      <div className="mt-6 mb-6">
+        {loading ? (
+          <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+            <div className="flex items-center justify-center h-[500px]">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
+                <p className="text-gray-600 font-accent">Loading shape analysis...</p>
+              </div>
+            </div>
+          </div>
+        ) : adminStats && adminStats.shape_size_distribution && Object.keys(adminStats.shape_size_distribution).length > 0 ? (
+          <CardComponent
+            item={{
+              title: "Bean Shape & Size Distribution",
+              subtitle: "Comparison of round vs teardrop beans across size categories",
+              content: (
+                <div className="w-full">
+                  <ShapeSizeDistribution 
+                    data={adminStats.shape_size_distribution}
+                    farmNames={adminStats.shape_size_farm_names || []}
+                    thresholds={adminStats.size_thresholds}
+                  />
+                </div>
+              )
+            }}
+          />
+        ) : (
+          <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+            <div className="flex items-center justify-center h-[400px] text-gray-500">
+              <div className="text-center">
+                <p>No shape-size distribution data available</p>
               </div>
             </div>
           </div>
