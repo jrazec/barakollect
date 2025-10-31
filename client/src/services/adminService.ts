@@ -906,6 +906,38 @@ export class AdminService {
     }
   }
 
+  static async deleteAllActivityLogs(): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_HOST_BE}/api/activity/logs/delete-all/`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error("Error deleting all activity logs:", error);
+      throw error;
+    }
+  }
+
+  static async deleteActivityLog(logId: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_HOST_BE}/api/activity/logs/${logId}/`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error("Error deleting activity log:", error);
+      throw error;
+    }
+  }
+
   // Admin Image Management Methods
   static async getImagesByStatus(
     status?: "verified" | "pending",

@@ -23,7 +23,7 @@ import Settings from "@/pages/admin/Settings";
 import AdminBeansGallery from "../components/AdminBeansGallery";
 import AdminBeansMetadata from "@/components/AdminBeansMetadata";
 import AdminFarmMap from "@/pages/admin/AdminFarmMap";
-import ResearcherAnnotations from "@/components/ResearcherAnnotations";
+
 import TestEnhancedGallery from "@/pages/TestEnhancedGallery";
 import Annotations from "@/pages/researcher/Annotations";
 
