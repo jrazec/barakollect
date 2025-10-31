@@ -133,6 +133,11 @@ export interface AdminStats {
       mode: Array<{ farm: string; value: number }>;
     };
   };
+  boxplot_features: {
+    [featureName: string]: {
+      [farmName: string]: number[];
+    };
+  };
 }
 
 export interface UserManagementUser {

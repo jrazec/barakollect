@@ -1,18 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardHeader from '../../components/DashboardHeader';
-import TabComponent from '../../components/TabComponent';
-import AnalysisCharts from './sections/AnalysisCharts';
 import CardComponent from '@/components/CardComponent';
 import CorrelationMatrixChart from '@/components/admin/CorrelationMatrixChart';
 import AdminService from '@/services/adminService';
 import type { AdminStats } from '@/interfaces/global';
+import BoxPlotChart from '@/components/admin/BoxPlotChart';
 
 
 const Analytics: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('Morphological');
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [boxPlotData, setBoxPlotData] = useState<Array<{ 
+    group: string; 
+    farms: string[];
+    data: Array<{ farm: string; value: number }>;
+  }>>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -20,6 +23,30 @@ const Analytics: React.FC = () => {
         setLoading(true);
         const stats = await AdminService.getAdminStats();
         setAdminStats(stats);
+        
+        // Prepare boxplot data from boxplot_features
+        if (stats.boxplot_features) {
+          const features = Object.keys(stats.boxplot_features);
+          const boxData = features.map(featureName => {
+            const farms = stats.boxplot_features[featureName];
+            const farmNames = Object.keys(farms);
+            
+            // Flatten all farm values into single array with farm labels
+            const allValues: Array<{ farm: string; value: number }> = [];
+            farmNames.forEach(farmName => {
+              farms[farmName].forEach(value => {
+                allValues.push({ farm: farmName, value });
+              });
+            });
+            
+            return {
+              group: featureName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              farms: farmNames,
+              data: allValues
+            };
+          });
+          setBoxPlotData(boxData);
+        }
       } catch (err) {
         console.error('Error fetching analytics data:', err);
       } finally {
@@ -50,6 +77,43 @@ const Analytics: React.FC = () => {
 
       {/* Chart Section */}
       {/* <AnalysisCharts activeTab={activeTab} /> */}
+
+      {/* Outlier Detection - Boxplots Section */}
+      <div className="mt-6 mb-6">
+        {loading ? (
+          <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+            <div className="flex items-center justify-center h-[500px]">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
+                <p className="text-gray-600 font-accent">Loading outlier analysis...</p>
+              </div>
+            </div>
+          </div>
+        ) : boxPlotData && boxPlotData.length > 0 ? (
+          <CardComponent
+            item={{
+              title: "Outlier Detection - Bean Feature Analysis",
+              subtitle: "Boxplot distribution showing quartiles, whiskers, and outliers",
+              content: (
+                <div className="w-full">
+                  <BoxPlotChart 
+                    data={boxPlotData}
+                    yAxisLabel="Feature Value"
+                  />
+                </div>
+              )
+            }}
+          />
+        ) : (
+          <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+            <div className="flex items-center justify-center h-[400px] text-gray-500">
+              <div className="text-center">
+                <p>No feature data available for outlier analysis</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Correlation Matrix Section */}
       <div className="mt-6 mb-6">

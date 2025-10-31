@@ -710,6 +710,74 @@ def render_admin_dashboard(request):
 
         hist_aspect = make_histogram(aspect_ratios, bin_size=0.1)
         hist_roundness = make_histogram(roundnesses, bin_size=0.05)
+        
+        # Raw feature data for boxplot analysis (all records) grouped by farm
+        raw_features_query = """
+        SELECT images.location_id, l.name as farm_name,
+               ef.area, ef.perimeter, ef.major_axis_length, ef.minor_axis_length, 
+               ef.extent, ef.eccentricity, ef.solidity, ef.mean_intensity,
+               ef.convex_area, ef.equivalent_diameter
+        FROM extracted_features ef 
+        JOIN predictions p ON ef.prediction_id = p.id
+        JOIN images ON p.image_id = images.id
+        JOIN locations l ON images.location_id = l.id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        """
+        
+        if location_id or role or year:
+            raw_features_query += " WHERE"
+            conditions = []
+            params = []
+            if location_id:
+                conditions.append(" images.location_id = %s")
+                params.append(location_id)
+            if role:
+                conditions.append(" roles.name = %s")
+                params.append(role)
+            if year:
+                conditions.append(" EXTRACT(YEAR FROM images.upload_date) = %s")
+                params.append(year)
+            raw_features_query += " AND".join(conditions)
+            cursor.execute(raw_features_query, params)
+        else:
+            cursor.execute(raw_features_query)
+        
+        raw_features = cursor.fetchall()
+        
+        # Structure raw features for boxplot grouped by farm
+        # Format: { 'area': { 'Farm 1': [values], 'Farm 2': [values] }, ... }
+        boxplot_features_by_farm = {}
+        feature_names = [
+            'area', 'perimeter', 'major_axis_length', 'minor_axis_length',
+            'extent', 'eccentricity', 'solidity', 'mean_intensity',
+            'convex_area', 'equivalent_diameter'
+        ]
+        
+        for feature in feature_names:
+            boxplot_features_by_farm[feature] = {}
+        
+        for row in raw_features:
+            farm_id = row[0]
+            farm_name = row[1] if row[1] else f"Farm {farm_id}"
+            
+            # Initialize farm arrays if not exists
+            for feature in feature_names:
+                if farm_name not in boxplot_features_by_farm[feature]:
+                    boxplot_features_by_farm[feature][farm_name] = []
+            
+            # Add values to respective feature arrays (indices 2-11)
+            boxplot_features_by_farm['area'][farm_name].append(float(row[2]) if row[2] is not None else 0)
+            boxplot_features_by_farm['perimeter'][farm_name].append(float(row[3]) if row[3] is not None else 0)
+            boxplot_features_by_farm['major_axis_length'][farm_name].append(float(row[4]) if row[4] is not None else 0)
+            boxplot_features_by_farm['minor_axis_length'][farm_name].append(float(row[5]) if row[5] is not None else 0)
+            boxplot_features_by_farm['extent'][farm_name].append(float(row[6]) if row[6] is not None else 0)
+            boxplot_features_by_farm['eccentricity'][farm_name].append(float(row[7]) if row[7] is not None else 0)
+            boxplot_features_by_farm['solidity'][farm_name].append(float(row[8]) if row[8] is not None else 0)
+            boxplot_features_by_farm['mean_intensity'][farm_name].append(float(row[9]) if row[9] is not None else 0)
+            boxplot_features_by_farm['convex_area'][farm_name].append(float(row[10]) if row[10] is not None else 0)
+            boxplot_features_by_farm['equivalent_diameter'][farm_name].append(float(row[11]) if row[11] is not None else 0)
             
 
         # Data to be returned
@@ -729,7 +797,8 @@ def render_admin_dashboard(request):
             "avg_confidence": float(confidence_stats[0]) if confidence_stats[0] is not None else 0,
             "min_confidence": float(confidence_stats[1]) if confidence_stats[1] is not None else 0,
             "max_confidence": float(confidence_stats[2]) if confidence_stats[2] is not None else 0,
-            "feature_stats": feature_stats_data
+            "feature_stats": feature_stats_data,
+            "boxplot_features": boxplot_features_by_farm
         }
 
 
