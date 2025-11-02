@@ -128,33 +128,19 @@ export default function AdminDashboard() {
 
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {/* User Activity Chart */}
-          <div className="min-h-[400px]">
-            <CardComponent
-              item={{
-                title: "User Activity",
-                subtitle: "Monthly activity trends by role",
-                content: <UserActivityChart data={userActivity} />,
-                description: "Filter by role to view specific user activity patterns"
-              }}
+        {/* Bean Analytics Section */}
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="min-h-[500px]">
+            <BeanAnalyticsChart 
+              totalPredictions={adminStats.total_predictions}
+              avgConfidence={adminStats.avg_confidence}
+              minConfidence={adminStats.min_confidence}
+              maxConfidence={adminStats.max_confidence}
+              featureStats={adminStats.feature_stats}
             />
           </div>
-
-          {/* Bean Submissions Chart */}
-          <div className="min-h-[400px]">
-            <CardComponent
-              item={{
-                title: "Bean Submissions",
-                subtitle: "Submission statistics and status distribution",
-                content: <BeanSubmissionsChart data={beanSubmissions} />,
-                description: "View submissions by type and status with role filtering"
-              }}
-            />
-          </div>
-          
         </div>
+
         
         {/* Upload Statistics Grid */}
         <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -199,39 +185,9 @@ export default function AdminDashboard() {
           </div>
         </div>
         
-        {/* Bean Analytics Section */}
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <div className="min-h-[500px]">
-            <BeanAnalyticsChart 
-              totalPredictions={adminStats.total_predictions}
-              avgConfidence={adminStats.avg_confidence}
-              minConfidence={adminStats.min_confidence}
-              maxConfidence={adminStats.max_confidence}
-              featureStats={adminStats.feature_stats}
-            />
-          </div>
-        </div>
 
-        {/* User Logs and System Status */}
-        <div className="grid grid-cols-1 gap-4 sm:gap-6">
-          {/* User Logs */}
-          <div className="bg-[var(--parchment)] rounded-lg shadow p-4 sm:p-6 min-h-[500px]">
-            <UserLogsComponent data={userLogs} />
-          </div>
 
-          {/* System Status */}
-          <div className="bg-[var(--parchment)] rounded-lg shadow p-4 sm:p-6 min-h-[500px]">
-            <div className="mb-4">
-              <h3 className="text-lg font-main font-bold text-[var(--espresso-black)] mb-2">
-                System Status
-              </h3>
-              <p className="text-sm font-accent text-gray-600">
-                Monitor system health, payments, and storage
-              </p>
-            </div>
-            <SystemStatusComponent data={systemStatus} />
-          </div>
-        </div>
+     
       </div>
     </div>
   );
