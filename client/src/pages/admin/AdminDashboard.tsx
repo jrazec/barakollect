@@ -9,7 +9,8 @@ import SystemStatusComponent from '@/components/admin/SystemStatusComponent';
 import UploadStatisticsChart from '@/components/admin/UploadStatisticsChart';
 import CorrelationMatrixChart from '@/components/admin/CorrelationMatrixChart';
 import BeanAnalyticsChart from '@/components/admin/BeanAnalyticsChart';
-import AdminService from '@/services/adminService';
+import { useCachedAdminService } from '@/hooks/useCachedServices';
+import { useCache } from '@/contexts/CacheContext';
 import type { 
   AdminStats, 
   UserActivity, 
@@ -27,19 +28,22 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const cachedAdminService = useCachedAdminService();
+  const cache = useCache();
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Fetch all dashboard data in parallel
+        // Fetch all dashboard data in parallel with caching
         const [stats, activity, submissions, logs, status] = await Promise.all([
-          AdminService.getAdminStats(),
-          AdminService.getUserActivity(),
-          AdminService.getBeanSubmissions(),
-          AdminService.getUserLogs(),
-          AdminService.getSystemStatus()
+          cachedAdminService.getAdminStats(),
+          cachedAdminService.getUserActivity(),
+          cachedAdminService.getBeanSubmissions(),
+          cachedAdminService.getUserLogs(),
+          cachedAdminService.getSystemStatus()
         ]);
 
         setAdminStats(stats);
@@ -58,12 +62,45 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
+  // Force refresh function that clears cache
+  const handleRefresh = async () => {
+    cache.invalidatePattern('admin-stats:');
+    cache.invalidatePattern('user-activity:');
+    cache.invalidatePattern('bean-submissions:');
+    cache.invalidatePattern('user-logs:');
+    
+    setLoading(true);
+    try {
+      const [stats, activity, submissions, logs, status] = await Promise.all([
+        cachedAdminService.getAdminStats(),
+        cachedAdminService.getUserActivity(),
+        cachedAdminService.getBeanSubmissions(),
+        cachedAdminService.getUserLogs(),
+        cachedAdminService.getSystemStatus()
+      ]);
+
+      setAdminStats(stats);
+      setUserActivity(activity);
+      setBeanSubmissions(submissions);
+      setUserLogs(logs);
+      setSystemStatus(status);
+    } catch (err) {
+      console.error('Error refreshing dashboard data:', err);
+      setError('Failed to refresh dashboard data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-lvh bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
           <p className="text-gray-600 font-accent">Loading dashboard...</p>
+          <div className="mt-2 text-xs text-gray-500">
+            Cache stats: {cache.getStats().hitRate.toFixed(1)}% hit rate
+          </div>
         </div>
       </div>
     );
@@ -74,12 +111,20 @@ export default function AdminDashboard() {
       <div className="min-h-lvh bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
         <div className="text-center max-w-md">
           <p className="text-red-600 font-accent mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-[var(--arabica-brown)] text-[var(--parchment)] rounded-lg font-accent hover:bg-opacity-90 transition-colors"
-          >
-            Retry
-          </button>
+          <div className="space-x-2">
+            <button 
+              onClick={handleRefresh}
+              className="px-4 py-2 bg-[var(--arabica-brown)] text-[var(--parchment)] rounded-lg font-accent hover:bg-opacity-90 transition-colors"
+            >
+              Refresh
+            </button>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg font-accent hover:bg-opacity-90 transition-colors"
+            >
+              Hard Reload
+            </button>
+          </div>
         </div>
       </div>
     );

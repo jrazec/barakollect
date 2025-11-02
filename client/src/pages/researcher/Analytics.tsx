@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardHeader from '../../components/DashboardHeader';
 import CardComponent from '@/components/CardComponent';
 import CorrelationMatrixChart from '@/components/admin/CorrelationMatrixChart';
-import AdminService from '@/services/adminService';
+import { useCachedAdminService } from '@/hooks/useCachedServices';
 import type { AdminStats } from '@/interfaces/global';
 import BoxPlotChart from '@/components/admin/BoxPlotChart';
 import ShapeSizeDistribution from '@/components/admin/ShapeSizeDistribution';
@@ -18,11 +18,14 @@ const Analytics: React.FC = () => {
     data: Array<{ farm: string; value: number }>;
   }>>([]);
 
+  // Initialize cached services
+  const cachedAdminService = useCachedAdminService();
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const stats = await AdminService.getAdminStats();
+        const stats = await cachedAdminService.getAdminStats();
         setAdminStats(stats);
         
         // Prepare boxplot data from boxplot_features

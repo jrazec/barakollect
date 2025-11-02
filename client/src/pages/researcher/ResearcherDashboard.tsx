@@ -4,13 +4,16 @@ import DashboardHeader from '@/components/DashboardHeader';
 import StatCard from '@/components/StatCard';
 import ScatterRatioRoundnessChart from '@/components/admin/ScatterRatioRoundnessChart';
 import BeanAnalyticsChart from '@/components/admin/BeanAnalyticsChart';
-import AdminService from '@/services/adminService';
+import { useCachedAdminService } from '@/hooks/useCachedServices';
 import type { AdminStats } from '@/interfaces/global';
 
 const ResearcherDashboard: React.FC = () => {
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize cached services
+  const cachedAdminService = useCachedAdminService();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -19,7 +22,7 @@ const ResearcherDashboard: React.FC = () => {
         setError(null);
 
         // Fetch admin stats for analytics data
-        const stats = await AdminService.getAdminStats();
+        const stats = await cachedAdminService.getAdminStats();
         setAdminStats(stats);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);

@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, LayersControl } f
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import FarmViewModal from "../../../components/FarmViewModal";
-import { AdminService } from "../../../services/adminService";
+import { useCachedAdminService } from "../../../hooks/useCachedServices";
 
 // Fix Leaflet's default marker icons
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -45,6 +45,9 @@ const GeographicMapSection: React.FC = () => {
   const [showFarmViewModal, setShowFarmViewModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Initialize cached services
+  const cachedAdminService = useCachedAdminService();
+
   // Load farms on component mount
   useEffect(() => {
     loadFarms();
@@ -53,7 +56,7 @@ const GeographicMapSection: React.FC = () => {
   const loadFarms = async () => {
     try {
       setLoading(true);
-      const farmsData = await AdminService.getFarms();
+      const farmsData = await cachedAdminService.getFarms();
       // Only show farms with valid locations
       const validFarms = farmsData.filter(farm => farm.hasLocation && farm.lat && farm.lng);
       setFarms(validFarms);
@@ -67,7 +70,7 @@ const GeographicMapSection: React.FC = () => {
   const handleFarmClick = async (farmId: string) => {
     try {
       setSelectedFarmId(farmId);
-      const farmData = await AdminService.getFarmView(farmId);
+      const farmData = await cachedAdminService.getFarmView(farmId);
       if (farmData) {
         setFarmViewData(farmData);
         setShowFarmViewModal(true);

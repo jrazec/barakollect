@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AdminService } from '@/services/adminService';
+import { useCachedAdminService } from '@/hooks/useCachedServices';
+import { useCache } from '@/contexts/CacheContext';
 import type { AdminPredictedImage, AdminImageFilters, PaginationData } from '@/interfaces/global';
 import ImageDetailsModal from './ImageDetailsModal';
 import EnhancedImageDetailsModal from './EnhancedImageDetailsModal';
@@ -37,6 +38,9 @@ const AdminBeansMetadata: React.FC = () => {
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const [uploadType, setUploadType] = useState<'csv' | 'zip' | null>(null);
 
+    const cachedAdminService = useCachedAdminService();
+    const cache = useCache();
+
     // Load data on pagination change only
     useEffect(() => {
         loadImages();
@@ -66,7 +70,7 @@ const AdminBeansMetadata: React.FC = () => {
             if (searchQueries.search_owner.trim()) searchParams.search_owner = searchQueries.search_owner.trim();
             if (searchQueries.search_image_id.trim()) searchParams.search_image_id = searchQueries.search_image_id.trim();
             
-            const result = await AdminService.getImagesByStatus(
+            const result = await cachedAdminService.getImagesByStatus(
                 status, 
                 filters, 
                 pagination.currentPage, 
@@ -85,7 +89,7 @@ const AdminBeansMetadata: React.FC = () => {
 
     const loadLocations = async () => {
         try {
-            const locations = await AdminService.getUniqueLocations();
+            const locations = await cachedAdminService.getUniqueLocations();
             setLocations(locations);
         } catch (error) {
             console.error('Error loading locations:', error);
@@ -137,7 +141,7 @@ const AdminBeansMetadata: React.FC = () => {
     const handleDeleteConfirm = async () => {
         if (imageToDelete) {
             try {
-                await AdminService.deleteImage(imageToDelete);
+                await cachedAdminService.deleteImage(imageToDelete);
                 // Refresh only the table data
                 await loadImages();
                 setShowDeleteModal(false);
@@ -316,7 +320,7 @@ const AdminBeansMetadata: React.FC = () => {
                 setUploadProgress(25);
                 
                 // Send CSV data (already processed as JSON) to upload-records endpoint
-                const result = await AdminService.uploadRecords(
+                const result = await cachedAdminService.uploadRecords(
                     uploadData, 
                     'csv', 
                     (progress) => setUploadProgress(progress)
@@ -337,7 +341,7 @@ const AdminBeansMetadata: React.FC = () => {
                     user_id: null // Add user context if available
                 };
                 
-                const result = await AdminService.uploadRecords(
+                const result = await cachedAdminService.uploadRecords(
                     uploadData, 
                     'zip', 
                     (progress) => setUploadProgress(progress)
@@ -382,7 +386,7 @@ const AdminBeansMetadata: React.FC = () => {
             if (searchQueries.search_image_id.trim()) searchParams.search_image_id = searchQueries.search_image_id.trim();
             
             // Get all images (use a large page size to get all records)
-            const result = await AdminService.getImagesByStatus(
+            const result = await cachedAdminService.getImagesByStatus(
                 status, 
                 filters, 
                 1, 
@@ -592,7 +596,7 @@ const AdminBeansMetadata: React.FC = () => {
 
     const handleSaveEdit = async (updatedImage: AdminPredictedImage) => {
         try {
-            await AdminService.editImage(updatedImage.id, updatedImage);
+            await cachedAdminService.editImage(updatedImage.id, updatedImage);
             // Refresh only the table data
             await loadImages();
             setIsModalOpen(false);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AnnotationService, type AnnotationImage } from '@/services/annotationService';
+import { type AnnotationImage } from '@/services/annotationService';
+import { useCachedAnnotationService } from '@/hooks/useCachedServices';
 import type { PaginationData } from '@/interfaces/global';
 import EnhancedImageEditModal from '@/components/EnhancedImageEditModal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,6 +34,9 @@ const Annotations: React.FC = () => {
     // Folder filtering state
     const [folderFilter, setFolderFilter] = useState<'all' | 'validated' | 'pending'>('all');
 
+    // Initialize cached services
+    const cachedAnnotationService = useCachedAnnotationService();
+
     // Load annotations data
     useEffect(() => {
         loadAnnotations();
@@ -41,7 +45,7 @@ const Annotations: React.FC = () => {
     const loadAnnotations = async () => {
         setIsLoading(true);
         try {
-            const result = await AnnotationService.getAnnotations(
+            const result = await cachedAnnotationService.getAnnotations(
                 pagination.currentPage,
                 pagination.itemsPerPage
             );
@@ -77,7 +81,7 @@ const Annotations: React.FC = () => {
                 role: role
             };
 
-            await AnnotationService.validateBean({
+            await cachedAnnotationService.validateBean({
                 bean_id: beanId,
                 bean_type: updatedBean.bean_type,
                 features: updatedBean.features,

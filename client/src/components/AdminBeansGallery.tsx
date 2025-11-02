@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AdminService } from '@/services/adminService';
+import { useCachedAdminService } from '@/hooks/useCachedServices';
 import type { AdminPredictedImage, AdminImageFilters, PaginationData } from '@/interfaces/global';
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -18,6 +18,9 @@ const AdminBeansGallery: React.FC = () => {
     const [locations, setLocations] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Initialize cached services
+    const cachedAdminService = useCachedAdminService();
+
     // Fetch data
     useEffect(() => {
         loadImages();
@@ -28,7 +31,7 @@ const AdminBeansGallery: React.FC = () => {
         setIsLoading(true);
         try {
             const status = statusFilter === 'all' ? undefined : statusFilter;
-            const result = await AdminService.getImagesByStatus(
+            const result = await cachedAdminService.getImagesByStatus(
                 status, 
                 filters, 
                 pagination.currentPage, 
@@ -45,7 +48,7 @@ const AdminBeansGallery: React.FC = () => {
 
     const loadLocations = async () => {
         try {
-            const locations = await AdminService.getUniqueLocations();
+            const locations = await cachedAdminService.getUniqueLocations();
             setLocations(locations);
         } catch (error) {
             console.error('Error loading locations:', error);
@@ -64,7 +67,7 @@ const AdminBeansGallery: React.FC = () => {
     const handleDelete = async (id: string) => {
         if (window.confirm('Are you sure you want to delete this image?')) {
             try {
-                await AdminService.deleteImage(id);
+                await cachedAdminService.deleteImage(id);
                 loadImages(); // Refresh the list
             } catch (error) {
                 console.error('Error deleting image:', error);
