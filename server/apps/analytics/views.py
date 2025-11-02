@@ -509,6 +509,7 @@ def render_admin_dashboard(request):
         # Feature statistics per farm
         features_stats_query = """
         SELECT images.location_id,
+               l.name as farm_name,
                -- Area statistics
                AVG(ef.area) as area_mean,
                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.area) as area_median,
@@ -552,6 +553,7 @@ def render_admin_dashboard(request):
         FROM extracted_features ef
         JOIN predictions p ON ef.prediction_id = p.id
         JOIN images ON p.image_id = images.id
+        JOIN locations l ON images.location_id = l.id
         JOIN users ON images.location_id = users.location_id
         JOIN user_roles ON users.id = user_roles.user_id
         JOIN roles ON user_roles.role_id = roles.id
@@ -584,14 +586,14 @@ def render_admin_dashboard(request):
             total_predictions = cursor.fetchone()
             cursor.execute(confidence_stats_query, params)
             confidence_stats = cursor.fetchone()
-            cursor.execute(features_stats_query + " GROUP BY images.location_id", params)
+            cursor.execute(features_stats_query + " GROUP BY images.location_id, l.name", params)
             features_stats = cursor.fetchall()
         else:
             cursor.execute(total_predictions_query)
             total_predictions = cursor.fetchone()
             cursor.execute(confidence_stats_query)
             confidence_stats = cursor.fetchone()
-            cursor.execute(features_stats_query + " GROUP BY images.location_id")
+            cursor.execute(features_stats_query + " GROUP BY images.location_id, l.name")
             features_stats = cursor.fetchall()
         
         # Process feature statistics data
@@ -611,21 +613,22 @@ def render_admin_dashboard(request):
         
         for row in features_stats:
             location_id_stats = row[0]
+            farm_name = row[1] if row[1] else f'Farm {location_id_stats}'
             for i, feature in enumerate(feature_names):
-                mean_idx = 1 + (i * 3)
-                median_idx = 2 + (i * 3)
-                mode_idx = 3 + (i * 3)
+                mean_idx = 2 + (i * 3)
+                median_idx = 3 + (i * 3)
+                mode_idx = 4 + (i * 3)
                 
                 feature_stats_data[feature]['mean'].append({
-                    'farm': f'Farm {location_id_stats}',
+                    'farm': farm_name,
                     'value': float(row[mean_idx]) if row[mean_idx] is not None else 0
                 })
                 feature_stats_data[feature]['median'].append({
-                    'farm': f'Farm {location_id_stats}',
+                    'farm': farm_name,
                     'value': float(row[median_idx]) if row[median_idx] is not None else 0
                 })
                 feature_stats_data[feature]['mode'].append({
-                    'farm': f'Farm {location_id_stats}',
+                    'farm': farm_name,
                     'value': float(row[mode_idx]) if row[mode_idx] is not None else 0
                 })
 
