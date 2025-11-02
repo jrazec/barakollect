@@ -8,6 +8,7 @@ from django.core.paginator import Paginator
 import uuid
 import json
 import random
+import traceback
 from services.activity_logger import log_user_activity
 from services.supabase_service import supabase
 from models.models import ActivityLog, Annotation, User, UserImage, BeanDetection, Prediction, ExtractedFeature,UserRole, Location
@@ -22,6 +23,8 @@ import cv2
 import numpy as np
 from PIL import Image
 import os
+import zipfile
+from io import BytesIO
 from django.conf import settings
 
 
@@ -1632,3 +1635,202 @@ def delete_bean(request,image_id):
         )
         print(f"DEBUG: Created activity log entry for deletion")
     return Response({"status": "success"}, status=200)
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def upload_images(request):
+    """
+    Handle ZIP file upload and extract images to Supabase bucket Beans/uploads/
+    """
+    try:
+        print("DEBUG: Starting upload_images view")
+        
+        return Response({
+            "status": "success"
+        }, status=201)
+        
+    except Exception as e:
+        print(f"DEBUG: Error in upload_images: {str(e)}")
+        print(f"DEBUG: Full traceback: {traceback.format_exc()}")
+        return Response({"error": f"Upload failed: {str(e)}"}, status=500)
+
+
+@api_view(['POST'])
+def upload_records(request):
+    """
+    Handle CSV data (already converted to JSON in frontend) and save to database
+    Expected format matches the structure from get_all_beans function
+    """
+    try:
+        print("DEBUG: Starting upload_records view")
+        
+        # Get JSON data from request
+        records_data = request.data.get('records')
+        if not records_data:
+            return Response({"error": "No records data provided"}, status=400)
+        
+        # Get optional user_id for activity logging
+        user_id = request.data.get('user_id')
+        
+        print(f"DEBUG: Processing {len(records_data)} records")
+        
+        created_records = []
+        errors = []
+        
+        with transaction.atomic():
+            for record_index, record in enumerate(records_data):
+                try:
+                    print(f"DEBUG: Processing record {record_index + 1}")
+                    
+                    # Extract required fields
+                    user_id_record = record.get('userId')
+                    image_url = record.get('image_url')
+                    location_name = record.get('locationName')
+                    bean_type = record.get('bean_type', 'Unknown')
+                    is_validated = record.get('is_validated', False)
+                    
+                    # Extract morphological features (nested structure)
+                    features_data = record.get('features', {})
+                    if not features_data:
+                        # Try to get from prediction.features if nested
+                        prediction_data = record.get('prediction', {})
+                        features_data = prediction_data.get('features', {})
+                    
+                    # Validate required fields
+                    if not user_id_record:
+                        errors.append(f"Record {record_index + 1}: Missing user_id")
+                        continue
+                    
+                    if not image_url:
+                        errors.append(f"Record {record_index + 1}: Missing image_url")
+                        continue
+                    
+                    # Get or create user (basic validation)
+                    try:
+                        user = User.objects.get(id=user_id_record)
+                    except User.DoesNotExist:
+                        errors.append(f"Record {record_index + 1}: User with ID {user_id_record} not found")
+                        continue
+                    
+                    # Get or create location
+                    location = None
+                    if location_name:
+                        location, created = Location.objects.get_or_create(
+                            name=location_name,
+                            defaults={'description': f'Auto-created from upload: {location_name}'}
+                        )
+                    
+                    # Create Image record
+                    image = ImageBucket.objects.create(
+                        image_url=image_url,
+                        upload_date=timezone.now()
+                    )
+                    
+                    # Create UserImage relationship
+                    user_image = UserImage.objects.create(
+                        user=user,
+                        image=image,
+                        is_deleted=False
+                    )
+                    
+                    # Create Prediction record
+                    prediction = Prediction.objects.create(
+                        image=image,
+                        predicted_label={
+                            'bean_type': bean_type,
+                            'confidence': record.get('confidence', 0.8)
+                        },
+                        confidence=record.get('confidence', 0.8)
+                    )
+                    
+                    # Create ExtractedFeature record if features are provided
+                    extracted_feature = None
+                    if features_data:
+                        extracted_feature = ExtractedFeature.objects.create(
+                            prediction=prediction,
+                            area=features_data.get('area_mm2', 0.0),
+                            perimeter=features_data.get('perimeter_mm', 0.0),
+                            major_axis_length=features_data.get('major_axis_length_mm', 0.0),
+                            minor_axis_length=features_data.get('minor_axis_length_mm', 0.0),
+                            extent=features_data.get('extent', 0.0),
+                            eccentricity=features_data.get('eccentricity', 0.0),
+                            convex_area=features_data.get('convex_area', 0.0),
+                            solidity=features_data.get('solidity', 0.0),
+                            mean_intensity=features_data.get('mean_intensity', 0.0),
+                            equivalent_diameter=features_data.get('equivalent_diameter_mm', 0.0)
+                        )
+                    
+                    # Create BeanDetection record if bean detection data is provided
+                    bean_detection_data = record.get('bean_detection', {})
+                    if bean_detection_data or extracted_feature:
+                        bbox = bean_detection_data.get('bbox', [0, 0, 0, 0])
+                        
+                        bean_detection = BeanDetection.objects.create(
+                            extracted_features=extracted_feature,
+                            bean_id=bean_detection_data.get('bean_id', 1),
+                            length_mm=bean_detection_data.get('length_mm', 0.0),
+                            width_mm=bean_detection_data.get('width_mm', 0.0),
+                            bbox_x=bbox[0] if len(bbox) >= 1 else 0,
+                            bbox_y=bbox[1] if len(bbox) >= 2 else 0,
+                            bbox_width=bbox[2] if len(bbox) >= 3 else 0,
+                            bbox_height=bbox[3] if len(bbox) >= 4 else 0,
+                            comment=bean_detection_data.get('comment', ''),
+                            created_at=timezone.now()
+                        )
+                    
+                    # Create Annotation record if validation data is provided
+                    if is_validated:
+                        annotation = Annotation.objects.create(
+                            image=image,
+                            label={
+                                'bean_type': bean_type,
+                                'is_validated': True,
+                                'bean_number': bean_detection_data.get('bean_id', 1)
+                            },
+                            annotated_at=timezone.now()
+                        )
+                    
+                    created_records.append({
+                        'image_id': image.id,
+                        'user_id': user.id,
+                        'bean_type': bean_type,
+                        'is_validated': is_validated
+                    })
+                    
+                    print(f"DEBUG: Successfully created record {record_index + 1}")
+                    
+                except Exception as e:
+                    error_msg = f"Record {record_index + 1}: {str(e)}"
+                    errors.append(error_msg)
+                    print(f"DEBUG: Error processing record {record_index + 1}: {str(e)}")
+                    continue
+        
+        # Log activity
+        if created_records:
+            log_user_activity(
+                user_id=user_id,
+                action="UPLOAD",
+                details=f"Uploaded {len(created_records)} records via CSV import",
+                resource="CSV upload",
+                status="success" if not errors else "partial"
+            )
+        
+        # Prepare response
+        response_data = {
+            "message": f"Processing completed",
+            "created_count": len(created_records),
+            "error_count": len(errors),
+            "created_records": created_records
+        }
+        
+        if errors:
+            response_data["errors"] = errors
+            return Response(response_data, status=206)  # Partial success
+        else:
+            return Response(response_data, status=201)  # Full success
+            
+    except Exception as e:
+        print(f"DEBUG: Error in upload_records: {str(e)}")
+        print(f"DEBUG: Full traceback: {traceback.format_exc()}")
+        return Response({"error": f"Upload failed: {str(e)}"}, status=500)

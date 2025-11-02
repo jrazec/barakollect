@@ -1223,6 +1223,93 @@ export class AdminService {
       throw error;
     }
   }
+
+  // Upload Records Methods
+  static async uploadRecords(
+    data: any,
+    type: 'csv' | 'zip',
+    onProgress?: (progress: number) => void
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      onProgress?.(10);
+      
+      if (type === 'csv') {
+        // For CSV data, send as JSON to upload-records endpoint
+        const response = await fetch(
+          `${import.meta.env.VITE_HOST_BE}/api/beans/upload-records/`,
+          {
+            method: "POST",
+            headers: { 
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              records: data,
+              user_id: null // Add user context if available
+            }),
+          }
+        );
+        
+        onProgress?.(75);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`CSV upload failed: ${errorData.error || response.statusText}`);
+        }
+        
+        onProgress?.(100);
+        
+        const result = await response.json();
+        return { 
+          success: true, 
+          message: `Successfully uploaded ${result.created_count} records` + 
+                  (result.error_count > 0 ? ` with ${result.error_count} errors` : '')
+        };
+        
+      } else if (type === 'zip') {
+        // For ZIP files, send to upload-images endpoint
+        const formData = new FormData();
+        
+        // Assuming data contains the file and user structure
+        if (data.file) {
+          formData.append('zip_file', data.file);
+        }
+        if (data.user_id) {
+          formData.append('user_id', data.user_id);
+        }
+        
+        onProgress?.(25);
+        
+        const response = await fetch(
+          `${import.meta.env.VITE_HOST_BE}/api/beans/upload-images/`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+        
+        onProgress?.(75);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`ZIP upload failed: ${errorData.error || response.statusText}`);
+        }
+        
+        onProgress?.(100);
+        
+        const result = await response.json();
+        return { 
+          success: true, 
+          message: result.message || `Successfully uploaded ${result.uploaded_count} images`
+        };
+      }
+      
+      throw new Error('Invalid upload type');
+      
+    } catch (error) {
+      console.error("Error uploading records:", error);
+      throw error;
+    }
+  }
 }
 
 export default AdminService;
