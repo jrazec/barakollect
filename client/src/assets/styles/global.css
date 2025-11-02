@@ -269,7 +269,7 @@ ul li a.active {
 .logoSection {
   height: 4rem;
   display: flex;
-  justify-content: space-between;
+  gap: 0.6rem;
   align-items: center;
 }
 .logo {
@@ -294,13 +294,14 @@ ul li a.active {
   position: absolute;
   padding: 0.7rem;
   background: var(--fadin-mocha);
-  left: 5rem;
+  left: 3.5rem;
   border-radius: 0.5rem;
   font-size: 0.8rem;
   display: none;
 }
 .headerNav {
   background-color: var(--white);
+  border-bottom: 1px solid rgba(120, 119, 119, 0.448);
 }
 
 .navigationBtn.active *{

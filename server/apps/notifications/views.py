@@ -11,11 +11,11 @@ def send_email_notification(user_email, title, message, notification_type):
     Temporary placeholder for email sending functionality.
     In the future, this will integrate with an email service like SendGrid, AWS SES, etc.
     """
-    print(f"[EMAIL PLACEHOLDER] Sending email to {user_email}")
-    print(f"Subject: {title}")
-    print(f"Message: {message}")
-    print(f"Type: {notification_type}")
-    print("---")
+    # print(f"[EMAIL PLACEHOLDER] Sending email to {user_email}")
+    # print(f"Subject: {title}")
+    # print(f"Message: {message}")
+    # print(f"Type: {notification_type}")
+    # print("---")
     # TODO: Implement actual email sending logic
     pass
 
@@ -45,8 +45,7 @@ def notification_list(request, user_id=None):
             timestamp: new Date().toISOString(),
             read: false,
             type: 'info',
-            
-
+        
     """
     for notification in notifications:
         data.append({
@@ -113,7 +112,7 @@ def send_broadcast_notification(request):
         log_user_activity(
                 user_id=None,
                 action="CREATE",
-                details=f"Broadcast notification sent with email failures: {title}; Error: {str(e)}",
+                details=f"Broadcast notification sent with email failures.",
                 resource="Notification",
                 status="failed"
         )
@@ -150,7 +149,7 @@ def send_personal_notification(request):
             log_user_activity(
                 user_id=user_id,
                 action="CREATE",
-                details=f"Personal notification sent with email failure: {title}; Error: {str(e)}",
+                details=f"Personal notification sent with email failure.",
                 resource="Notification",
                 status="failed"
             )
@@ -161,7 +160,7 @@ def send_personal_notification(request):
         log_user_activity(
             user_id=user_id,
             action="CREATE",
-            details=f"Personal notification failed: {title}; Error: User not found.",
+            details=f"Personal notification failed. User not found.",
             resource="Notification",
             status="failed"
         )

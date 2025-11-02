@@ -6,7 +6,7 @@ interface StatCardProps {
   subtext?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ label, value, subtext = "from last month" }) => {
+const StatCard: React.FC<StatCardProps> = ({ label, value, subtext = "" }) => {
   return (
     <div className="bg-[var(--arabica-brown)] rounded-lg p-4 text-center shadow text-[var(--parchment)]">
       <div className="text-xs font-accent mb-1">{label}</div>

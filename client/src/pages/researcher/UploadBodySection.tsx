@@ -156,13 +156,13 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
     return (
       <div className="w-full">
         {/* Toggle Buttons */}
-        <div className="flex mb-4 bg-gray-100 rounded p-1">
+        <div className="flex mb-4 bg-gray-100 rounded p-1 gap-2">
           <button
             onClick={() => setUploadMode('file')}
             className={`flex-1 py-2 px-4 rounded text-sm font-medium transition-colors ${
               uploadMode === 'file'
-                ? 'bg-white text-[var(--espresso-black)] shadow'
-                : 'text-gray-600 hover:text-gray-800'
+                ? '!bg-[var(--arabica-brown)] !text-white'
+                : 'button-secondary'
             }`}
           >
             📁 Select Files
@@ -171,8 +171,8 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
             onClick={() => setUploadMode('camera')}
             className={`flex-1 py-2 px-4 rounded text-sm font-medium transition-colors ${
               uploadMode === 'camera'
-                ? 'bg-white text-[var(--espresso-black)] shadow'
-                : 'text-gray-600 hover:text-gray-800'
+                ? '!bg-[var(--arabica-brown)] !text-white'
+                : 'button-secondary'
             }`}
           >
             📷 Take Photos
