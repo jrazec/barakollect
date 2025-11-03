@@ -5,6 +5,8 @@ import logo1 from "@/assets/images/barakollect_logo.svg";
 import { Link } from "react-router-dom";
 import { storageService } from "@/services/storageService";
 import type { Location } from "@/interfaces/global";
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
 
 type ProfilePayload = {
     first_name: string;
@@ -29,6 +31,7 @@ export default function Signup() {
     const [loading, setLoading] = useState(false);
     const [locations, setLocations] = useState<Location[]>([]);
     const [role, setRole] = useState<'researcher' | 'farmer'>("researcher");
+    const { showSuccess, showError } = useNotification();
 
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -47,7 +50,7 @@ export default function Signup() {
                 },
             });
             if (signUpError || !signUpData.user) {
-                alert(signUpError?.message || "Unable to sign up");
+                showError("Sign Up Failed", signUpError?.message || "Unable to sign up");
                 setLoading(false);
                 return;
             }
@@ -71,7 +74,7 @@ export default function Signup() {
             });
             const result = await resp.json();
             if (!resp.ok) {
-                alert(result.error || "Failed to save profile");
+                showError("Failed to save profile", result.error || "Unknown error");
                 setLoading(false);
                 return;
             }
@@ -80,7 +83,7 @@ export default function Signup() {
             const resolvedRole = (result.role || role).toLowerCase();
             window.location.href = `/${resolvedRole}/dashboard`;
         } catch (err) {
-            alert("Network error");
+            showError("Network error", err instanceof Error ? err.message : "Unknown error");
         } finally {
             setLoading(false);
         }

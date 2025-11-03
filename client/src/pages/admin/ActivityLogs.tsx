@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import CardComponent from '@/components/CardComponent';
 import TableComponent from '@/components/TableComponent';
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
 import type { TableColumn } from '@/components/TableComponent';
 import { 
   Search, 
@@ -85,6 +87,9 @@ export default function ActivityLogs() {
   const [isDeletingIndividual, setIsDeletingIndividual] = useState(false);
   const logsPerPage = 10;
 
+  // Initialize notification system
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
+
   useEffect(() => {
     const fetchLogs = async () => {
       const filteredLogs = await getActivityLogs(filters);
@@ -162,11 +167,10 @@ export default function ActivityLogs() {
       setLogs([]);
       setShowDeleteModal(false);
       setDeleteConfirmText('');
-      // You might want to show a success notification here
-      alert('All activity logs have been deleted successfully.');
+      showSuccess('Delete Successful', 'All activity logs have been deleted successfully.');
     } catch (error) {
       console.error('Error deleting logs:', error);
-      alert('Failed to delete logs. Please try again.');
+      showError('Delete Failed', 'Failed to delete logs. Please try again.');
     } finally {
       setIsDeleting(false);
     }
@@ -193,10 +197,10 @@ export default function ActivityLogs() {
       setLogs(prevLogs => prevLogs.filter(log => log.id !== logToDelete.id));
       setShowIndividualDeleteModal(false);
       setLogToDelete(null);
-      alert('Activity log has been deleted successfully.');
+      showSuccess('Delete Successful', 'Activity log has been deleted successfully.');
     } catch (error) {
       console.error('Error deleting log:', error);
-      alert('Failed to delete log. Please try again.');
+      showError('Delete Failed', 'Failed to delete log. Please try again.');
     } finally {
       setIsDeletingIndividual(false);
     }
@@ -508,6 +512,22 @@ export default function ActivityLogs() {
           </div>
         </div>
       )}
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={hideNotification}
+        mode={notification.mode}
+        title={notification.title}
+        message={notification.message}
+        confirmText={notification.confirmText}
+        cancelText={notification.cancelText}
+        onConfirm={notification.onConfirm}
+        onCancel={notification.onCancel}
+        showCancel={notification.showCancel}
+        autoClose={notification.autoClose}
+        autoCloseDelay={notification.autoCloseDelay}
+      />
     </div>
   );
 }

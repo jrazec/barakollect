@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import BeanDetectionCanvas from './BeanDetectionCanvas';
 import BeanImageExtractor from './BeanImageExtractor';
 import { useAuth } from '@/contexts/AuthContext';
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
 
 interface BeanDetection {
   bean_id: number;
@@ -53,6 +55,8 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
   const [activeTab, setActiveTab] = useState<'edit' | 'analysis'>('edit');
   const [showBeanBoxes, setShowBeanBoxes] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
+
+  const { showSuccess, showError } = useNotification();
   
   // Debug log for initial data
   useEffect(() => {
@@ -189,7 +193,7 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
         setBeans(updatedBeans);
 
         // Show Modal that says success validation
-        alert('Bean validated successfully!');
+        showSuccess("Success", `Bean has been validated successfully.`);
 
       } catch (validationError) {
         console.error('Failed to validate bean:', validationError);
@@ -197,6 +201,7 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
       }
     } catch (error) {
       console.error('Error validating bean:', error);
+      showError("Validation Failed", `Failed to validate bean. Please try again.`);
     } finally {
       setIsValidating(false);
     }

@@ -1,5 +1,7 @@
 import PageContainer from '../../components/PageContainer';
 import EmptyStateNotice from '@/components/EmptyStateNotice';
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
 import type { NotifAttributes } from '@/interfaces/global';
 import { BellIcon, CheckCheck, Plus, X, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -163,6 +165,9 @@ const Notifications: React.FC = () => {
     const [showBroadcastModal, setShowBroadcastModal] = useState(false);
     const [showClearModal, setShowClearModal] = useState(false);
 
+    // Initialize notification system
+    const { notification, showSuccess, showError, hideNotification } = useNotification();
+
     useEffect(() => {
         const getUser = async () => {
             const user = await supabase.auth.getUser();
@@ -236,12 +241,12 @@ const Notifications: React.FC = () => {
     const handleBroadcastSubmit = async (data: { title: string; message: string; type: 'info' | 'alert' | 'system' }) => {
         try {
             await NotificationsService.sendBroadcastNotification(data);
-            alert('Broadcast notification sent successfully!');
+            showSuccess('Broadcast Sent', 'Broadcast notification sent successfully!');
             // Refresh notifications
             fetchNotifications();
         } catch (error) {
             console.error('Failed to send broadcast notification:', error);
-            alert('Failed to send broadcast notification. Please try again.');
+            showError('Broadcast Failed', 'Failed to send broadcast notification. Please try again.');
         }
     };
 
@@ -253,10 +258,10 @@ const Notifications: React.FC = () => {
             // Clear local state
             setNotifs([]);
             setShowClearModal(false);
-            alert('All notifications cleared successfully!');
+            showSuccess('Notifications Cleared', 'All notifications cleared successfully!');
         } catch (error) {
             console.error('Failed to clear notifications:', error);
-            alert('Failed to clear notifications. Please try again.');
+            showError('Clear Failed', 'Failed to clear notifications. Please try again.');
         }
     };
 
@@ -402,6 +407,22 @@ const Notifications: React.FC = () => {
             onClose={() => setShowClearModal(false)}
             onConfirm={handleClearNotifications}
             notificationCount={notifs.length}
+        />
+
+        {/* Notification Modal */}
+        <NotificationModal
+            isOpen={notification.isOpen}
+            onClose={hideNotification}
+            mode={notification.mode}
+            title={notification.title}
+            message={notification.message}
+            confirmText={notification.confirmText}
+            cancelText={notification.cancelText}
+            onConfirm={notification.onConfirm}
+            onCancel={notification.onCancel}
+            showCancel={notification.showCancel}
+            autoClose={notification.autoClose}
+            autoCloseDelay={notification.autoCloseDelay}
         />
 
       </div>

@@ -7,6 +7,8 @@ import PredictionLoadingModal from '../../components/PredictionLoadingModal';
 import CameraCapture from '../../components/CameraCapture';
 import { supabase } from '../../lib/supabaseClient';
 import type { MultiImageProcessingResponse } from '../../interfaces/global';
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
 
 interface UploadBodySectionProps {
   activeTab: string;
@@ -29,6 +31,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
   } | null>(null);
   const [multiImageResults, setMultiImageResults] = useState<MultiImageProcessingResponse | null>(null);
   const [comment, setComment] = useState('');
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
 
   const handleFileSelect = (files: FileList) => {
     const newFiles = Array.from(files).slice(0, 5 - selectedFiles.length);
@@ -63,7 +66,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
       const user_id = data.session?.user?.id;
 
       if (!user_id) {
-        alert('User not authenticated');
+        showError("User not authenticated", "Please log in and try again.", { autoClose: false });
         return;
       }
 
@@ -107,11 +110,11 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
           } else {
             // All images failed or no beans detected
             const errorMessages = response.images.map(img => img.error || 'No beans detected').join(', ');
-            alert(`Prediction failed: ${errorMessages}`);
+            showError("Prediction failed", errorMessages, { autoClose: false });
           }
         } else {
           console.error('Prediction response:', response);
-          alert('Prediction failed or no results returned');
+          showError("Prediction failed", "No results returned", { autoClose: false });
         }
       } else if (activeTab === 'Submit Image') {
         response = await storageService.submitImage({
@@ -120,7 +123,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         });
         
         if (response?.success) {
-          alert('Images uploaded successfully!');
+          showSuccess("Images uploaded successfully", "Your images have been uploaded.", { autoClose: false });
           // Reset state and clear preview images
           setCapturedImages([]);
           setSelectedFiles([]);
@@ -136,7 +139,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
       }
     } catch (error: any) {
       setIsPredicting(false);
-      alert(`Upload failed: ${error.message}`);
+      showError("Upload failed", error.message, { autoClose: false });
     } finally {
       setIsUploading(false);
     }
@@ -312,6 +315,22 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
           onClose={() => setShowMultiImageResult(false)}
           results={multiImageResults}
         />
+
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          onClose={hideNotification}
+          mode={notification.mode}
+          title={notification.title}
+          message={notification.message}
+          confirmText={notification.confirmText}
+          cancelText={notification.cancelText}
+          onConfirm={notification.onConfirm}
+          onCancel={notification.onCancel}
+          showCancel={notification.showCancel}
+          autoClose={notification.autoClose}
+          autoCloseDelay={notification.autoCloseDelay}
+        />
       </div>
     );
   }
@@ -328,6 +347,22 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         <div className="bg-[#FDE9DD] rounded p-2 text-xs text-[var(--espresso-black)] font-accent text-center">
           This feature requires camera access. In a real implementation, this would open your device camera and use computer vision to find the largest bean in view.
         </div>
+
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          onClose={hideNotification}
+          mode={notification.mode}
+          title={notification.title}
+          message={notification.message}
+          confirmText={notification.confirmText}
+          cancelText={notification.cancelText}
+          onConfirm={notification.onConfirm}
+          onCancel={notification.onCancel}
+          showCancel={notification.showCancel}
+          autoClose={notification.autoClose}
+          autoCloseDelay={notification.autoCloseDelay}
+        />
       </div>
     );
   }

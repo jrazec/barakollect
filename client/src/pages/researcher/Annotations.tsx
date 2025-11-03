@@ -3,6 +3,9 @@ import { type AnnotationImage } from '@/services/annotationService';
 import { useCachedAnnotationService } from '@/hooks/useCachedServices';
 import type { PaginationData } from '@/interfaces/global';
 import EnhancedImageEditModal from '@/components/EnhancedImageEditModal';
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
+
 import { useAuth } from '@/contexts/AuthContext';
 
 interface FolderData {
@@ -26,6 +29,10 @@ const Annotations: React.FC = () => {
         itemsPerPage: 100
     });
     const [isLoading, setIsLoading] = useState(true);
+
+    // Initialize notification system
+    const { notification, showSuccess, showError, hideNotification } = useNotification();
+
     
     // Modal state
     const [selectedImage, setSelectedImage] = useState<AnnotationImage | null>(null);
@@ -135,11 +142,11 @@ const Annotations: React.FC = () => {
                     predictions: updatedPredictions
                 };
             });
-
+            showSuccess('Bean Validated', 'The bean has been validated successfully.');
             console.log('Bean validated successfully');
         } catch (error) {
             console.error('Error validating bean:', error);
-            alert('Failed to validate bean. Please try again.');
+            showError('Validation Failed', 'Failed to validate bean. Please try again.');
         }
     };
 

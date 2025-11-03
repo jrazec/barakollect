@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCachedAdminService } from '@/hooks/useCachedServices';
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
 import type { AdminPredictedImage, AdminImageFilters, PaginationData } from '@/interfaces/global';
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -20,6 +22,9 @@ const AdminBeansGallery: React.FC = () => {
 
     // Initialize cached services
     const cachedAdminService = useCachedAdminService();
+    
+    // Initialize notification system
+    const { notification, showSuccess, showError, showWarning, showInfo, hideNotification } = useNotification();
 
     // Fetch data
     useEffect(() => {
@@ -71,7 +76,7 @@ const AdminBeansGallery: React.FC = () => {
                 loadImages(); // Refresh the list
             } catch (error) {
                 console.error('Error deleting image:', error);
-                alert('Failed to delete image. Please try again.');
+                showError('Delete Failed', 'Failed to delete image. Please try again.');
             }
         }
     };
@@ -106,10 +111,10 @@ const AdminBeansGallery: React.FC = () => {
             const content = await zip.generateAsync({ type: "blob" });
             saveAs(content, "beans-images-by-user.zip");
 
-            alert(`Starting download of ${images.length} images${folderName ? ` from ${folderName}` : ''}`);
+            showInfo('Download Started', `Starting download of ${images.length} images${folderName ? ` from ${folderName}` : ''}`);
         } catch (error) {
             console.error('Error downloading images:', error);
-            alert('Failed to download images. Please try again.');
+            showError('Download Failed', 'Failed to download images. Please try again.');
         }
     };
 
@@ -224,7 +229,7 @@ const AdminBeansGallery: React.FC = () => {
             });
 
             if (allBeanRecords.length === 0) {
-                alert('No bean records found to download.');
+                showInfo('No Records Found', 'No bean records found to download.');
                 return;
             }
 
@@ -294,10 +299,10 @@ const AdminBeansGallery: React.FC = () => {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
 
-            alert(`Downloaded ${allBeanRecords.length} bean records${folderName ? ` from ${folderName}` : ''}`);
+            showSuccess('Download Complete', `Downloaded ${allBeanRecords.length} bean records${folderName ? ` from ${folderName}` : ''}`);
         } catch (error) {
             console.error('Error downloading image details:', error);
-            alert('Failed to download image details. Please try again.');
+            showError('Download Failed', 'Failed to download image details. Please try again.');
         }
     };
 
@@ -418,6 +423,22 @@ const AdminBeansGallery: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Notification Modal */}
+            <NotificationModal
+                isOpen={notification.isOpen}
+                onClose={hideNotification}
+                mode={notification.mode}
+                title={notification.title}
+                message={notification.message}
+                confirmText={notification.confirmText}
+                cancelText={notification.cancelText}
+                onConfirm={notification.onConfirm}
+                onCancel={notification.onCancel}
+                showCancel={notification.showCancel}
+                autoClose={notification.autoClose}
+                autoCloseDelay={notification.autoCloseDelay}
+            />
         </div>
     );
 };

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useCachedAdminService } from '@/hooks/useCachedServices';
 import { useCache } from '@/contexts/CacheContext';
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
 import type { AdminPredictedImage, AdminImageFilters, PaginationData } from '@/interfaces/global';
 import ImageDetailsModal from './ImageDetailsModal';
 import EnhancedImageDetailsModal from './EnhancedImageDetailsModal';
@@ -40,6 +42,9 @@ const AdminBeansMetadata: React.FC = () => {
 
     const cachedAdminService = useCachedAdminService();
     const cache = useCache();
+    
+    // Initialize notification system
+    const { notification, showSuccess, showError, showWarning, showInfo, hideNotification } = useNotification();
 
     // Load data on pagination change only
     useEffect(() => {
@@ -148,7 +153,7 @@ const AdminBeansMetadata: React.FC = () => {
                 setImageToDelete(null);
             } catch (error) {
                 console.error('Error deleting image:', error);
-                alert('Failed to delete image. Please try again.');
+                showError('Delete Failed', 'Failed to delete image. Please try again.');
             }
         }
     };
@@ -176,7 +181,7 @@ const AdminBeansMetadata: React.FC = () => {
                 setUploadType('zip');
                 setUploadFile(file);
             } else {
-                alert('Please select a CSV, TSV, or ZIP file.');
+                showWarning('Invalid File Type', 'Please select a CSV, TSV, or ZIP file.');
                 event.target.value = '';
             }
         }
@@ -327,7 +332,7 @@ const AdminBeansMetadata: React.FC = () => {
                 );
                 
                 if (result.success) {
-                    alert(`CSV file uploaded successfully! ${result.message}`);
+                    showSuccess('Upload Successful', `CSV file uploaded successfully! ${result.message}`);
                     setShowUploadModal(false);
                     // Refresh the table data
                     await loadImages();
@@ -348,7 +353,7 @@ const AdminBeansMetadata: React.FC = () => {
                 );
                 
                 if (result.success) {
-                    alert(`ZIP file uploaded successfully! ${result.message}`);
+                    showSuccess('Upload Successful', `ZIP file uploaded successfully! ${result.message}`);
                     setShowUploadModal(false);
                     // Refresh the table data
                     await loadImages();
@@ -358,7 +363,7 @@ const AdminBeansMetadata: React.FC = () => {
         } catch (error) {
             console.error('Upload error:', error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-            alert(`Failed to upload ${uploadType?.toUpperCase()} file: ${errorMessage}`);
+            showError('Upload Failed', `Failed to upload ${uploadType?.toUpperCase()} file: ${errorMessage}`);
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
@@ -397,7 +402,7 @@ const AdminBeansMetadata: React.FC = () => {
             const allImages = result.images;
             
             if (allImages.length === 0) {
-                alert('No records found to download.');
+                showInfo('No Records Found', 'No records found to download.');
                 return;
             }
 
@@ -508,7 +513,7 @@ const AdminBeansMetadata: React.FC = () => {
             });
 
             if (allBeanRecords.length === 0) {
-                alert('No bean records found to download.');
+                showInfo('No Records Found', 'No bean records found to download.');
                 return;
             }
 
@@ -587,10 +592,10 @@ const AdminBeansMetadata: React.FC = () => {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
 
-            alert(`Downloaded ${allBeanRecords.length} bean records from ${allImages.length} images`);
+            showSuccess('Download Complete', `Downloaded ${allBeanRecords.length} bean records from ${allImages.length} images`);
         } catch (error) {
             console.error('Error downloading records:', error);
-            alert('Failed to download records. Please try again.');
+            showError('Download Failed', 'Failed to download records. Please try again.');
         }
     };
 
@@ -604,7 +609,7 @@ const AdminBeansMetadata: React.FC = () => {
             setIsEditing(false);
         } catch (error) {
             console.error('Error saving image:', error);
-            alert('Failed to save changes. Please try again.');
+            showError('Save Failed', 'Failed to save changes. Please try again.');
         }
     };
 
@@ -629,11 +634,12 @@ const AdminBeansMetadata: React.FC = () => {
                 console.log('Bean validated successfully');
             } else {
                 console.error('Failed to validate bean');
-                alert('Failed to validate bean. Please try again.');
+                console.log('Response status:', response.status);
+                showError('Validation Failed', 'Failed to validate bean. Please try again.');
             }
         } catch (error) {
             console.error('Error validating bean:', error);
-            alert('Error validating bean. Please try again.');
+            showError('Validation Error', 'Error validating bean. Please try again.');
         }
     };
 
@@ -1159,6 +1165,22 @@ const AdminBeansMetadata: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Notification Modal */}
+            <NotificationModal
+                isOpen={notification.isOpen}
+                onClose={hideNotification}
+                mode={notification.mode}
+                title={notification.title}
+                message={notification.message}
+                confirmText={notification.confirmText}
+                cancelText={notification.cancelText}
+                onConfirm={notification.onConfirm}
+                onCancel={notification.onCancel}
+                showCancel={notification.showCancel}
+                autoClose={notification.autoClose}
+                autoCloseDelay={notification.autoCloseDelay}
+            />
         </div>
     );
 };

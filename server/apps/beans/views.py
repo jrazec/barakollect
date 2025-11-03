@@ -413,7 +413,7 @@ def process_bean(request):
             img_debug, h_mm, w_mm = calibration_result
             
             # Step 2: Preprocess and detect beans
-            black_bg, mask, gray, bean_bboxes = extractor.preprocess_image(img)
+            black_bg, mask, gray, bean_bboxes, predictions = extractor.preprocess_image(img)
             
             # Step 3: Extract features for all beans
             all_beans = extractor.extract_features_for_all_beans(mask, gray, bean_bboxes)
@@ -595,20 +595,20 @@ def process_bean(request):
             
             results.append(image_result)
 
-            # ACTIVITY LOG
-            if save_to_db and user_id:
-                log_user_activity(
-                    user_id=user_id,
-                    action="UPLOAD",
-                    details=f"Processed image {image_id} with {len(all_beans)} beans detected",
-                    resource=ImageBucket.objects.filter(id=image_id).first().image_url.split("/")[-1] if ImageBucket.objects.filter(id=image_id).exists() else None,
-                status="success"
-                )
+            # # ACTIVITY LOG
+            # if save_to_db and user_id:
+            #     log_user_activity(
+            #         user_id=user_id,
+            #         action="UPLOAD",
+            #         details=f"Processed image {image_id} with {len(all_beans)} beans detected",
+            #         resource=original_filename.split("/")[-1] if 'original_filename' in locals() else f"{image_id}.jpg",
+            #         status="success"
+            #     ) 
             
         except Exception as e:
             results.append({
                 "image_id": str(uuid.uuid4()),
-                "error": f"Processing failed: {str(e)}",
+                "error": f"Processing failed. Error: {str(e)}",
                 "beans": []
             })
             # ACTIVITY LOG for failure
@@ -616,7 +616,7 @@ def process_bean(request):
             log_user_activity(
                     user_id=user_id,
                     action="UPLOAD",
-                    details=f"Failed to process image: {str(e)}",
+                    details=f"Failed to process image.",
                     resource=None,
                     status="failed"
                 )
@@ -680,7 +680,7 @@ def process_single_bean(request):
     log_user_activity(
         user_id=user_id,
         action="UPLOAD",
-        details=f"Uploaded and processed image {filename}",
+        details=f"Uploaded and processed image.",
         resource=img_str,
         status="success"
     )
@@ -1555,12 +1555,15 @@ def validate_beans(request):
         activity_description = f"Bean ID {bean_id} in Image ID {image_id} validated as '{bean_type}'"
         if annotator_info:
             activity_description += f" by {annotator_info['name']} ({annotator_info['role']})"
-        if not annotator_info['id']:
-            annotator_info['id'] = "admin"  # Ensure user_id is None if not provided
+        
+        # Safely get user_id for logging
+        log_user_id = None
+        if annotator_info and annotator_info.get('id'):
+            log_user_id = annotator_info['id']
         
         # LOG UPDATE VALIDATION ACTIVITY
         log_user_activity(
-            user_id=annotator_info['id'] if annotator_info and annotator_info.get('id') else None,
+            user_id=log_user_id,
             action="UPDATE",
             details=activity_description,
             resource=ImageBucket.objects.filter(id=image_id).first().image_url.split("/")[-1] if ImageBucket.objects.filter(id=image_id).exists() else None,
@@ -1576,12 +1579,9 @@ def validate_beans(request):
         }, status=200)
         
     except Exception as e:
-        print(f"DEBUG: Error during validation update: {str(e)}")
-        import traceback
-        print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
         # LOG UPDATE VALIDATION ACTIVITY
         log_user_activity(
-            user_id=annotator_info['id'] if annotator_info and annotator_info.get('id') else None,
+            user_id=annotator_info.get('id') if annotator_info else None,
             action="UPDATE",
             details=f"Failed to validate Bean ID {bean_id} in Image ID {image_id}: {str(e)}",
             resource=ImageBucket.objects.filter(id=image_id).first().image_url.split("/")[-1] if ImageBucket.objects.filter(id=image_id).exists() else None,

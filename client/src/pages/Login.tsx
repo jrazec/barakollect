@@ -6,6 +6,8 @@ import logo2 from "@/assets/images/logo.svg";
 import { supabase } from "@/lib/supabaseClient";
 import type { LoginFormType } from "@/interfaces/global";
 import { Link } from "react-router-dom";
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
 
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +18,7 @@ export default function Login() {
     const [rememberMe, setRememberMe] = useState<boolean>(false);
     const [showForgot, setShowForgot] = useState<boolean>(false);
     const [forgotEmail, setForgotEmail] = useState<string>("");
+    const { showSuccess, showError } = useNotification();
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -53,7 +56,7 @@ export default function Login() {
         // Handle login logic here
         const {data, error} = await supabase.auth.signInWithPassword(formData);
         if(error) {
-            alert("Login Failed Zirr")
+            showError("Login Failed", error.message);
         } else {
            localStorage.setItem("bk_remember_me", rememberMe ? "true" : "false");
            // Example fetch template for calling your Django backend after successful Supabase login
@@ -70,18 +73,18 @@ export default function Login() {
                });
                const result = await response.json();
                if (!response.ok) {
-                   alert(result.error || "Failed to fetch user data");
+                   showError("Failed to fetch user data", result.error || "Unknown error");
                } else {
                    const user = result.data && result.data[0];
                    if (user && user["userrole__role__name"]) {
                        const role = user["userrole__role__name"].toLowerCase();
                        window.location.href = `/${role}/dashboard`;
                    } else {
-                       alert("User role not found. Cannot redirect.");
+                       showError("User role not found", "Cannot redirect.");
                    }
                }
            } catch (err) {
-               alert("Network error");
+               showError("Network error", err instanceof Error ? err.message : "Unknown error");
            }
         }
     };
@@ -93,10 +96,10 @@ export default function Login() {
             redirectTo: `${window.location.origin}/reset-password`
         });
         if (error) {
-            alert(error.message);
+            showError("Password reset failed", error.message);
             return;
         }
-        alert("Password reset email sent. Please check your inbox.");
+        showSuccess("Password reset email sent", "Please check your inbox.");
         setShowForgot(false);
         setForgotEmail("");
     };
