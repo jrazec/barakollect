@@ -293,11 +293,12 @@ ul li a.active {
 .lblNav.collapsed {
   position: absolute;
   padding: 0.7rem;
-  background: var(--fadin-mocha);
+  background: rgba(255, 255, 255, 0.8);
   left: 3.5rem;
   border-radius: 0.5rem;
   font-size: 0.8rem;
   display: none;
+  z-index: 10;
 }
 .headerNav {
   background-color: var(--white);
@@ -306,7 +307,8 @@ ul li a.active {
 
 .navigationBtn.active *{
   color: var(--white);
-    background-color: var(--espresso-black);
+  background-color: var(--espresso-black);
+  font-weight: 500;
 }
 
 .formFloatingLbl {

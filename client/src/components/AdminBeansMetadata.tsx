@@ -9,6 +9,7 @@ import EnhancedImageDetailsModal from './EnhancedImageDetailsModal';
 import EnhancedImageEditModal from './EnhancedImageEditModal';
 import TableComponent, { type TableColumn } from './TableComponent';
 import JSZip from 'jszip';
+import PageHeader from './PageHeader';
 
 const AdminBeansMetadata: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<'verified' | 'pending' | 'all'>('all');
@@ -757,9 +758,8 @@ const AdminBeansMetadata: React.FC = () => {
                 {/* Header */}
                 <div className="mb-6 sm:mb-8">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl sm:text-3xl font-main font-bold text-[var(--espresso-black)] mb-2">
-                            Beans Metadata Management
-                        </h1>
+                        <PageHeader title="Beans Metadata Management" subtitle={''} />
+                       
                         <div className="flex space-x-3">
                             <button
                                 onClick={handleDownloadRecords}

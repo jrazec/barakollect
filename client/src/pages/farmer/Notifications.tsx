@@ -7,6 +7,7 @@ import { BellIcon, CheckCheck, Plus, X, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import NotificationsService from '@/services/notificationsService';
 import { supabase } from '@/lib/supabaseClient';
+import PageHeader from '@/components/PageHeader';
 
 interface BroadcastModalProps {
   isOpen: boolean;
@@ -299,17 +300,12 @@ const Notifications: React.FC = () => {
     const unreadCount = notifs.filter(notif => !notif.read).length;
     
   return (
-    <PageContainer>
-      <div className="w-full max-w-6xl bg-white rounded-xl shadow p-6">
+      <div className="w-full h-full max-w-6xl bg-white p-6">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-                <p className="text-gray-600">
-                    {unreadCount > 0 ? `${unreadCount} unread notifications` : 'All notifications read'}
-                </p>
-            </div>
+            <PageHeader title="Notifications" subtitle={unreadCount > 0 ? `${unreadCount} unread notifications` : 'All notifications read'} />
+
             
             <div className="flex space-x-3">
                 {unreadCount > 0 && (
@@ -426,7 +422,6 @@ const Notifications: React.FC = () => {
         />
 
       </div>
-    </PageContainer>
   );
 };
 

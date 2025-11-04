@@ -6,6 +6,7 @@ import type { AdminPredictedImage, AdminImageFilters, PaginationData } from '@/i
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import GalleryComponent from './GalleryComponent';
+import PageHeader from './PageHeader';
 
 const AdminBeansGallery: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<'verified' | 'pending' | 'all'>('all');
@@ -316,9 +317,8 @@ const AdminBeansGallery: React.FC = () => {
     return (
         <div className="p-6 bg-white h-full">
             {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Beans Gallery Management</h1>     
-            </div>
+            <PageHeader 
+                title="Beans Gallery Management" subtitle={''}            />
 
             {/* Filters and Controls - If needed uncommnet */}
             {/* <div className="mb-6 bg-gray-50 p-4 rounded-lg">
@@ -379,7 +379,6 @@ const AdminBeansGallery: React.FC = () => {
                 onDeleteImage={handleDelete}
                 onDownloadImages={handleDownloadImages}
                 onDownloadImageDetails={handleDownloadImageDetails}
-                maxHeight="100%"
                 
                 showViewToggle={true}
             />

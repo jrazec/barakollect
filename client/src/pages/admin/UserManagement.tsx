@@ -3,6 +3,7 @@ import TableComponent from '@/components/TableComponent';
 import type { TableColumn } from '@/components/TableComponent';
 import AdminService from '@/services/adminService';
 import type { UserManagementUser, PaginationData } from '@/interfaces/global';
+import PageHeader from '@/components/PageHeader';
 
 
 
@@ -392,11 +393,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-main font-bold text-[var(--espresso-black)] mb-2">
-            User Management
-          </h1>
-        </div>
+        <PageHeader title="User Management" subtitle={''} />
 
         {/* Search and Filters */}
         <div className="bg-[var(--parchment)] rounded-lg shadow p-4 sm:p-6 mb-6">

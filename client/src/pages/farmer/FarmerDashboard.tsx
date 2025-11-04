@@ -78,7 +78,7 @@ const FarmerDashboard: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen p-4 sm:p-6 flex items-center justify-center">
+            <div className="min-h-screen bg-white p-4 sm:p-6 flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
                     <p className="text-gray-600 font-accent">Loading dashboard...</p>
@@ -173,7 +173,7 @@ const FarmerDashboard: React.FC = () => {
     ] : [];
 
     return (
-        <div className="min-h-screen bg-[var(--mocha-beige)] pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
+        <div className="min-h-screen bg-white pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
             {/* Dashboard Header */}
             <DashboardHeader 
                 title='Farmer Dashboard'

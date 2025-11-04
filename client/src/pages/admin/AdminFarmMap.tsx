@@ -1,23 +1,17 @@
 import React from 'react';
-import PageContainer from '../../components/PageContainer';
 import AdminMapSection from './sections/AdminMapSection';
+import PageHeader from '@/components/PageHeader';
 
 const AdminFarmMap: React.FC = () => {
   return (
-    <PageContainer>
-      <div className="w-full bg-[var(--white)] p-5">
+      <div className="w-full bg-[var(--white)] p-6">
          {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold font-main text-[var(--espresso-black)]">
-              Farm Management & GIS Mapping
-            </h1>
-          </div>
+            <PageHeader title="Farm Management & GIS Mapping" subtitle={''} />
         </div>
         {/* Map Section */}
         <AdminMapSection />
       </div>
-    </PageContainer>
   );
 };
 

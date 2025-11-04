@@ -11,6 +11,7 @@ import {
   AlertCircle,
   CheckCircle
 } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 
 interface SystemSettings {
   general: {
@@ -167,7 +168,7 @@ export default function Settings() {
   return (
     <div className="space-y-6 p-6 bg-gray-50">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--espresso-black)]">System Settings</h1>
+        <PageHeader title="System Settings" subtitle={''} />
         <div className="flex space-x-2">
           <button 
             onClick={resetToDefaults}

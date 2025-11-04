@@ -86,7 +86,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
     onDeleteImage,
     customViewMode,
     showViewToggle = true,
-    maxHeight = '400px',
+    maxHeight = '55vh',
     enableFolderView = false,
     onDownloadImages,
     onDownloadImageDetails
@@ -249,7 +249,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
     }
 
     return (
-        <div className="w-full border border-gray-300 bg-gray-50 ">
+        <div className="w-full border border-gray-300 bg-gray-50 flex flex-col overflow-y-auto" >
             {/* Breadcrumb Navigation */}
             {enableFolderView && (
                 <div className="p-3 border-b border-gray-200 bg-white">
@@ -260,14 +260,14 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                                     onClick={() => navigateToBreadcrumb(index)}
                                     className={`${
                                         index === currentPath.length - 1
-                                            ? 'text-gray-700 font-medium'
-                                            : 'text-amber-800 hover:text-amber-900'
+                                            ? '!text-[var(--arabica-brown)] font-bold !bg-[var(--parchment)]'
+                                            : '!text-[var(--coffee-gray)] !bg-[var(--parchment)] !hover:text-amber-900'
                                     }`}
                                 >
                                     {pathItem}
                                 </button>
                                 {index < currentPath.length - 1 && (
-                                    <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg className="w-4 h-4 text-gray-500 font-medium" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
                                     </svg>
                                 )}
@@ -381,7 +381,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
             </div>
 
             {/* Content */}
-            <div className="overflow-y-auto p-3" style={{ maxHeight: `calc(${maxHeight} - 60px)` }}>
+            <div className="overflow-y-auto p-3" style={{ maxHeight }}>
                 {enableFolderView && isInFolderView ? (
                     // Folder View - Show user folders
                     <>
@@ -397,20 +397,20 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                                         className="group relative cursor-pointer"
                                         onClick={() => navigateToFolder(folder.userName, folder.images)}
                                     >
-                                        <div className="w-full p-4 bg-amber-100 rounded-lg shadow hover:shadow-lg transition-shadow border-1 border-gray-300">
+                                        <div className="w-full p-4 bg-[var(--parchment)] rounded-lg shadow hover:shadow-lg transition-shadow border-1 border-gray-300">
                                             <div className="flex items-center space-x-3">
-                                                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                    <svg className="w-6 h-6 text-amber-800" fill="currentColor" viewBox="0 0 20 20">
+                                                <div className="w-12 h-12 bg-[var(--parchment)] rounded-lg flex items-center justify-center flex-shrink-0">
+                                                    <svg className="w-6 h-6 text-[var(--mocha)]" fill="currentColor" viewBox="0 0 20 20">
                                                         <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
                                                     </svg>
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-medium text-amber-900 truncate">{folder.userName}</p>
-                                                    <p className="text-xs text-amber-800">
+                                                    <p className="text-xs text-[var(--mocha)]">
                                                         {folder.imageCount} images • {folder.userRole}
                                                     </p>
                                                 </div>
-                                                <svg className="w-5 h-5 text-amber-800 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <svg className="w-5 h-5 text-[var(--mocha)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
                                                 </svg>
                                             </div>
@@ -430,8 +430,8 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                                         className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 cursor-pointer border border-gray-200"
                                         onClick={() => navigateToFolder(folder.userName, folder.images)}
                                     >
-                                        <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-amber-200 rounded-lg flex items-center justify-center">
-                                            <svg className="w-6 h-6 text-amber-800" fill="currentColor" viewBox="0 0 20 20">
+                                        <div className="w-12 h-12 bg-[var(--parchment)] rounded-lg flex items-center justify-center">
+                                            <svg className="w-6 h-6 text-[var(--mocha)]" fill="currentColor" viewBox="0 0 20 20">
                                                 <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
                                             </svg>
                                         </div>

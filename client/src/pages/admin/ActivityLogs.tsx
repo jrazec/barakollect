@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import AdminService from '@/services/adminService';
 import {type ActivityLog} from '@/interfaces/global';
+import PageHeader from '@/components/PageHeader';
 
 
 
@@ -283,7 +284,7 @@ export default function ActivityLogs() {
   return (
     <div className="space-y-6 p-6 bg-gray-50">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--espresso-black)]">Activity Logs</h1>
+        <PageHeader title="Activity Logs" subtitle={''} />
         <div className="flex space-x-3">
           <button 
             onClick={exportLogs} 

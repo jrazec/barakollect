@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import PageContainer from '@/components/PageContainer';
 import UploadBodySection from '../pages/researcher/UploadBodySection';
 import PageHeader from '@/components/PageHeader';
 import TabComponent from '@/components/TabComponent';
@@ -13,8 +12,7 @@ const UploadSamples: React.FC = () => {
   };
 
   return (
-    <PageContainer>
-      <div className="w-full max-w-6xl bg-white rounded-xl shadow p-6">
+      <div className="w-full h-full max-w-6xl bg-white p-6">
         <PageHeader
           title="Upload Bean Images"
           subtitle="Upload coffee bean images for analysis and contribute to our research database"
@@ -22,7 +20,7 @@ const UploadSamples: React.FC = () => {
         <TabComponent activeTab={activeTab} onTabChange={setActiveTab} tabs={['Predict Image','Find Largest Bean']} />
         <UploadBodySection activeTab={activeTab} onFilesSelected={handleFiles} />
       </div>
-    </PageContainer>
+
   );
 };
 

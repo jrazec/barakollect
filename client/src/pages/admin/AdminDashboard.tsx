@@ -18,6 +18,7 @@ import type {
   UserLog, 
   SystemStatus 
 } from '@/interfaces/global';
+import DashboardHeader from '@/components/DashboardHeader';
 
 export default function AdminDashboard() {
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
@@ -141,13 +142,8 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-lvh bg-gray-50 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-main font-bold text-[var(--espresso-black)] mb-2">
-            Admin Dashboard
-          </h1>
+        <DashboardHeader title="Admin Dashboard" subtitle='' />
          
-        </div>
        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <StatCard

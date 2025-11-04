@@ -119,7 +119,7 @@ export default function Login() {
                 </div>
 
                 {/* Login Form */}
-                <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-200">
+                <div className="bg-white rounded-lg shadow-2xl p-8 border border-gray-200">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* email Field */}
                         <div className="formFloatingLbl">
@@ -175,7 +175,7 @@ export default function Login() {
                                     id="remember-me"
                                     name="remember-me"
                                     type="checkbox"
-                                    className="h-4 w-4 text-barako focus:ring-amber-500 border-gray-300 rounded"
+                                    className="h-4 w-4 checked:bg-[var(--arabica-brown)] !checked:text-white border-gray-300 rounded cursor-pointer"
                                     checked={rememberMe}
                                     onChange={(e) => setRememberMe(e.target.checked)}
                                 />
@@ -183,7 +183,7 @@ export default function Login() {
                                     Remember me
                                 </label>
                             </div>
-                            <button type="button" onClick={() => setShowForgot(true)} className="text-sm text-barako hover:text-barako-light font-medium">
+                            <button type="button" onClick={() => setShowForgot(true)} className="button-secondary text-sm text-barako !hover:text-[var(--barako-light)] !hover:bg-[var(--mocha)] font-medium">
                                 Forgot password?
                             </button>
                         </div>
