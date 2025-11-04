@@ -7,6 +7,7 @@ import { storageService } from "@/services/storageService";
 import type { Location } from "@/interfaces/global";
 import useNotification from '@/hooks/useNotification';
 import NotificationModal from '@/components/ui/NotificationModal';
+import GlassSurface from '@/components/GlassSurface';
 
 type ProfilePayload = {
     first_name: string;
@@ -102,15 +103,29 @@ export default function Signup() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
+        <div className="login-bg min-h-screen flex items-center justify-center p-4">
             <div className="w-full max-w-xl">
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center mb-6">
-                        <img src={logo1} alt="BaraKollect Logo" className="h-16 w-auto" />
-                    </div>
-                </div>
+                
 
-                <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-200">
+                <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-200 login-form">
+                <GlassSurface
+                    className="logo-div p-11"
+                    borderRadius={40}
+                    width={'70%'}
+                    displace={1}
+                >
+                    {/* barakollect */}
+                    <div className="text-center">
+                        <div className="inline-flex items-center justify-center">
+                            <img 
+                                src={logo1} 
+                                alt="BaraKollect Logo" 
+                                className="h-fit w-auto"
+                            />
+                        </div>
+                    </div>
+                 </GlassSurface>
+                    
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
                             <h2 className="text-lg font-semibold">Create your account</h2>
@@ -179,14 +194,14 @@ export default function Signup() {
                             </div>
                         </div>
 
-                        <button type="submit" disabled={loading} className="w-full !bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-barako focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200">
+                        <button type="submit" disabled={loading} className="w-full !bg-black text-white py-3 px-4 rounded-lg font-medium hover:!bg-[var(--arabica-brown)] focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-[1.02] hover:shadow-lg">
                             {loading ? 'Creating account…' : 'Create account'}
                         </button>
                     </form>
 
                     <div className="mt-6 text-center">
                         <span className="text-gray-600 text-sm">Already have an account? </span>
-                        <Link to="/login" className="text-barako hover:text-barako-light font-medium">Log in</Link>
+                        <Link to="/login" className="text-barako hover:text-[var(--arabica-brown)] font-medium transition-colors duration-300">Log in</Link>
                     </div>
                 </div>
             </div>

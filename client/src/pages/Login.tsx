@@ -8,6 +8,7 @@ import type { LoginFormType } from "@/interfaces/global";
 import { Link } from "react-router-dom";
 import useNotification from '@/hooks/useNotification';
 import NotificationModal from '@/components/ui/NotificationModal';
+import GlassSurface from '@/components/GlassSurface';
 
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +19,7 @@ export default function Login() {
     const [rememberMe, setRememberMe] = useState<boolean>(false);
     const [showForgot, setShowForgot] = useState<boolean>(false);
     const [forgotEmail, setForgotEmail] = useState<string>("");
+    const [loginError, setLoginError] = useState<string>("");
     const { showSuccess, showError } = useNotification();
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,9 +55,11 @@ export default function Login() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLoginError(""); // Clear any previous errors
         // Handle login logic here
         const {data, error} = await supabase.auth.signInWithPassword(formData);
         if(error) {
+            setLoginError(error.message);
             showError("Login Failed", error.message);
         } else {
            localStorage.setItem("bk_remember_me", rememberMe ? "true" : "false");
@@ -73,6 +77,7 @@ export default function Login() {
                });
                const result = await response.json();
                if (!response.ok) {
+                   setLoginError(result.error || "Failed to fetch user data");
                    showError("Failed to fetch user data", result.error || "Unknown error");
                } else {
                    const user = result.data && result.data[0];
@@ -80,11 +85,14 @@ export default function Login() {
                        const role = user["userrole__role__name"].toLowerCase();
                        window.location.href = `/${role}/dashboard`;
                    } else {
+                       setLoginError("User role not found");
                        showError("User role not found", "Cannot redirect.");
                    }
                }
            } catch (err) {
-               showError("Network error", err instanceof Error ? err.message : "Unknown error");
+               const errorMessage = err instanceof Error ? err.message : "Unknown error";
+               setLoginError(errorMessage);
+               showError("Network error", errorMessage);
            }
         }
     };
@@ -105,22 +113,33 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
+        <div className="login-bg min-h-screen flex items-center justify-center p-4">
             <div className="w-full max-w-md">
-                {/* barakollect */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center mb-6">
-                        <img 
-                            src={logo1} 
-                            alt="BaraKollect Logo" 
-                            className="h-16 w-auto"
-                        />
-                    </div>
-                </div>
-
                 {/* Login Form */}
-                <div className="bg-white rounded-lg shadow-2xl p-8 border border-gray-200">
+                <div className="login-form bg-white rounded-lg shadow-2xl p-8 border border-gray-200">
+                    
+                <GlassSurface
+                    className="logo-div p-11 "
+                    borderRadius={40}
+                    width={'100%'}
+                    displace={1}
+                >
+                    {/* barakollect */}
+                    <div className="text-center">
+                        <div className="inline-flex items-center justify-center">
+                            <img 
+                                src={logo1} 
+                                alt="BaraKollect Logo" 
+                                className="h-fit w-auto"
+                            />
+                        </div>
+                    </div>
+                 </GlassSurface>
+                    
+
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        
+                        
                         {/* email Field */}
                         <div className="formFloatingLbl">
                             <input
@@ -157,7 +176,7 @@ export default function Login() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="!bg-black absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    className="!bg-black absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:!bg-[var(--arabica-brown)] focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:ring-offset-2 transition-all duration-300 ease-in-out transform"
                                 >
                                     {showPassword ? (
                                         <EyeOffIcon className="w-5 h-5" />
@@ -167,6 +186,13 @@ export default function Login() {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Error Message Display */}
+                        {loginError && (
+                            <div className="!bg-red-50 text-red-700 rounded-lg text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                                <p className="font-medium">⚠️ {loginError}</p>
+                            </div>
+                        )}
 
                         {/* Remember Me & Forgot Password */}
                         <div className="flex items-center justify-between">
@@ -183,7 +209,7 @@ export default function Login() {
                                     Remember me
                                 </label>
                             </div>
-                            <button type="button" onClick={() => setShowForgot(true)} className="button-secondary text-sm text-barako !hover:text-[var(--barako-light)] !hover:bg-[var(--mocha)] font-medium">
+                            <button type="button" onClick={() => setShowForgot(true)} className="button-secondary text-sm text-barako hover:!text-white hover:!bg-[var(--arabica-brown)] font-medium transition-all duration-300 ease-in-out transform hover:scale-105">
                                 Forgot password?
                             </button>
                         </div>
@@ -191,7 +217,7 @@ export default function Login() {
                         {/* Login Button */}
                         <button
                             type="submit"
-                            className="w-full !bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-barako focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200"
+                            className="w-full !bg-black text-white py-3 px-4 rounded-lg font-medium hover:!bg-[var(--arabica-brown)] focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:ring-offset-2"
                         >
                             Log In
                         </button>
@@ -211,12 +237,14 @@ export default function Login() {
 
                     {/* Sign Up Link */}
                     <div className="mt-6 text-center">
-                        <Link to="/signup" className="text-barako hover:text-barako-light font-medium">
+                        <Link to="/signup" className="text-barako hover:text-barako-light font-medium transition-all duration-300 ease-in-out transform">
                             Create a new account
                         </Link>
                     </div>
-                </div>
+                </div> {/* end of login form */}
             </div>
+
+
 
             {showForgot && (
                 <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
