@@ -314,8 +314,8 @@ button:hover{
   z-index: 10;
 }
 .headerNav {
-  background-color: var(--white);
-  border-bottom: 1px solid rgba(120, 119, 119, 0.448);
+
+  background-color: transparent !important;
 }
 
 .navigationBtn.active *{

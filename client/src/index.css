@@ -18,7 +18,7 @@ body {
   margin: 0;
   height: 100%;
   width: 100%;
-  background: var(--parchment);
+  
   color: var(--espresso-black);
   font-family: var(--font-secondary);
 }
