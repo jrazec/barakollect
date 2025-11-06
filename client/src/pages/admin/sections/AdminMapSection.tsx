@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, LayersControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -36,6 +36,36 @@ const MapClickHandler: React.FC<{
   return null;
 };
 
+// Add color constants and custom pin styles
+const FARM_COLORS = [
+  "#FF5733", "#33FF57", "#3357FF", "#FF33F6", 
+  "#33FFF6", "#F6FF33", "#FF3333", "#33FFB5"
+];
+
+const getFarmColor = (index: number) => {
+  return FARM_COLORS[index % FARM_COLORS.length];
+};
+
+const markerHtmlStyles = (color: string) => `
+  background-color: ${color};
+  width: 2rem;
+  height: 2rem;
+  display: block;
+  position: relative;
+  border-radius: 3rem 3rem 0;
+  transform: rotate(45deg);
+  border: 1px solid #FFFFFF;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+`;
+
+const customIcon = (color: string) => L.divIcon({
+  className: "custom-pin",
+  html: `<span style="${markerHtmlStyles(color)}"></span>`,
+  iconSize: [30, 42],
+  iconAnchor: [15, 42],
+  popupAnchor: [0, -45]
+});
+
 const AdminMapSection: React.FC = () => {
   const [farms, setFarms] = useState<Farm[]>([]);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
@@ -47,7 +77,8 @@ const AdminMapSection: React.FC = () => {
   const [confirmationMessage, setConfirmationMessage] = useState("");
   const [confirmationAction, setConfirmationAction] = useState<() => void>(() => {});
   const [loading, setLoading] = useState(true);
-  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Load farms on component mount
   useEffect(() => {
@@ -56,15 +87,15 @@ const AdminMapSection: React.FC = () => {
 
   // Update cursor style when selecting location
   useEffect(() => {
-    if (mapInstance) {
-      const container = mapInstance.getContainer();
+    if (mapRef.current) {
+      const container = mapRef.current.getContainer();
       if (isSelectingLocation) {
         container.style.cursor = 'crosshair';
       } else {
         container.style.cursor = '';
       }
     }
-  }, [isSelectingLocation, mapInstance]);
+  }, [isSelectingLocation]);
 
   const loadFarms = async () => {
     try {
@@ -81,13 +112,20 @@ const AdminMapSection: React.FC = () => {
   const handleFarmClick = (farm: Farm) => {
     setSelectedFarm(farm);
     if (farm.hasLocation && farm.lat && farm.lng) {
-      // Center map on the farm's location
-      if (mapInstance) {
-        mapInstance.setView([farm.lat, farm.lng], 18);
+      if (mapRef.current) {
+        mapRef.current.setView([farm.lat, farm.lng], 18);
       }
     } else {
-      // Start location selection for farms without location
       setIsSelectingLocation(true);
+    }
+  };
+
+  const centerMapOnFarm = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const farmId = e.target.value;
+    const farm = farms.find(f => f.id === farmId);
+    if (farm?.lat && farm?.lng && mapRef.current) {
+      mapRef.current.setView([farm.lat, farm.lng], 16);
+      setSelectedFarm(farm);
     }
   };
 
@@ -195,45 +233,35 @@ const AdminMapSection: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="bg-[var(--parchment)] rounded-lg shadow p-4 mb-4">
-        <div className="flex items-center justify-center h-96">
-          <div className="text-[var(--espresso-black)]">Loading farms...</div>
-        </div>
-      </div>
-    );
+    return <div className="h-full flex items-center justify-center">Loading farms...</div>;
   }
 
   return (
-    <div className="space-y-4">
-      {/* Farm List Header */}
-      <FarmListHeader
-        farms={farms}
-        selectedFarm={selectedFarm}
-        onFarmClick={handleFarmClick}
-        buttonText={getButtonText()}
-        onAddFarm={handleAddFarm}
-        onCancel={handleCancel}
-        onActionButtonClick={handleActionButtonClick}
-      />
+    <div className="h-full flex">
+      {/* Main Map Area */}
+      <div className={`flex-1 flex flex-col ${sidebarCollapsed ? 'mr-0' : 'mr-4'}`}>
+        {/* Top Controls */}
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            
+            
+            {isSelectingLocation && (
+              <div className="text-sm text-orange-600 font-medium">
+                Click on the map to set location for {selectedFarm?.name}
+              </div>
+            )}
+          </div>
 
-      {/* Map Section */}
-      <div className="bg-[var(--white)] rounded-lg shadow p-4">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-main font-bold text-[var(--espresso-black)] text-lg">
-            &#128506; Farm Locations Management
-          </span>
-          <span className="text-xs font-accent text-[var(--espresso-black)] ml-auto">
-            {isSelectingLocation ? "Click on the map to select location" : "Click on markers for farm details"}
-          </span>
+       
         </div>
 
-        <div className="relative w-full h-80 bg-white rounded-lg overflow-hidden border border-[var(--mocha-beige)] z-0">
+        {/* Map Container - Always visible */}
+        <div className="flex-1 relative rounded-lg overflow-hidden" style={{ zIndex: 0 }}>
           <MapContainer
             center={[13.956626112464809, 121.16317033767702]}
             zoom={15}
             style={{ height: "100%", width: "100%", position: "relative", zIndex: 0 }}
-            ref={setMapInstance}
+            ref={mapRef}
           >
             <LayersControl position="topright">
               <LayersControl.BaseLayer checked name="Map with Labels">
@@ -262,11 +290,15 @@ const AdminMapSection: React.FC = () => {
               </LayersControl.BaseLayer>
             </LayersControl>
 
-            {/* Render farm markers */}
+            {/* Render farm markers with custom icons */}
             {farms
               .filter(farm => farm.hasLocation && farm.lat && farm.lng)
-              .map((farm) => (
-                <Marker key={farm.id} position={[farm.lat!, farm.lng!]}>
+              .map((farm, index) => (
+                <Marker 
+                  key={farm.id} 
+                  position={[farm.lat!, farm.lng!]}
+                  icon={customIcon(getFarmColor(index))}
+                >
                   <Popup>
                     <div className="min-w-[200px]">
                       <div className="font-bold text-lg mb-2">{farm.name}</div>
@@ -295,11 +327,27 @@ const AdminMapSection: React.FC = () => {
           </MapContainer>
         </div>
 
-        <div className="flex justify-between text-xs text-stone-400 mt-2">
+        {/* Map Stats - Always visible */}
+        <div className="mt-2 flex justify-between text-xs text-gray-500">
           <span>Showing {farms.filter(f => f.hasLocation).length} located farms of {farms.length} total</span>
           <span>{selectedFarm ? `Selected: ${selectedFarm.name}` : 'No farm selected'}</span>
         </div>
       </div>
+
+      {/* Collapsible Sidebar - Only this part is hidden/shown */}
+      {!sidebarCollapsed && (
+        <div className="w-96 bg-white rounded-lg shadow-lg flex-shrink-0">
+          <FarmListHeader
+            farms={farms}
+            selectedFarm={selectedFarm}
+            onFarmClick={handleFarmClick}
+            buttonText={getButtonText()}
+            onAddFarm={handleAddFarm}
+            onCancel={handleCancel}
+            onActionButtonClick={handleActionButtonClick}
+          />
+        </div>
+      )}
 
       {/* Modals */}
         <AddFarmModal

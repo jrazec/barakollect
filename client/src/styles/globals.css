@@ -1,0 +1,43 @@
+/* Custom marker colors */
+.leaflet-marker-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+[class*="custom-marker-"] {
+  filter: hue-rotate(var(--hue-rotate)) saturate(150%);
+}
+
+/* Marker color customization */
+.custom-marker-FF5733 { filter: hue-rotate(0deg); }
+.custom-marker-33FF57 { filter: hue-rotate(120deg); }
+.custom-marker-3357FF { filter: hue-rotate(240deg); }
+.custom-marker-FF33F6 { filter: hue-rotate(300deg); }
+.custom-marker-33FFF6 { filter: hue-rotate(180deg); }
+.custom-marker-F6FF33 { filter: hue-rotate(60deg); }
+.custom-marker-FF3333 { filter: hue-rotate(-30deg); }
+.custom-marker-33FFB5 { filter: hue-rotate(150deg); }
+
+.leaflet-marker-icon {
+  transition: filter 0.3s ease;
+}
+
+/* Custom map marker styles */
+.custom-pin {
+  background: transparent;
+  border: none;
+}
+
+.custom-pin span {
+  transition: all 0.3s ease;
+}
+
+.custom-pin span:hover {
+  transform: rotate(45deg) scale(1.1);
+}
