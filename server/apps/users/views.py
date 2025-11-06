@@ -8,6 +8,9 @@ from models.models import Image, User, UserRole, Role, Location
 from django.core import serializers
 from services.activity_logger import log_user_activity
 from services.supabase_service import supabase
+# import cursor from django.db.connection
+from django.db import connection
+from django.db.models import F
 
 # USER SIGNUP AND LOGIN
 @api_view(['POST'])
@@ -125,11 +128,27 @@ def get_users(req):
         role_filter = req.GET.get('role', '').strip()
         location_filter = req.GET.get('location', '').strip()
         
+
+        
+        
         print(f"DEBUG: get_users - page={page}, limit={limit}, search_username={search_username}, role_filter={role_filter}, location_filter={location_filter}")
         
-        # Build the base queryset
+        # Build the base queryset, merge to auth.users and get the email
         users_query = User.objects.all()
         
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, email FROM auth.users
+            """)
+            auth_users = cursor.fetchall()
+            auth_user_dict = {str(row[0]): row[1] for row in auth_users}
+            print(f"DEBUG: Auth users fetched: {auth_user_dict}")
+        
+        
+        
+
+        # Do not include user with username 'barakollect'
+        users_query = users_query.exclude(username='barakollect')
         # Apply search filter for username
         if search_username:
             users_query = users_query.filter(username__icontains=search_username)
@@ -155,9 +174,13 @@ def get_users(req):
             "username",
             "last_login",
             "is_active",
-            "userrole__role__name",  
+            "userrole__role__name"
         ).order_by('-registration_date')  # Order by registration date descending
         
+        # for each user in users_data add an email field from auth_user_dict that is mapped by id
+        for user in users_data:
+            user_id_str = str(user['id'])
+            user['email'] = auth_user_dict.get(user_id_str, '')
         # Apply pagination using Django's Paginator
         paginator = Paginator(users_data, limit)
         

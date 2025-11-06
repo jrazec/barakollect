@@ -755,6 +755,13 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                 </div>
 
                 <div>
+                  <label className="block text-sm font-accent text-gray-600 mb-1">Email</label>
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                    {selectedUser.email}
+                  </div>
+                </div>
+
+                <div>
                   <label className="block text-sm font-accent text-gray-600 mb-1">Role</label>
                   <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-accent ${
