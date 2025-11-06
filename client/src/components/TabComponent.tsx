@@ -14,11 +14,11 @@ const TabComponent: React.FC<TabComponentProps> = ({ activeTab, onTabChange,tabs
                 <button
                     key={tab}
                     onClick={() => onTabChange(tab)}
-                    className={`flex-1 rounded px-4 py-1 text-xs font-main text-center transition-all duration-200 ease-in-out
+                    className={`flex-1 rounded px-4 py-1 text-sm font-main text-center transition-all duration-200 ease-in-out
                         ${
                             activeTab === tab
                                 ? 'bg-white shadow text-[var(--espresso-black)] border-b-2 border-[var(--espresso-black)]'
-                                : 'bg-transparent text-[var(--espresso-black)/70] hover:bg-white hover:shadow hover:text-[var(--espresso-black)] hover:border-b-2 hover:border-[var(--espresso-black)]'
+                                : 'button-secondary'
                         }`}
                 >
                     {tab}

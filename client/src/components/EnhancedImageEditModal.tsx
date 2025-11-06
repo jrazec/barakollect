@@ -349,7 +349,7 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
                       <label className="text-sm font-medium text-gray-700">Show Bean Boxes:</label>
                       <button
                         onClick={() => setShowBeanBoxes(!showBeanBoxes)}
-                        className={`mini-glass !border-[var(--fadin-mocha)] relative inline-flex h-6 w-14 items-center rounded-full transition-colors ${
+                        className={`mini-glass !border-[var(--fadin-mocha)] relative inline-flex h-6 w-14 items-center rounded-full transition-colors hover:!shadow-none ${
                           showBeanBoxes ? '!bg-green-200' : '!bg-gray-300'
                         }`}
                       >

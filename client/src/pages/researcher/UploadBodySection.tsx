@@ -157,14 +157,14 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
 
   if (activeTab === 'Predict Image' || activeTab === 'Submit Image') {
     return (
-      <div className="w-full">
+      <div className="glass-div w-full p-4 rounded-lg shadow-sm">
         {/* Toggle Buttons */}
         <div className="flex mb-4 bg-gray-100 rounded p-1 gap-2">
           <button
             onClick={() => setUploadMode('file')}
             className={`flex-1 py-2 px-4 rounded text-sm font-medium transition-colors ${
               uploadMode === 'file'
-                ? '!bg-[var(--arabica-brown)] !text-white'
+                ? ''
                 : 'button-secondary'
             }`}
           >
@@ -186,7 +186,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         {uploadMode === 'file' && (
           <div className="w-full">
             <div
-              className="w-full min-h-[10rem] bg-white border border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center cursor-pointer mb-2"
+              className="w-full min-h-[20rem] bg-white border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center cursor-pointer mb-2 hover:border-[var(--arabica-brown)] border-2 transition-colors"
               onDragOver={e => e.preventDefault()}
               onDrop={e => {
                 e.preventDefault();
@@ -202,8 +202,8 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
                 multiple
                 onChange={e => e.target.files && handleFileSelect(e.target.files)}
               />
-              <span className="text-3xl text-[var(--espresso-black)] mb-2">&#8682;</span>
-              <span className="text-xs text-[var(--espresso-black)] font-accent">
+              <span className="text-6xl !text-[var(--arabica-brown)] mb-2">&#8682;</span>
+              <span className="text-sm text-[var(--espresso-black)] font-accent">
                 Drop your images here or click to browse (Max 5 images) - {selectedFiles.length}/5 selected
               </span>
             </div>
@@ -218,7 +218,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
                       placeholder="Add optional comment for analysis..."
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded text-sm resize-none h-16"
+                      className="w-full bg-white p-2 border border-gray-300 rounded text-sm resize-none h-16"
                       maxLength={500}
                     />
                   </div>
@@ -237,7 +237,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         {/* Camera Mode */}
         {uploadMode === 'camera' && (
           <div className="w-full">
-            <div className="w-full min-h-[10rem] bg-white border border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center mb-2">
+            <div className="w-full min-h-[20rem] bg-white border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center cursor-pointer mb-2 hover:border-[var(--arabica-brown)] border-2 transition-colors">
               <span className="text-4xl text-[var(--espresso-black)] mb-2">📷</span>
               <span className="text-xs text-[var(--espresso-black)] font-accent mb-3">
                 Take up to 5 photos with your camera
@@ -262,7 +262,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
                       placeholder="Add optional comment for analysis..."
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded text-sm resize-none h-16"
+                      className="w-full p-2 border bg-white border-gray-300 rounded text-sm resize-none h-16"
                       maxLength={500}
                     />
                   </div>
@@ -335,37 +335,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
     );
   }
 
-  if (activeTab === 'Find Largest Bean') {
-    return (
-      <div className="w-full">
-        <div className="w-full min-h-[10rem] bg-white border border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center mb-2">
-          <span className="text-4xl text-[var(--espresso-black)] mb-2">&#128247;</span>
-          <div className="font-main font-bold text-[var(--espresso-black)] mb-1">Live Camera View</div>
-          <div className="text-xs text-[var(--espresso-black)] font-accent mb-2">Position your coffee beans in the camera view to auto-detect the largest bean.</div>
-          <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-1 rounded font-main text-xs shadow">Open Camera</button>
-        </div>
-        <div className="bg-[#FDE9DD] rounded p-2 text-xs text-[var(--espresso-black)] font-accent text-center">
-          This feature requires camera access. In a real implementation, this would open your device camera and use computer vision to find the largest bean in view.
-        </div>
 
-        {/* Notification Modal */}
-        <NotificationModal
-          isOpen={notification.isOpen}
-          onClose={hideNotification}
-          mode={notification.mode}
-          title={notification.title}
-          message={notification.message}
-          confirmText={notification.confirmText}
-          cancelText={notification.cancelText}
-          onConfirm={notification.onConfirm}
-          onCancel={notification.onCancel}
-          showCancel={notification.showCancel}
-          autoClose={notification.autoClose}
-          autoCloseDelay={notification.autoCloseDelay}
-        />
-      </div>
-    );
-  }
   return null;
 };
 
