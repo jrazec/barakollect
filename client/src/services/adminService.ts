@@ -219,17 +219,7 @@ const tempUserLogs: UserLog[] = [
   },
 ];
 
-const tempSystemStatus: SystemStatus = {
-  systemUptime: "99.8%",
-  pendingPayments: 12500,
-  duePayments: 8500,
-  totalRevenue: "$45,230",
-  activeSubscriptions: 892,
-  serverStatus: "online",
-  lastBackup: "2024-01-20 02:00 AM",
-  storageUsed: "2.4 TB",
-  storageTotal: "5.0 TB",
-};
+
 
 // Temporary farm data - now handled by backend API calls
 
@@ -635,14 +625,63 @@ export class AdminService {
   // Get system status data
   static async getSystemStatus(): Promise<SystemStatus> {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/admin/system-status');
-      // return await response.json();
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/analytics/admin/system-status/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      return tempSystemStatus;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("System status fetched:", result);
+      return result;
     } catch (error) {
       console.error("Error fetching system status:", error);
+      // Return fallback data if API fails
+      return {
+        paymentPlan: {
+          plan_type: 'free',
+          current_bill: 0,
+        },
+        systemUptime: '0 days',
+        activeSubscriptions: 0,
+        serverStatus: 'offline',
+        databaseStatus: 'offline',
+        storageUsed: "0 MB",
+        storageStatus: 'operational',
+        lastBackup: 'N/A'
+      };
+    }
+  }
+
+  // Update payment plan
+  static async updatePaymentPlan(planType: 'free' | 'pro', endDate?: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const body: { plan_type: 'free' | 'pro'; end_date?: string } = { plan_type: planType };
+      if (endDate) {
+        body.end_date = endDate;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_HOST_BE}/api/analytics/admin/system-status/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return { success: true, message: result.message };
+    } catch (error) {
+      console.error("Error updating payment plan:", error);
       throw error;
     }
   }

@@ -3,6 +3,7 @@ export interface CardAttributes {
     subtitle: string,
     content: React.ReactNode,
     description?: React.ReactNode,
+    side?: React.ReactNode
 };
 
 
@@ -70,14 +71,22 @@ export interface UserLog {
 
 export interface SystemStatus {
   systemUptime: string;
-  pendingPayments: number;
-  duePayments: number;
-  totalRevenue: string;
+  pendingPayments?: number; // Legacy field
+  duePayments?: number; // Legacy field
+  totalRevenue?: string; // Legacy field
   activeSubscriptions: number;
-  serverStatus: 'online' | 'offline' | 'maintenance';
+  serverStatus: 'online' | 'offline' | 'maintenance' | 'operational' | 'unknown';
+  databaseStatus: 'operational' | 'unknown' | 'offline';
+  storageStatus: 'operational' | 'unknown' | 'offline';
   lastBackup: string;
-  storageUsed: string;
-  storageTotal: string;
+  storageUsed?: string; // Legacy field
+  storageTotal?: string; // Legacy field
+  paymentPlan: {
+    plan_type: 'free' | 'pro';
+    end_date?: string | null;
+    current_bill: number;
+    days_remaining?: number | null;
+  };
 }
 
 export interface BeanSubmission {
@@ -149,6 +158,20 @@ export interface AdminStats {
     medium_min: number;
     medium_max: number;
     large_min: number;
+  };
+  img_bucket: Array<{
+    bucket_id: string;
+    file_count: number;
+    total_bytes: number;
+    total_size: string;
+  }>;
+  db_size: {
+    tables: Array<{
+      table_name: string;
+      total_size: string;
+      estimated_rows: number;
+    }>;
+    total: string;
   };
 }
 

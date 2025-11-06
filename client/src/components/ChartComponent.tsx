@@ -1,32 +1,32 @@
 
-import {  PieChart,Area, Tooltip, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Pie, LineChart, Line, BarChart, Bar, ScatterChart, Scatter } from 'recharts';
+import { PieChart, Area, Tooltip, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Pie, LineChart, Line, BarChart, Bar, ScatterChart, Scatter } from 'recharts';
 const data = [
-  { name: 'Page A', uv: 1000, pv: 2400, amt: 2400 },
-  { name: 'Page B', uv: 5300, pv: 2400, amt: 2400 },
-  { name: 'Page C', uv: 500, pv: 2400, amt: 2400 },
-  { name: 'Page D', uv: 6600, pv: 2400, amt: 2400 },
-  { name: 'Page E', uv: 345, pv: 2400, amt: 2400 },
-  { name: 'Page F', uv: 4030, pv: 2400, amt: 2400 }
+    { name: 'Page A', uv: 1000, pv: 2400, amt: 2400 },
+    { name: 'Page B', uv: 5300, pv: 2400, amt: 2400 },
+    { name: 'Page C', uv: 500, pv: 2400, amt: 2400 },
+    { name: 'Page D', uv: 6600, pv: 2400, amt: 2400 },
+    { name: 'Page E', uv: 345, pv: 2400, amt: 2400 },
+    { name: 'Page F', uv: 4030, pv: 2400, amt: 2400 }
 
 ];
 
 const TempChart = () => (
-  <ResponsiveContainer width="100%" height="100%">
-    <AreaChart data={data}
-      margin={{ top: 1, right: 0, left: -5, bottom: 0 }}>
-      <XAxis dataKey="name" />
-      <YAxis />
-      <CartesianGrid strokeDasharray="3 3" />
-      <Tooltip />
-    
-      <Area type="monotone" dataKey="uv" stroke="#8884d8" fill="#8884d8" />
-    </AreaChart>
-  </ResponsiveContainer>
+    <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data}
+            margin={{ top: 1, right: 0, left: -5, bottom: 0 }}>
+            <XAxis dataKey="name" />
+            <YAxis />
+            <CartesianGrid strokeDasharray="3 3" />
+            <Tooltip />
+
+            <Area type="monotone" dataKey="uv" stroke="#8884d8" fill="#8884d8" />
+        </AreaChart>
+    </ResponsiveContainer>
 );
-const PieChartComponent = () => (
+const PieChartComponent = ({ data }: { data: { name: string; uv: number; }[] }) => (
     <ResponsiveContainer width="100%" height="100%">
         <PieChart data={data}>
-            <Pie dataKey="uv" cx="50%" cy="50%" outerRadius={60} fill="#8884d8" />
+            <Pie dataKey="uv" cx="50%" cy="50%" innerRadius={60} outerRadius={120} fill="#8884d8" />
             <Tooltip />
         </PieChart>
     </ResponsiveContainer>
@@ -81,4 +81,43 @@ const CorrelationGrid = () => (
     </ResponsiveContainer>
 );
 
-export { TempChart, PieChartComponent, LineChartComponent, BarChartComponent, ScatterChartComponent, CorrelationGrid };
+const LinearProgressBar = ({ data }: { data: { total_size: number, size: string } }) => {
+    // Size is expected to be in MB, convert to number with this format "n MB"
+    const sizeInMB = parseFloat(data.size.replace(" MB", ""));
+    console.log('sizeInMB:', sizeInMB);
+    const percentage = data.total_size === 0 ? 0 : (sizeInMB / data.total_size) * 100;
+    return (
+        <div className='h-[4rem] w-full flex flex-col justify-center space-y-2 align-center'>
+            <div className="w-full bg-[var(--white)] rounded-full h-2.5">
+                <div
+                    className={`h-2.5 rounded-full transition-all duration-300 ease-in-out ${percentage < 70 ? 'bg-green-500' :
+                        percentage < 90 ? 'bg-yellow-500' :
+                            'bg-red-500'
+                        }`}
+                    style={{ width: `${Math.min(percentage, 100)}%` }}
+                />
+                <div className="mt-1 text-sm text-[var(--brown)] font-accent">
+                    {data.size} / {data.total_size} MB ({percentage.toFixed(1)}%)
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const HorizontalBarChartComponent = ({ data }: { data: { name: string; uv: number; }[] }) => (
+    <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+            layout="vertical"
+            data={[...data].sort((a, b) => b.uv - a.uv)}
+            margin={{ top: 1, right: 0, left: -5, bottom: 0 }}
+        >
+            <XAxis type="number" />
+            <YAxis type="category" dataKey="name" />
+            <CartesianGrid strokeDasharray="3 3" />
+            <Tooltip />
+            <Bar dataKey="uv" fill="#8884d8" />
+        </BarChart>
+    </ResponsiveContainer>
+);
+
+export { TempChart, PieChartComponent, LineChartComponent, BarChartComponent, ScatterChartComponent, CorrelationGrid, LinearProgressBar, HorizontalBarChartComponent };

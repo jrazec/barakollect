@@ -5,8 +5,12 @@ from django.db import connection
 from services.supabase_service import supabase
 from models.models import UserImage, User
 import math
+import numpy as np
 import pandas as pd
 from collections import Counter
+import requests
+from datetime import datetime, timedelta
+from django.utils import timezone
 
 # === Farmer Dashboard ファルマー　❘ 農家
 @api_view(['GET'])
@@ -450,6 +454,31 @@ def render_admin_dashboard(request):
         count_top_uploaders += " GROUP BY users.id, users.first_name, users.last_name ORDER BY upload_count DESC LIMIT 10;"
         total_beans_predicted_per_farm += " GROUP BY images.location_id;"
 
+        # System Statistics Queries
+
+        # DB SIZE with 500mb limit on free plan while in pro 8gb
+        db_size_distribution_stats = """
+        SELECT relname AS table_name,
+            pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
+            n_live_tup AS estimated_rows
+        FROM pg_stat_user_tables
+        ORDER BY pg_total_relation_size(relid) DESC;
+        """
+        total_db_size = """
+        SELECT pg_size_pretty(pg_database_size(current_database())) AS db_size;
+        """
+
+        # IMG Bucket Size 1GB limit on free plan pro 100GB
+        image_bucket_stats = """
+        SELECT bucket_id,
+            COUNT(*) AS file_count,
+            SUM( (metadata->>'size')::bigint ) AS total_bytes,
+            pg_size_pretty( SUM( (metadata->>'size')::bigint ) ) AS total_size
+        FROM storage.objects
+        GROUP BY bucket_id
+        ORDER BY total_bytes DESC;
+        """
+
             
         cursor.execute(image_count)
         uploads = cursor.fetchall()
@@ -461,6 +490,14 @@ def render_admin_dashboard(request):
         unvalidated = cursor.fetchall()
         cursor.execute(count_bean_types, [location_id, role, year])
         bean_types = cursor.fetchall()
+        
+        cursor.execute(db_size_distribution_stats)
+        db_size = cursor.fetchall()
+        cursor.execute(image_bucket_stats)
+        img_bucket = cursor.fetchall()
+        cursor.execute(total_db_size)
+        total_db = cursor.fetchall()
+
         bean_type_data = {}
         for bean_type, count in bean_types:
             bean_type_data[bean_type] = count
@@ -869,6 +906,25 @@ def render_admin_dashboard(request):
                 overall_distribution[size] = {'size': size, 'Round': 0, 'Teardrop': 0}
             overall_distribution[size][shape] += int(count)
         
+        # Structure db_size and img_bucket info
+        data_db_size_rep = []
+        for table_name, total_size, estimated_rows in db_size:
+            data_db_size_rep.append({
+                "table_name": table_name,
+                "total_size": total_size,
+                "estimated_rows": estimated_rows
+            })
+        data_db_size = { "total": total_db[0][0] if total_db[0][0] is not None else 0 , "tables": data_db_size_rep }
+
+        data_img_bucket = []
+        for bucket_id, file_count, total_bytes, total_size in img_bucket:
+            data_img_bucket.append({
+                "bucket_id": bucket_id,
+                "file_count": file_count,
+                "total_bytes": total_bytes,
+                "total_size": total_size
+            })
+
         # Convert to lists and ensure proper ordering
         size_order = {'Small': 1, 'Medium': 2, 'Large': 3}
         
@@ -914,11 +970,223 @@ def render_admin_dashboard(request):
                 "medium_min": round(p33_area, 2),
                 "medium_max": round(p67_area, 2),
                 "large_min": round(p67_area, 2)
-            }
+            },
+            "db_size": data_db_size,
+            "img_bucket": data_img_bucket
         }
 
 
     return JsonResponse({'data': (data)})
+
+# System Status for Payment Plan Management
+@api_view(['GET', 'POST'])
+def system_status(request):
+    """
+    GET: Return system status including uptime, Supabase status, and payment plan
+    POST: Update payment plan information
+    """
+    if request.method == 'POST':
+        # Handle payment plan update
+        plan_type = request.data.get('plan_type', 'free')
+        end_date = request.data.get('end_date', None)
+        
+        try:
+            with connection.cursor() as cursor:
+                if plan_type == 'pro':
+                    if end_date:
+                        # Validate and parse the end_date
+                        try:
+                            end_dt = datetime.fromisoformat(end_date)
+                            days_remaining = (end_dt - datetime.now()).days
+                        except:
+                            end_dt = datetime.now() + timedelta(days=30)
+                            end_date = end_dt.isoformat()
+                            days_remaining = 30
+                    else:
+                        end_dt = datetime.now() + timedelta(days=30)
+                        end_date = end_dt.isoformat()
+                        days_remaining = 30
+                    
+                    current_bill = 25.0
+                    
+                    # Update or insert into plans table
+                    cursor.execute("""
+                       UPDATE public.plans SET 
+                            plan_type = %s,
+                            end_date = %s,
+                            current_bill = %s,
+                            updated_at = NOW()
+                    """, [plan_type, end_date, current_bill])
+                    
+                else:
+                    # Free plan
+                    end_date = None
+                    current_bill = 0.0
+                    days_remaining = None
+                    
+                    # Update or insert into plans table
+                    cursor.execute("""
+                        UPDATE public.plans SET 
+                            plan_type = %s,
+                            end_date = %s,
+                            current_bill = %s,
+                            updated_at = NOW()
+                    """, [plan_type, end_date, current_bill])
+            
+            return JsonResponse({
+                'status': 'success',
+                'plan_type': plan_type,
+                'end_date': end_date,
+                'current_bill': current_bill if plan_type == 'pro' else 0.0,
+                'days_remaining': days_remaining,
+                'message': f'Plan updated to {plan_type}'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Failed to update plan: {str(e)}'
+            }, status=500)
+    # GET request - return system status
+    try:
+        with connection.cursor() as cursor:
+            # 1. System Uptime - check database uptime
+            cursor.execute("SELECT pg_postmaster_start_time() as uptime;")
+            uptime_result = cursor.fetchone()
+            
+            if uptime_result and uptime_result[0]:
+                uptime_start = uptime_result[0]
+                current_time = timezone.now()
+                # Convert to timezone-aware datetime if needed
+                if uptime_start.tzinfo is None:
+                    uptime_start = timezone.make_aware(uptime_start)
+                
+                uptime_delta = current_time - uptime_start
+                uptime_days = uptime_delta.days
+                uptime_str = f"{uptime_days} days"
+            else:
+                uptime_str = "Unknown"
+        
+        # 2. Supabase Status - check external API
+        try:
+            response = requests.get('https://status.supabase.com/api/v2/summary.json', timeout=10)
+            if response.status_code == 200:
+                status_data = response.json()
+                
+                # Check overall status
+                overall_status = status_data.get('status', {}).get('indicator', 'unknown')
+                
+                # Check specific components (Database and Storage)
+                components = status_data.get('components', [])
+                database_status = 'unknown'
+                storage_status = 'unknown'
+                
+                for component in components:
+                    if 'database' in component.get('name', '').lower():
+                        database_status = component.get('status', 'unknown')
+                    elif 'storage' in component.get('name', '').lower():
+                        storage_status = component.get('status', 'unknown')
+                
+                # Get last update
+                last_update = status_data.get('page', {}).get('updated_at', '')
+                if last_update:
+                    try:
+                        last_update_dt = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
+                        last_update_str = last_update_dt.strftime('%Y-%m-%d %H:%M UTC')
+                    except:
+                        last_update_str = last_update
+                else:
+                    last_update_str = 'Unknown'
+                    
+            else:
+                overall_status = 'unknown'
+                database_status = 'unknown'
+                storage_status = 'unknown'
+                last_update_str = 'Failed to fetch'
+                
+        except Exception as e:
+            print(f"Error fetching Supabase status: {e}")
+            overall_status = 'unknown'
+            database_status = 'unknown'
+            storage_status = 'unknown'
+            last_update_str = 'API unavailable'
+        
+        # 3. Payment Plan Status - get from database
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT plan_type, end_date, current_bill, 
+                    CASE 
+                    WHEN end_date IS NOT NULL AND end_date > NOW() 
+                    THEN EXTRACT(DAY FROM (end_date - NOW()))::INTEGER
+                    ELSE NULL
+                    END as days_remaining
+                FROM public.plans 
+                ORDER BY updated_at DESC 
+                LIMIT 1
+                """)
+                plan_result = cursor.fetchone()
+                print(f"Plan result: {plan_result}")
+            
+            if plan_result:
+                payment_plan = {
+                    'plan_type': plan_result[0] if plan_result[0] else 'free',
+                    'end_date': plan_result[1].isoformat() if plan_result[1] else None,
+                    'current_bill': float(plan_result[2]) if plan_result[2] else 0,
+                    'days_remaining': int(plan_result[3]) if plan_result[3] else None
+                }
+            else:
+                # No plan found, create default free plan
+                cursor.execute("""
+                    INSERT INTO public.plans (plan_type, end_date, current_bill, created_at, updated_at)
+                    VALUES ('free', NULL, 0, NOW(), NOW())
+                """)
+                payment_plan = {
+                    'plan_type': 'free',
+                    'end_date': None,
+                    'current_bill': 0,
+                    'days_remaining': None
+                }
+        except Exception as e:
+            print(f"Error fetching payment plan: {e}")
+            # Fallback to free plan if database error
+            payment_plan = {
+            'plan_type': 'free',
+            'end_date': None,
+            'current_bill': 0,
+            'days_remaining': None
+            }
+        
+        # For demo, you could store this in a simple model or settings
+        # Here we'll just return mock data
+        
+        return JsonResponse({
+            'systemUptime': uptime_str,
+            'serverStatus': overall_status,
+            'databaseStatus': database_status,
+            'storageStatus': storage_status,
+            'lastBackup': last_update_str,
+            'activeSubscriptions': 1,
+            'paymentPlan': payment_plan
+        })
+        
+    except Exception as e:
+        print(f"Error in system_status view: {e}")
+        return JsonResponse({
+            'error': 'Failed to fetch system status',
+            'systemUptime': 'Unknown',
+            'serverStatus': 'unknown',
+            'databaseStatus': 'unknown', 
+            'storageStatus': 'unknown',
+            'lastBackup': 'Unknown',
+            'activeSubscriptions': 0,
+            'paymentPlan': {
+                'plan_type': 'free',
+                'end_date': None,
+                'current_bill': 0,
+                'days_remaining': None
+            }
+        }, status=500)
 
 def make_histogram(data, bin_size):
     # Round each value to nearest bin (like 1.1, 1.2, etc.)
