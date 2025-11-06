@@ -258,7 +258,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                             <React.Fragment key={index}>
                                 <button
                                     onClick={() => navigateToBreadcrumb(index)}
-                                    className={`${
+                                    className={`button-accent ${
                                         index === currentPath.length - 1
                                             ? '!text-[var(--arabica-brown)] font-bold !bg-[var(--parchment)]'
                                             : '!text-[var(--coffee-gray)] !bg-[var(--parchment)] !hover:text-amber-900'
@@ -362,7 +362,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                     <div className="flex space-x-2">
                         <button
                             onClick={() => setViewMode('grid')}
-                            className={`p-2 rounded ${viewMode === 'grid' ? 'bg-amber-100 text-amber-800' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`button-accent p-2 rounded ${viewMode === 'grid' ? 'bg-amber-100 text-amber-800' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
@@ -370,7 +370,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
-                            className={`p-2 rounded ${viewMode === 'list' ? 'bg-amber-100 text-amber-800' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`button-accent p-2 rounded ${viewMode === 'list' ? 'bg-amber-100 text-amber-800' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 12a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 16a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"></path>

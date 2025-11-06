@@ -178,6 +178,7 @@ export default function AdminDashboard() {
               minConfidence={adminStats.min_confidence}
               maxConfidence={adminStats.max_confidence}
               featureStats={adminStats.feature_stats}
+              boxplotFeatures={adminStats.boxplot_features}
             />
           </div>
         </div>

@@ -346,24 +346,24 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
       
       {/* Zoom Controls */}
       {showZoomControls && (
-        <div className="absolute top-2 left-2 bg-[rgba(0,0,0,0.35)] bg-opacity-75 text-white text-xs p-2 rounded flex flex-col gap-1">
+        <div className="mini-glass !bg-[var(--fadin-gray)] absolute !rounded-4xl top-2 left-2 bg-opacity-75 text-white text-xs flex flex-col gap-1">
           <button
             onClick={handleZoomIn}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="button-accent rounded"
             title="Zoom In"
           >
             +
           </button>
           <button
             onClick={handleZoomOut}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="button-accent rounded"
             title="Zoom Out"
           >
             -
           </button>
           <button
             onClick={handleZoomReset}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+            className="button-accent rounded text-xs"
             title="Reset Zoom"
           >
             1:1

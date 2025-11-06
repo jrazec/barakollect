@@ -740,7 +740,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                 </h3>
                 <button
                   onClick={() => setShowViewModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-xl"
+                  className="button-accent text-gray-500 hover:text-gray-700 text-xl"
                 >
                   ×
                 </button>

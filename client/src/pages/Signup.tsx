@@ -194,7 +194,7 @@ export default function Signup() {
                             </div>
                         </div>
 
-                        <button type="submit" disabled={loading} className="w-full !bg-black text-white py-3 px-4 rounded-lg font-medium hover:!bg-[var(--arabica-brown)] focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-[1.02] hover:shadow-lg">
+                        <button type="submit" disabled={loading} className="w-full py-3 px-4 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:ring-offset-2">
                             {loading ? 'Creating account…' : 'Create account'}
                         </button>
                     </form>

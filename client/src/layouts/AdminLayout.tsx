@@ -25,7 +25,7 @@ export default function AdminLayout() {
       <div className="absolute top-0 left-0 w-full z-50">
         <GlassSurface 
           width="100%" 
-          backgroundOpacity={0.5}
+          backgroundOpacity={0.7}
           borderRadius={0} 
           displace={5}
           redOffset={40}
@@ -33,7 +33,7 @@ export default function AdminLayout() {
           greenOffset={20}
           blur={20}
           brightness={50}
-          saturation={1.5}
+          saturation={1.3}
           distortionScale={-200}
         >
           <NavBar logo={logo} showSideBar={showSideBar} setShowSideBar={setShowSideBar} />
