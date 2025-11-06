@@ -1,5 +1,5 @@
 import type { NavItems, User } from "@/interfaces/global";
-import { ActivityIcon, BellIcon, ChartBar, DatabaseIcon, ImageIcon, LayoutDashboard, LogOutIcon, MapPin, Monitor, ScanFaceIcon, Settings, UploadIcon, User2Icon, PenTool } from "lucide-react";
+import { ActivityIcon, ChartBar, DatabaseIcon, ImageIcon, LayoutDashboard, LogOutIcon, MapPin, ScanFaceIcon, Settings, UploadIcon, User2Icon, PenTool } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
@@ -32,11 +32,6 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 icon: (<MapPin />),
                 label: "Farm Map",
                 route: "/farmer/farm-map"
-            },
-            {
-                icon: (<BellIcon />),
-                label: "Notifications",
-                route: "/farmer/notifications"
             }
         ],
         researcher: [
@@ -71,11 +66,6 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 icon: (<MapPin />),
                 label: "Farm Map",
                 route: "/researcher/farm-map"
-            },
-            {
-                icon: (<BellIcon />),
-                label: "Notifications",
-                route: "/researcher/notifications"
             }
         ],
         admin: [
@@ -114,11 +104,6 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 icon: (<ActivityIcon />),
                 label: "Activity Logs",
                 route: "/admin/activity-logs"
-            },
-            {
-                icon: (<BellIcon />),
-                label: "Notifications",
-                route: "/admin/notifications"
             },
             {
                 icon: (<Settings />),

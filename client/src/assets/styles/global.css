@@ -486,7 +486,7 @@ button:hover{
   border: 2px solid rgb(204, 204, 204);
 }
 
-.button-accent:hover {
+.button-accent:hover, .glass-hover:hover {
   box-shadow: inset 2px 2px 5px #bcbcbc, inset -2px -2px 5px #ffffff, 2px 2px 5px #bcbcbc, -2px -2px 5px #ffffff;
   font-weight: 700;
 }
@@ -501,5 +501,11 @@ button:hover{
   box-shadow: inset 4px 4px 10px #c3c2c284, inset -4px -4px 10px #ffffff70;
   backdrop-filter: blur(20px);
 }
+
+.glass-hover {
+  transition: all 0.2s ease-in-out;
+  padding: 0.5rem;
+}
+
 
 /* button color variations */

@@ -39,7 +39,7 @@ const AddFarmModal: React.FC<AddFarmModalProps> = ({ isOpen, onClose, onSubmit }
           </h3>
           <button
             onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700 text-xl"
+            className="button-accent text-gray-500 hover:text-gray-700 text-xl"
           >
             ✕
           </button>

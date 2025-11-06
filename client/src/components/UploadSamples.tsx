@@ -12,7 +12,7 @@ const UploadSamples: React.FC = () => {
   };
 
   return (
-      <div className="w-full h-full bg-white p-6">
+      <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
         <PageHeader
           title="Upload Bean Images"
           subtitle="Upload coffee bean images for analysis and contribute to our research database"

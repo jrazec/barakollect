@@ -62,7 +62,7 @@ const Analytics: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-full bg-white pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
+    <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
       {/* Header */}
       <DashboardHeader
         title="Bean Visualization & Analysis"

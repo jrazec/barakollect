@@ -45,7 +45,7 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose, onSubm
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Send Broadcast Notification</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="button-accent text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -300,7 +300,7 @@ const Notifications: React.FC = () => {
     const unreadCount = notifs.filter(notif => !notif.read).length;
     
   return (
-      <div className="w-full h-full max-w-6xl bg-white p-6">
+      <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -341,7 +341,7 @@ const Notifications: React.FC = () => {
         </div>
         
         {/* Notifications */}
-        <div className='bg-white rounded-lg shadow p-4'>
+        <div className='bg-white rounded-lg shadow'>
             <div className="w-full border border-gray-300 p-3 box-border bg-gray-50 max-h-[500px] overflow-y-auto">
                 {isLoading ? (
                     <div className="flex items-center justify-center py-8">
@@ -375,7 +375,7 @@ const Notifications: React.FC = () => {
                                     {!notif.read && (
                                         <button
                                             onClick={() => handleMarkAsRead(notif.id)}
-                                            className="ml-4 text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                                            className="button-secondary ml-4 text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
                                         >
                                             Mark as read
                                         </button>

@@ -33,7 +33,7 @@ export default function ClientLayout() {
           saturation={1.3}
           distortionScale={-200}
         >
-          <NavBar logo={logo} showSideBar={showSideBar} setShowSideBar={setShowSideBar} />
+          <NavBar logo={logo} showSideBar={showSideBar} setShowSideBar={setShowSideBar} role={role} />
         </GlassSurface>
       </div>
 

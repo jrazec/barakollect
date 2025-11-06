@@ -173,7 +173,7 @@ const FarmerDashboard: React.FC = () => {
     ] : [];
 
     return (
-        <div className="min-h-screen bg-white pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
+        <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
             {/* Dashboard Header */}
             <DashboardHeader 
                 title='Farmer Dashboard'
