@@ -69,21 +69,21 @@ RUN echo "=== Collecting Static Files ===" && \
 # Validate GeoDjango setup
 RUN echo "=== Validating GeoDjango/GDAL Setup ===" && \
     echo "Checking system GDAL..." && \
-    gdal-config --version || echo "✗ ERROR: gdal-config not found" && \
+    (gdal-config --version 2>&1 && echo "✓ GDAL version: $(gdal-config --version 2>&1)" || echo "✗ ERROR: gdal-config not found") && \
     echo "Checking system GEOS..." && \
-    geos-config --version || echo "✗ ERROR: geos-config not found" && \
+    (geos-config --version 2>&1 && echo "✓ GEOS version: $(geos-config --version 2>&1)" || echo "✗ ERROR: geos-config not found") && \
     echo "Checking system PROJ..." && \
-    proj --version || echo "✗ ERROR: proj not found" && \
+    (proj --version 2>&1 && echo "✓ PROJ version: $(proj --version 2>&1)" || echo "✗ ERROR: proj not found") && \
     echo "Testing GEOS import..." && \
-    DJANGO_SETTINGS_MODULE=config.settings python -c "from django.contrib.gis import geos; print('✓ GEOS version:', geos.geos_version)" || echo "✗ ERROR: GEOS import failed" && \
+    (DJANGO_SETTINGS_MODULE=config.settings python -c "from django.contrib.gis import geos; print('✓ GEOS version:', geos.geos_version)" 2>&1 || echo "✗ ERROR: GEOS import failed - check logs above") && \
     echo "Testing GDAL import..." && \
-    DJANGO_SETTINGS_MODULE=config.settings python -c "from django.contrib.gis import gdal; print('✓ GDAL version:', gdal.gdal_version)" || echo "✗ ERROR: GDAL import failed" && \
+    (DJANGO_SETTINGS_MODULE=config.settings python -c "from django.contrib.gis import gdal; print('✓ GDAL version:', gdal.gdal_version)" 2>&1 || echo "✗ ERROR: GDAL import failed - check logs above") && \
     echo "Testing PROJ import..." && \
-    DJANGO_SETTINGS_MODULE=config.settings python -c "from django.contrib.gis import gdal; print('✓ PROJ version:', gdal.proj_version)" || echo "✗ ERROR: PROJ import failed" && \
+    (DJANGO_SETTINGS_MODULE=config.settings python -c "from django.contrib.gis import gdal; print('✓ PROJ version:', gdal.proj_version)" 2>&1 || echo "✗ ERROR: PROJ import failed - check logs above") && \
     echo "Testing GeoDjango models import..." && \
-    DJANGO_SETTINGS_MODULE=config.settings python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings'); import django; django.setup(); from django.contrib.gis.db import models; print('✓ GeoDjango models imported successfully')" || echo "✗ ERROR: GeoDjango models import failed" && \
+    (DJANGO_SETTINGS_MODULE=config.settings python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings'); import django; django.setup(); from django.contrib.gis.db import models; print('✓ GeoDjango models imported successfully')" 2>&1 || echo "✗ ERROR: GeoDjango models import failed - check logs above") && \
     echo "Testing PostGIS backend..." && \
-    DJANGO_SETTINGS_MODULE=config.settings python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings'); import django; django.setup(); from django.contrib.gis.db.backends.postgis import base; print('✓ PostGIS backend available')" || echo "✗ ERROR: PostGIS backend not available" && \
+    (DJANGO_SETTINGS_MODULE=config.settings python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings'); import django; django.setup(); from django.contrib.gis.db.backends.postgis import base; print('✓ PostGIS backend available')" 2>&1 || echo "✗ ERROR: PostGIS backend not available - check logs above") && \
     echo "=== GeoDjango/GDAL Validation Complete ==="
 
 # Expose port (Railway will set PORT env var, default to 8000)
@@ -95,15 +95,23 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # Run gunicorn with comprehensive logging
 CMD echo "=== Starting Application ===" && \
-    echo "PORT: ${PORT:-8000}" && \
+    echo "PORT environment variable: ${PORT:-8000}" && \
     echo "DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings}" && \
+    echo "=== Checking Environment Variables ===" && \
+    echo "DB_NAME: ${DB_NAME:+SET}" && \
+    echo "DB_HOST: ${DB_HOST:+SET}" && \
+    echo "SECRET_KEY: ${SECRET_KEY:+SET}" && \
+    echo "=== Testing Django Setup ===" && \
+    python manage.py check --deploy 2>&1 || echo "⚠ WARNING: Django check failed" && \
     echo "=== Starting Gunicorn ===" && \
+    echo "Binding to: 0.0.0.0:${PORT:-8000}" && \
     exec gunicorn config.wsgi:application \
         --bind 0.0.0.0:${PORT:-8000} \
         --workers 2 \
         --timeout 120 \
         --access-logfile - \
         --error-logfile - \
-        --log-level info \
-        --capture-output
+        --log-level debug \
+        --capture-output \
+        --enable-stdio-inheritance
 
