@@ -282,7 +282,7 @@ export default function ActivityLogs() {
   const totalPages = Math.ceil(logs.length / logsPerPage);
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50">
+    <div className="w-full space-y-6 max-w-7xl bg-white p-6 mx-auto">
       <div className="flex justify-between items-center">
         <PageHeader title="Activity Logs" subtitle={''} />
         <div className="flex space-x-3">
@@ -309,21 +309,21 @@ export default function ActivityLogs() {
           title: "Filters",
           subtitle: "",
           content: (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 w-full">
+              <div className="relative col-span-2">
+                <Search className="!text-xs absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search logs..."
                   value={filters.search}
                   onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                  className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
+                  className=" text-xs w-full pl-8 pr-3 py-2 border bg-white border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
                 />
               </div>
               <select 
                 value={filters.userType} 
                 onChange={(e) => setFilters({ ...filters, userType: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
+                className="cursor-pointer text-xs w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] hover:border-[var(--arabica-brown)] transition-all"
               >
                 <option value="all">All User Types</option>
                 <option value="admin">Admin</option>
@@ -334,7 +334,7 @@ export default function ActivityLogs() {
               <select 
                 value={filters.status} 
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
+                className="cursor-pointer text-xs w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] hover:border-[var(--arabica-brown)] transition-all"
               >
                 <option value="all">All Status</option>
                 <option value="success">Success</option>
@@ -344,7 +344,7 @@ export default function ActivityLogs() {
               <select 
                 value={filters.dateRange} 
                 onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
+                className="cursor-pointer text-xs w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] hover:border-[var(--arabica-brown)] transition-all"
               >
                 <option value="1day">Last 24 hours</option>
                 <option value="7days">Last 7 days</option>
@@ -358,14 +358,12 @@ export default function ActivityLogs() {
 
       {/* Logs Table */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--espresso-black)]">
-          Activity Log Entries ({logs.length} total)
+        <h2 className="text-xl font-semibold text-[var(--espresso-black)] mb-2">
+          Entries
         </h2>
-        <TableComponent columns={columns} data={currentLogs} />
-
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="text-sm text-gray-600">
               Showing {indexOfFirstLog + 1} to {Math.min(indexOfLastLog, logs.length)} of {logs.length} entries
             </div>
@@ -373,20 +371,23 @@ export default function ActivityLogs() {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="button-accent px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
               >
                 Previous
               </button>
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="button-accent px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
               >
                 Next
               </button>
             </div>
           </div>
         )}
+        <TableComponent columns={columns} data={currentLogs} />
+
+        
       </div>
 
       {/* Individual Delete Confirmation Modal */}

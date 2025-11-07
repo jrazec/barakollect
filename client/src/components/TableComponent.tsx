@@ -48,14 +48,14 @@ const PaginationControls = memo(({ pagination }: { pagination: PaginationProps }
         <button
           onClick={handlePreviousClick}
           disabled={!hasPrevious && currentPage === 1}
-          className="px-3 py-1 text-sm border border-gray-300 rounded-lg font-accent disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+          className="button-accent px-3 py-1 text-sm border border-gray-300 rounded-lg font-accent disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
         >
           Previous
         </button>
         <button
           onClick={handleNextClick}
           disabled={!hasNext && currentPage === totalPages}
-          className="px-3 py-1 text-sm border border-gray-300 rounded-lg font-accent disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+          className="button-accent px-3 py-1 text-sm border border-gray-300 rounded-lg font-accent disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
         >
           Next
         </button>

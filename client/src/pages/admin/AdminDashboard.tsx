@@ -236,8 +236,8 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-lvh bg-gray-50 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
+      <div>
         <DashboardHeader title="Admin Dashboard" subtitle='' />
 
         {/* Stats Cards */}
@@ -435,6 +435,7 @@ export default function AdminDashboard() {
               minConfidence={adminStats.min_confidence}
               maxConfidence={adminStats.max_confidence}
               featureStats={adminStats.feature_stats}
+              boxplotFeatures={adminStats.boxplot_features}
             />
           </div>
         </div>

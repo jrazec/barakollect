@@ -108,7 +108,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65  backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
       <div 
@@ -140,8 +140,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
           {/* Close button */}
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-            style={{ color: 'var(--ash-gray)' }}
+            className="button-accent text-gray-400 hover:text-gray-600 transition-colors p-1"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

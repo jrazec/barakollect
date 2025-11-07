@@ -33,7 +33,7 @@ const MultiImagePredictionModal: React.FC<MultiImagePredictionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/65 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg max-w-7xl max-h-[95vh] overflow-hidden w-full mx-4">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
@@ -47,7 +47,7 @@ const MultiImagePredictionModal: React.FC<MultiImagePredictionModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+            className="button-accent"
           >
             ✕
           </button>
@@ -55,7 +55,7 @@ const MultiImagePredictionModal: React.FC<MultiImagePredictionModalProps> = ({
 
         <div className="flex h-[calc(95vh-80px)]">
           {/* Left Panel - Image Selection */}
-          <div className="w-80 border-r bg-gray-50 overflow-y-auto">
+          <div className="w-60 border-r bg-gray-50 overflow-y-auto">
             <div className="p-4">
               <h4 className="font-semibold text-gray-800 mb-3">Images ({results.images.length})</h4>
               <div className="space-y-2">
@@ -103,13 +103,13 @@ const MultiImagePredictionModal: React.FC<MultiImagePredictionModalProps> = ({
             ) : (
               <div className="p-6">
                 {/* Tab Navigation */}
-                <div className="flex mb-6 border-b">
+                <div className="flex mb-6 border-b pb-4 gap-4 justify-end">
                   <button
                     onClick={() => setActiveTab('overview')}
                     className={`px-4 py-2 font-medium ${
                       activeTab === 'overview'
                         ? 'border-b-2 border-[var(--espresso-black)] text-[var(--espresso-black)]'
-                        : 'text-gray-600 hover:text-gray-800'
+                        : 'button-secondary'
                     }`}
                   >
                     Overview
@@ -119,7 +119,7 @@ const MultiImagePredictionModal: React.FC<MultiImagePredictionModalProps> = ({
                     className={`px-4 py-2 font-medium ${
                       activeTab === 'details'
                         ? 'border-b-2 border-[var(--espresso-black)] text-[var(--espresso-black)]'
-                        : 'text-gray-600 hover:text-gray-800'
+                        : 'button-secondary'
                     }`}
                   >
                     Bean Details
@@ -148,6 +148,14 @@ const MultiImagePredictionModal: React.FC<MultiImagePredictionModalProps> = ({
                     <div>
                       <h5 className="font-semibold text-gray-800 mb-3">Analysis Summary</h5>
                       <div className="space-y-4">
+                        {/* Bean Count */}
+                        <div className="bg-green-50 rounded-lg p-4">
+                          <h6 className="font-medium text-green-800 mb-2">Detection Results</h6>
+                          <div className="text-2xl font-bold text-green-600">
+                            {selectedImage.total_beans_detected} bean{selectedImage.total_beans_detected !== 1 ? 's' : ''} detected
+                          </div>
+                        </div>
+                        
                         {/* Image Info */}
                         <div className="bg-gray-50 rounded-lg p-4">
                           <h6 className="font-medium text-gray-800 mb-2">Image Information</h6>
@@ -158,13 +166,7 @@ const MultiImagePredictionModal: React.FC<MultiImagePredictionModalProps> = ({
                           </div>
                         </div>
 
-                        {/* Bean Count */}
-                        <div className="bg-green-50 rounded-lg p-4">
-                          <h6 className="font-medium text-green-800 mb-2">Detection Results</h6>
-                          <div className="text-2xl font-bold text-green-600">
-                            {selectedImage.total_beans_detected} bean{selectedImage.total_beans_detected !== 1 ? 's' : ''} detected
-                          </div>
-                        </div>
+                        
 
                         {/* Bean Size Summary */}
                         {selectedImage.beans.length > 0 && (

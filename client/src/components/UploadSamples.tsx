@@ -86,7 +86,7 @@ const UploadSamples: React.FC = () => {
 
   return (
     <>
-      <div className="w-full h-full max-w-6xl bg-white p-6">
+      <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
         <div className="flex justify-between items-start mb-6">
           <PageHeader
             title="Upload Bean Images"
@@ -101,7 +101,6 @@ const UploadSamples: React.FC = () => {
           </button>
         </div>
         
-        <TabComponent activeTab={activeTab} onTabChange={setActiveTab} tabs={['Predict Image','Find Largest Bean']} />
         <UploadBodySection activeTab={activeTab} onFilesSelected={handleFiles} />
 
         {/* Workflow Help Button */}

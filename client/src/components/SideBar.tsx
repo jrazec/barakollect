@@ -1,5 +1,5 @@
 import type { NavItems, User } from "@/interfaces/global";
-import { ActivityIcon, BellIcon, ChartBar, DatabaseIcon, ImageIcon, LayoutDashboard, LogOutIcon, MapPin, Monitor, ScanFaceIcon, Settings, UploadIcon, User2Icon, PenTool } from "lucide-react";
+import { ActivityIcon, ChartBar, DatabaseIcon, ImageIcon, LayoutDashboard, LogOutIcon, MapPin, ScanFaceIcon, Settings, UploadIcon, User2Icon, PenTool } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
@@ -32,11 +32,6 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 icon: (<MapPin />),
                 label: "Farm Map",
                 route: "/farmer/farm-map"
-            },
-            {
-                icon: (<BellIcon />),
-                label: "Notifications",
-                route: "/farmer/notifications"
             }
         ],
         researcher: [
@@ -71,11 +66,6 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 icon: (<MapPin />),
                 label: "Farm Map",
                 route: "/researcher/farm-map"
-            },
-            {
-                icon: (<BellIcon />),
-                label: "Notifications",
-                route: "/researcher/notifications"
             }
         ],
         admin: [
@@ -114,11 +104,6 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 icon: (<ActivityIcon />),
                 label: "Activity Logs",
                 route: "/admin/activity-logs"
-            },
-            {
-                icon: (<BellIcon />),
-                label: "Notifications",
-                route: "/admin/notifications"
             },
             {
                 icon: (<Settings />),
@@ -202,8 +187,8 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
 
                 <div className="bottomSection">
                     <ul>
-                        <li className={`navigationBtn ${show ? "" : "collapsed"}`}>
-                            <button onClick={handleLogoutClick} className="w-full text-left flex items-center justify-center gap-2 text-sm" style={{ opacity: 1 }}>
+                        <li className={` ${show ? "" : "collapsed"}`}>
+                            <button onClick={handleLogoutClick} className="button-accent w-full text-left flex items-center justify-center gap-2 text-sm" style={{ opacity: 1 }}>
                                 <LogOutIcon style={{ opacity: 0.4 }} />
                                 {show && <span>Logout</span>}
                             </button>
@@ -214,7 +199,7 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
 
             {/* Logout Confirmation Modal */}
             {showLogoutModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="fixed inset-0 z-1001 flex items-center justify-center bg-black/65">
                     <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
@@ -229,13 +214,13 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                         <div className="flex gap-3 justify-end mt-6">
                             <button
                                 onClick={handleCancelLogout}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                                className="button-secondary cancel px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleConfirmLogout}
-                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                                className="px-4 py-2 text-sm font-medium text-white !bg-red-700 rounded-md hover:bg-red-700 transition-colors"
                             >
                                 Logout
                             </button>

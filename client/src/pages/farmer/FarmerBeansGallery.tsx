@@ -7,7 +7,7 @@ const FarmerBeansGallery: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Validated');
 
   return (
-      <div className="w-full h-full max-w-6xl bg-white p-6">
+      <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
 
         {/* Header */}
         <PageHeader

@@ -120,9 +120,17 @@ export default function Login() {
                     
                 <GlassSurface
                     className="logo-div p-11 "
+                    backgroundOpacity={0.2}
                     borderRadius={40}
                     width={'100%'}
-                    displace={1}
+                    displace={5}
+                    redOffset={50}
+                    blueOffset={20}
+                    greenOffset={20}
+                    blur={20}
+                    brightness={70}
+                    saturation={1.3}
+                    distortionScale={-200}
                 >
                     {/* barakollect */}
                     <div className="text-center">
@@ -176,7 +184,7 @@ export default function Login() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="!bg-black absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:!bg-[var(--arabica-brown)] focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:ring-offset-2 transition-all duration-300 ease-in-out transform"
+                                    className="!bg-transparent !text-gray-400 hover:!text-gray-600 hover:!shadow-none hover:!border-none absolute inset-y-0 right-0 pr-3 flex items-center"
                                 >
                                     {showPassword ? (
                                         <EyeOffIcon className="w-5 h-5" />
@@ -209,7 +217,7 @@ export default function Login() {
                                     Remember me
                                 </label>
                             </div>
-                            <button type="button" onClick={() => setShowForgot(true)} className="button-secondary text-sm text-barako hover:!text-white hover:!bg-[var(--arabica-brown)] font-medium transition-all duration-300 ease-in-out transform hover:scale-105">
+                            <button type="button" onClick={() => setShowForgot(true)} className="button-secondary text-sm text-barako  font-medium">
                                 Forgot password?
                             </button>
                         </div>
@@ -217,7 +225,7 @@ export default function Login() {
                         {/* Login Button */}
                         <button
                             type="submit"
-                            className="w-full !bg-black text-white py-3 px-4 rounded-lg font-medium hover:!bg-[var(--arabica-brown)] focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:ring-offset-2"
+                            className="w-full py-3 px-4 rounded-lg font-medium hover:bg-[var(--arabica-brown)] focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:ring-offset-2"
                         >
                             Log In
                         </button>
@@ -270,8 +278,8 @@ export default function Login() {
                                 </label>
                             </div>
                             <div className="flex items-center justify-end gap-2">
-                                <button type="button" onClick={() => setShowForgot(false)} className="px-4 py-2 rounded-md border">Cancel</button>
-                                <button type="submit" className="px-4 py-2 rounded-md !bg-black text-white">Send reset link</button>
+                                <button type="button" onClick={() => setShowForgot(false)} className="button-secondary cancel px-4 py-2 rounded-md border">Cancel</button>
+                                <button type="submit" className="px-4 py-2 rounded-md">Send reset link</button>
                             </div>
                         </form>
                     </div>

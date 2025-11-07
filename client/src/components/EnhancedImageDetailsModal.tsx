@@ -54,6 +54,7 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'beans' | 'analysis'>('overview');
   const [showBeanBoxes, setShowBeanBoxes] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   if (!isOpen) return null;
 
@@ -76,8 +77,24 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
     }
   };
 
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (onDeleteImage && image.id) {
+      onDeleteImage(image.id);
+      setShowDeleteModal(false);
+      onClose();
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/65 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg max-w-7xl max-h-[95vh] overflow-hidden w-full mx-4">
         {/* Header */}
         <div className="flex justify-between items-center p-6">
@@ -92,7 +109,7 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
           <div className="flex items-center space-x-2">
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+              className="button-accent text-gray-500 hover:text-gray-700 text-xl font-bold"
             >
               ✕
             </button>
@@ -101,14 +118,14 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
 
         {/* Tab Navigation */}
         <div className="bg-gray-50">
-          <div className="px-6">
-            <div className="flex space-x-8">
+          <div className="px-6 mt-2 pb-2 border-b border-gray-300">
+            <div className="flex space-x-5 justify-end">
               <button
                 onClick={() => setActiveTab('overview')}
                 className={`py-4 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === 'overview'
                     ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'button-secondary'
                 }`}
               >
                 Overview
@@ -118,7 +135,7 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                 className={`py-4 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === 'beans'
                     ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'button-secondary'
                 }`}
               >
                 Bean Details ({beans.length})
@@ -128,7 +145,7 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                 className={`py-4 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === 'analysis'
                     ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'button-secondary'
                 }`}
               >
                 Analysis
@@ -138,13 +155,13 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="h-[calc(95vh-180px)] overflow-y-auto">
+        <div className="h-[calc(95vh-220px)] overflow-y-auto">
           <div className="p-6">
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 {/* Bean Visualization - Large and Responsive */}
                 <div className="w-full">
-                  <div className="h-96 md:h-[500px]">
+                  <div className="h-96 md:h-[500px] border-gray-300 border rounded-lg">
                     <BeanDetectionCanvas
                       imageSrc={image.src}
                       beans={beans}
@@ -274,52 +291,30 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
 
             {activeTab === 'beans' && (
               <div className="space-y-6">
-                {/* Controls Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-4 bg-gray-50 p-4 rounded-lg">
-                  {/* Bean Selector Dropdown */}
-                  <div className="flex items-center space-x-4">
-                    <label className="text-sm font-medium text-gray-700">Select Bean:</label>
-                    <select
-                      value={selectedBeanId || ''}
-                      onChange={(e) => setSelectedBeanId(e.target.value ? parseInt(e.target.value) : undefined)}
-                      className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48"
-                    >
-                      <option value="">Select a bean...</option>
-                      {beans.map((bean) => (
-                        <option key={bean.bean_id} value={bean.bean_id}>
-                          Bean #{bean.bean_id} - {bean.length_mm.toFixed(1)}×{bean.width_mm.toFixed(1)}mm
-                          {bean.bean_id === bestCandidate?.bean_id && userRole === 'farmer' ? ' (BEST)' : ''}
-                          {bean.is_validated === true ? ' ✓' : bean.is_validated === false ? ' ⏳' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Controls */}
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm font-medium text-gray-700">Show Bean Boxes:</label>
-                      <button
-                        onClick={() => setShowBeanBoxes(!showBeanBoxes)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          showBeanBoxes ? 'bg-blue-600' : 'bg-gray-200'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            showBeanBoxes ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="grid lg:grid-cols-3 gap-6">
                   {/* Bean Visualization - Takes up more space */}
-                  <div className="lg:col-span-1">
-                    <h3 className="text-lg font-semibold mb-4">Bean Visualization</h3>
-                    <div className="h-96 md:h-[500px]">
+                  <div className="lg:col-span-2 ">
+                    
+                    {/* Controls */}
+                    <div className="flex items-center space-x-4 justify-between mb-2">
+                      <h3 className="text-lg font-semibold">Bean Visualization</h3>
+                      <div className="flex items-center space-x-2">
+                        <label className="text-sm font-medium text-gray-700">Show Bean Boxes:</label>
+                        <button
+                          onClick={() => setShowBeanBoxes(!showBeanBoxes)}
+                          className={`mini-glass !border-[var(--fadin-mocha)] relative inline-flex h-6 w-14 items-center rounded-full transition-colors hover:!shadow-none ${
+                            showBeanBoxes ? '!bg-green-200' : '!bg-gray-300'
+                          }`}
+                        >
+                          <span
+                            className={`button-accent !bg-white inline-block h-1 w-1 transform rounded-full transition-transform ${
+                              showBeanBoxes ? 'translate-x-1' : '-translate-x-3.5'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="h-96 md:h-[500px] border-gray-300 border rounded-lg">
                       <BeanDetectionCanvas
                         imageSrc={image.src}
                         beans={beans}
@@ -336,8 +331,26 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                   </div>
 
                   {/* Bean Details */}
-                  <div className="lg:col-span-2">
+                  <div className="lg:col-span-1">
                     <h3 className="text-lg font-semibold mb-4">Bean Details</h3>
+                    {/* Bean Selector Dropdown */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-700"></label>
+                      <select
+                        value={selectedBeanId || ''}
+                        onChange={(e) => setSelectedBeanId(e.target.value ? parseInt(e.target.value) : undefined)}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                      >
+                        <option value="">Select a bean...</option>
+                        {beans.map((bean) => (
+                          <option key={bean.bean_id} value={bean.bean_id}>
+                            Bean #{bean.bean_id} - {bean.length_mm.toFixed(1)}×{bean.width_mm.toFixed(1)}mm
+                            {bean.bean_id === bestCandidate?.bean_id && userRole === 'farmer' ? ' (BEST)' : ''}
+                            {bean.is_validated === true ? ' ✓' : bean.is_validated === false ? ' ⏳' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     {selectedBean ? (
                       <div className="bg-gray-50 rounded-lg p-4 space-y-4">
                         <div className="flex items-center justify-between">
@@ -669,27 +682,61 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center p-6 bg-gray-50">
+        <div className="flex justify-between items-center p-4 bg-gray-50">
           <div className="text-sm text-gray-600">
             {beans.length} beans • {validatedCount} validated
           </div>
           <div className="flex space-x-3">
             {userRole === 'admin' && onDeleteImage && image.id && (
               <button
-                onClick={() => onDeleteImage(image.id!)}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                onClick={handleDeleteClick}
+                className="px-4 py-2 !bg-red-700 text-white rounded hover:bg-red-600 transition-colors"
               >
                 Delete Image
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="px-6 py-2 bg-[var(--espresso-black)] text-white rounded hover:bg-opacity-90"
-            >
-              Close
-            </button>
           </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/65 bg-opacity-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Confirm Deletion</h3>
+                  <p className="text-sm text-gray-600">Are you sure you want to delete this image?</p>
+                </div>
+              </div>
+              
+              <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+                <p className="text-sm text-red-800">
+                  <strong>Warning:</strong> This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={handleCancelDelete}
+                  className="button-secondary cancel px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  className="!bg-red-700 px-4 py-2 text-sm font-medium text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Delete Image
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

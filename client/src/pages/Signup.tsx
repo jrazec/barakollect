@@ -108,23 +108,18 @@ export default function Signup() {
                 
 
                 <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-200 login-form">
-                <GlassSurface
-                    className="logo-div p-11"
-                    borderRadius={40}
-                    width={'70%'}
-                    displace={1}
-                >
+            
                     {/* barakollect */}
-                    <div className="text-center">
+                    <div className="text-center mb-6 border-b border-gray-300 pb-2">
                         <div className="inline-flex items-center justify-center">
                             <img 
                                 src={logo1} 
                                 alt="BaraKollect Logo" 
-                                className="h-fit w-auto"
+                                className="h-fit w-40"
                             />
                         </div>
                     </div>
-                 </GlassSurface>
+                
                     
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
@@ -194,7 +189,7 @@ export default function Signup() {
                             </div>
                         </div>
 
-                        <button type="submit" disabled={loading} className="w-full !bg-black text-white py-3 px-4 rounded-lg font-medium hover:!bg-[var(--arabica-brown)] focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:ring-offset-2 transition-all duration-300 ease-in-out transform hover:scale-[1.02] hover:shadow-lg">
+                        <button type="submit" disabled={loading} className="w-full py-3 px-4 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:ring-offset-2">
                             {loading ? 'Creating account…' : 'Create account'}
                         </button>
                     </form>

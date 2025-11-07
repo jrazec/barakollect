@@ -120,7 +120,7 @@ const PaymentPlanModal: React.FC<PaymentPlanModalProps> = ({
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="button-accent p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X size={20} className="text-gray-500" />
           </button>

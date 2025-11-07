@@ -142,7 +142,7 @@ const SystemStatusComponent: React.FC<SystemStatusComponentProps> = ({
               </div>
               <button
                 onClick={() => setShowPaymentModal(true)}
-                className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
+                className="button-accent p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
                 title="Manage Payment Plan"
               >
                 <Settings size={16} className="text-gray-600" />

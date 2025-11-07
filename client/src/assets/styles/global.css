@@ -81,7 +81,6 @@ header svg {
   align-items: center;
   padding: 0.5rem 1rem;
   font-family: var(--font-main);
-  background: var(--fadin-mocha);
   color: var(--arabica-brown);
   font-weight: bold;
   height: 5rem;
@@ -148,7 +147,7 @@ header svg {
   align-items: center;
   border-radius: 0.5rem;
   margin: 0.25rem 0;
-  transition: background 0.3s ease;
+  transition: all 0.2s ease-in-out;
 }
 
 .navigationBtn a {
@@ -194,13 +193,13 @@ header svg {
 }
 
 .navigationBtn:hover {
-  background: var(--fadin-mocha);
-  transition: ease;
+  background: #e0ccb659 ;
+  
 }
 
 .navigationBtn:hover * {
-  color: var(--mocha);
-    transition: ease;
+  color: var(--arabica-brown);
+  transition: ease;
 }
 
 /* Mid & Bottom Sections */
@@ -248,7 +247,7 @@ ul li a.active {
   color: var(--parchment);
   font-family: var(--font-main);
   border: none;
-  border-radius: 4px;
+  border-radius: 1.5rem;
   padding: 0.5em 1em;
   cursor: pointer;
   transition: all 0.3s ease-in-out;
@@ -256,20 +255,31 @@ ul li a.active {
 
 /* !text-[var(--arabica-brown)] !border-2 !border-[var(--arabica-brown)] !bg-transparent */
 .button-secondary {
-  color: var(--arabica-brown);
+  color: var(--arabica-brown) !important;
   background: transparent;
-  box-shadow: inset 0 0 0 1px var(--arabica-brown);
+  box-shadow: inset 0 0 0 1px var(--gray);
 }
 
 button:hover{
-  transform: scale(1.02);
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  /* transform: scale(1.02); */
+  background-color: var(--color-barako);
+  font-weight: 500;
+  box-shadow:
+    inset -2px -2px 4px #cebdae,
+    inset 3px 3px 4px #17110e,
+    inset 3px 4px 2px #ffc99d, 
+    inset 3px 2px 5px #17110e,
+    inset 10px 10px 40px  #17110eb9,
+    inset -10px -10px 30px  #b39b87b7,
+    2px 2px 5px #93746a, -1px -1px 3px #ffffff, 
+    5px 5px 20px rgba(0, 0, 0, 0.201);
+  border: 1px solid rgba(255, 255, 255, 0.66);
 }
 
 .button-secondary:hover {
-  background: var(--arabica-brown);
-  color: var(--parchment);
-  box-shadow: none;
+  background: var(--fadin-mocha);
+  color: var(--arabica-brown);
+  box-shadow: inset 2px 2px 5px #bcbcbc, inset -2px -2px 5px #ffffff, 2px 2px 5px #bcbcbc, -2px -2px 5px #ffffff;
 }
 
 
@@ -466,4 +476,61 @@ button:hover{
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* new button test */
+/* From Uiverse.io by adamgiebl */ 
+
+.button-accent, .mini-glass {
+  background-color:  #e0ccb659 !important;
+  border-radius: 1.5rem;
+  box-shadow: inset 4px 4px 10px #c3c2c2, inset -4px -4px 10px #ffffffbf;
+  color: var(--arabica-brown);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 10px 15px;
+  transition: all 0.2s ease-in-out;
+  border: 2px solid rgb(204, 204, 204);
+}
+
+.button-accent:hover, .glass-hover:hover, .navigationBtn:hover {
+  box-shadow: inset 2px 2px 5px #bcbcbc, inset -2px -2px 5px #ffffff, 2px 2px 5px #bcbcbc, -2px -2px 5px #ffffff;
+  font-weight: 700;
+}
+
+.button-accent:focus {
+  outline: none;
+  box-shadow: inset 2px 2px 5px #bcbcbc, inset -2px -2px 5px #ffffff, 2px 2px 5px #bcbcbc, -2px -2px 5px #ffffff;
+  font-weight: 700;
+}
+
+.mini-glass {
+  box-shadow: inset 4px 4px 10px #c3c2c284, inset -4px -4px 10px #ffffff70;
+  backdrop-filter: blur(20px);
+}
+
+.glass-hover {
+  transition: all 0.2s ease-in-out;
+  padding: 0.5rem;
+}
+
+/* button color variations */
+.cancel:hover {
+  background-color: #d7d7d7;
+  box-shadow: inset 2px 2px 5px #bcbcbc, inset -2px -2px 5px #ffffff, 2px 2px 5px #bcbcbc, -2px -2px 5px #ffffff;
+}
+
+/* div */
+.glass-div {
+  background-color: var(--parchment);
+  box-shadow: inset 2px 2px 5px #bcbcbcaa, inset -2px -2px 5px #ffffff, 2px 2px 5px #bcbcbc, -2px -2px 5px #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+.glass-div:hover {
+  box-shadow: 
+    inset 1px 1px 5px #bcbcbcaa, 
+    inset -2px -2px 5px #ffffff, 
+    2px 2px 5px #bcbcbc, 
+    -2px -2px 5px #ffffff,
+    8px 8px 8px rgb(218, 218, 218);
 }

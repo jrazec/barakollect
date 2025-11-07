@@ -391,8 +391,8 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
+      <div>
         <PageHeader title="User Management" subtitle={''} />
 
         {/* Search and Filters */}
@@ -740,9 +740,9 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                 </h3>
                 <button
                   onClick={() => setShowViewModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-xl"
+                  className="button-accent text-gray-500 hover:text-gray-700 text-xl"
                 >
-                  ×
+                  ✕
                 </button>
               </div>
 

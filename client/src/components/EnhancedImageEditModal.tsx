@@ -277,7 +277,7 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
           <div className="flex items-center space-x-2">
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+              className="button-accent text-gray-500 hover:text-gray-700 text-xl font-bold"
             >
               ✕
             </button>
@@ -349,13 +349,13 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
                       <label className="text-sm font-medium text-gray-700">Show Bean Boxes:</label>
                       <button
                         onClick={() => setShowBeanBoxes(!showBeanBoxes)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          showBeanBoxes ? 'bg-blue-600' : 'bg-gray-200'
+                        className={`mini-glass !border-[var(--fadin-mocha)] relative inline-flex h-6 w-14 items-center rounded-full transition-colors hover:!shadow-none ${
+                          showBeanBoxes ? '!bg-green-200' : '!bg-gray-300'
                         }`}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            showBeanBoxes ? 'translate-x-6' : 'translate-x-1'
+                          className={`button-accent !bg-white inline-block h-1 w-1 transform rounded-full transition-transform ${
+                            showBeanBoxes ? 'translate-x-1' : '-translate-x-3.5'
                           }`}
                         />
                       </button>

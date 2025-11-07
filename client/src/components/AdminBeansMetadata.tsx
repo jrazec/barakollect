@@ -753,8 +753,8 @@ const AdminBeansMetadata: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-            <div className="max-w-7xl mx-auto">
+        <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
+            <div>
                 {/* Header */}
                 <div className="mb-6 sm:mb-8">
                     <div className="flex justify-between items-center">
