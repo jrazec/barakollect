@@ -2,7 +2,24 @@
 aptPkgs = [
   "gdal-bin",
   "libgdal-dev",
-  "binutils",
+  "libgeos-dev",
+  "libspatialindex-dev", 
   "libproj-dev",
-  "libpq-dev"
+  "libpq-dev",
+  "binutils",
+  "pkg-config",
+  "build-essential"
 ]
+
+[phases.install]
+cmds = [
+  "pip install --upgrade pip",
+  "chmod +x install_gdal.sh",
+  "./install_gdal.sh",
+  "pip install -r requirements.txt"
+]
+
+[variables]
+GDAL_LIBRARY_PATH = "/usr/lib/x86_64-linux-gnu/libgdal.so"
+GEOS_LIBRARY_PATH = "/usr/lib/x86_64-linux-gnu/libgeos_c.so"
+GDAL_DATA = "/usr/share/gdal"
