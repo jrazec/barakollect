@@ -199,7 +199,7 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
 
             {/* Logout Confirmation Modal */}
             {showLogoutModal && (
-                <div className="fixed inset-0 z-1001 flex items-center justify-center bg-black bg-opacity-10">
+                <div className="fixed inset-0 z-1001 flex items-center justify-center bg-black/65">
                     <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
@@ -214,13 +214,13 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                         <div className="flex gap-3 justify-end mt-6">
                             <button
                                 onClick={handleCancelLogout}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                                className="button-secondary cancel px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleConfirmLogout}
-                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                                className="px-4 py-2 text-sm font-medium text-white !bg-red-700 rounded-md hover:bg-red-700 transition-colors"
                             >
                                 Logout
                             </button>

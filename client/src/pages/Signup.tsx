@@ -108,23 +108,18 @@ export default function Signup() {
                 
 
                 <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-200 login-form">
-                <GlassSurface
-                    className="logo-div p-11"
-                    borderRadius={40}
-                    width={'70%'}
-                    displace={1}
-                >
+            
                     {/* barakollect */}
-                    <div className="text-center">
+                    <div className="text-center mb-6 border-b border-gray-300 pb-2">
                         <div className="inline-flex items-center justify-center">
                             <img 
                                 src={logo1} 
                                 alt="BaraKollect Logo" 
-                                className="h-fit w-auto"
+                                className="h-fit w-40"
                             />
                         </div>
                     </div>
-                 </GlassSurface>
+                
                     
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>

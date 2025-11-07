@@ -315,7 +315,8 @@ const AdminBeansGallery: React.FC = () => {
     }));
 
     return (
-        <div className="p-6 bg-white h-full">
+        <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
+            <div>
             {/* Header */}
             <PageHeader 
                 title="Beans Gallery Management" subtitle={''}            />
@@ -422,6 +423,7 @@ const AdminBeansGallery: React.FC = () => {
                     </div>
                 </div>
             )}
+            </div>
 
             {/* Notification Modal */}
             <NotificationModal

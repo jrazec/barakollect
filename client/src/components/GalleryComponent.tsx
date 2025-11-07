@@ -249,7 +249,7 @@ const GalleryComponent: React.FC<GalleryComponentProps> = ({
     }
 
     return (
-        <div className="w-full border border-gray-300 bg-gray-50 flex flex-col overflow-y-auto" >
+        <div className="w-full border border-gray-300 bg-gray-50 flex flex-col rounded-lg overflow-y-auto" >
             {/* Breadcrumb Navigation */}
             {enableFolderView && (
                 <div className="p-3 border-b border-gray-200 bg-white">
