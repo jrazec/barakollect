@@ -29,6 +29,9 @@ if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('GDAL_LIBRARY_PATH'):
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable is required")
+
 SUPABASE_URL= os.getenv("SUPABASE_URL")
 SUPABASE_ROLE_KEY= os.getenv("SUPABASE_ROLE_KEY")
 SUPABASE_KEY= os.getenv("SUPABASE_KEY")
@@ -40,9 +43,6 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = ["*", "barakollect-production.up.railway.app", "barakollect.vercel.app"]
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 
 # Application definition
 
@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',  # Required for PostGIS backend
     'rest_framework',
     'corsheaders',
     'apps.users',
@@ -172,3 +173,25 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Logging configuration for debugging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

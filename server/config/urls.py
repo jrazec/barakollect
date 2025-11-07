@@ -18,8 +18,22 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+
+def health_check(request):
+    return JsonResponse({"status": "healthy", "message": "Django is running"})
+
+def debug_imports(request):
+    try:
+        import pandas as pd
+        import numpy as np
+        return JsonResponse({"status": "success", "pandas": str(pd.__version__), "numpy": str(np.__version__)})
+    except Exception as e:
+        return JsonResponse({"status": "error", "error": str(e)})
 
 urlpatterns = [
+    path('', health_check, name='health_check'),
+    path('debug/', debug_imports, name='debug_imports'),
     path('admin/', admin.site.urls),
     path('api/users/', include('apps.users.urls')),  # <- add this
     path('api/activity/', include('apps.activitylogs.urls')),
