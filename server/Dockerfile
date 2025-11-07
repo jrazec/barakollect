@@ -1,57 +1,110 @@
-# Use GDAL-enabled Ubuntu image as base for GeoDjango support# Use GDAL-enabled Ubuntu image as base for GeoDjango support# Use Debian-based Python image
+# Use GDAL-enabled Ubuntu image as base for GeoDjango support# Use GDAL-enabled Ubuntu image as base for GeoDjango support# Use GDAL-enabled Ubuntu image as base for GeoDjango support# Use Debian-based Python image
 
 FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.0
 
-FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.0FROM python:3.12-slim
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.0
 
 # Set environment variables for Python
 
-ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONDONTWRITEBYTECODE=1FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.0FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1
 
-ENV DEBIAN_FRONTEND=noninteractive# Set environment variables for Python# Disable .pyc files + enable unbuffered logs
+ENV DEBIAN_FRONTEND=noninteractive# Set environment variables for Python
 
 
 
-# Install system dependenciesENV PYTHONDONTWRITEBYTECODE=1ENV PYTHONDONTWRITEBYTECODE=1
+# Install system dependenciesENV PYTHONDONTWRITEBYTECODE=1
 
 RUN apt-get update && apt-get install -y \
 
-    python3 \ENV PYTHONUNBUFFERED=1ENV PYTHONUNBUFFERED=1
+    python3 \ENV PYTHONUNBUFFERED=1
 
     python3-pip \
 
-    python3-dev \ENV DEBIAN_FRONTEND=noninteractive
+    python3-dev \ENV DEBIAN_FRONTEND=noninteractive# Set environment variables for Python# Disable .pyc files + enable unbuffered logs
 
     python3-venv \
 
-    libpq-dev \# Install system dependencies for PostgreSQL
+    libpq-dev \
 
     postgresql-client \
 
-    build-essential \# Install system dependenciesRUN apt-get update && apt-get install -y \
+    build-essential \# Install system dependenciesENV PYTHONDONTWRITEBYTECODE=1ENV PYTHONDONTWRITEBYTECODE=1
 
     curl \
 
-    && rm -rf /var/lib/apt/lists/*RUN apt-get update && apt-get install -y \    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*RUN apt-get update && apt-get install -y \
 
 
 
-# Create symlink for python command    python3 \    libpq-dev \
+# Create symlink for python command    python3 \ENV PYTHONUNBUFFERED=1ENV PYTHONUNBUFFERED=1
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
-    python3-pip \    build-essential \
+    python3-pip \
 
 # Set working directory
 
-WORKDIR /app    python3-dev \    pkg-config \
+WORKDIR /app    python3-dev \ENV DEBIAN_FRONTEND=noninteractive
 
 
 
-# Copy requirements first for better Docker layer caching    python3-venv \    curl \
+# Copy requirements first for better Docker layer caching    python3-venv \
 
+COPY requirements.txt .
+
+    libpq-dev \# Install system dependencies for PostgreSQL
+
+# Install Python dependencies
+
+RUN pip3 install --upgrade pip && \    postgresql-client \
+
+    pip3 install --no-cache-dir -r requirements.txt
+
+    build-essential \# Install system dependenciesRUN apt-get update && apt-get install -y \
+
+# Copy project files
+
+COPY . .    curl \
+
+
+
+# Create necessary directories    && rm -rf /var/lib/apt/lists/*RUN apt-get update && apt-get install -y \    postgresql-client \
+
+RUN mkdir -p /app/staticfiles /app/media /app/logs
+
+
+
+# Collect static files (but don't run migrations automatically)
+
+RUN python manage.py collectstatic --noinput --clear# Create symlink for python command    python3 \    libpq-dev \
+
+
+
+# Make any shell scripts executableRUN ln -sf /usr/bin/python3 /usr/bin/python
+
+RUN find . -name "*.sh" -exec chmod +x {} \;
+
+    python3-pip \    build-essential \
+
+# Expose port 8000
+
+EXPOSE 8000# Set working directory
+
+
+
+# Health checkWORKDIR /app    python3-dev \    pkg-config \
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+
+    CMD curl -f http://localhost:8000/ || exit 1
+
+
+
+# Start command - no automatic migrations# Copy requirements first for better Docker layer caching    python3-venv \    curl \
+
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
 COPY requirements.txt .
 
     libpq-dev \    && rm -rf /var/lib/apt/lists/*
