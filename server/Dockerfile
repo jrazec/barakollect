@@ -41,15 +41,15 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /app/media/processed /app/logs /app/staticfiles
 
-# Make scripts executable
-RUN chmod +x start.sh validate_env.py
+# Make start script executable
+RUN chmod +x start.sh
 
 # Railway dynamically injects PORT
 EXPOSE 8000
 
-# Health check
+# Health check (simplified)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/ || exit 1
 
-# Use the startup script
+# Start the application using the startup script
 CMD ["./start.sh"]
