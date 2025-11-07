@@ -1,11 +1,13 @@
-from django.contrib.gis.db import models 
+from django.db import models 
 
 
 
 
 class Location(models.Model):
     id = models.BigAutoField(primary_key=True)
-    location = models.PointField(geography=True, blank=True, null=True)
+    # Replace PointField with separate lat/lng fields to avoid GDAL
+    latitude = models.DecimalField(max_digits=10, decimal_places=8, blank=True, null=True)
+    longitude = models.DecimalField(max_digits=11, decimal_places=8, blank=True, null=True)
     name = models.CharField(max_length=255, unique=True)
     
     class Meta:

@@ -28,9 +28,7 @@ if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('GDAL_LIBRARY_PATH'):
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY environment variable is required")
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-temporary-key-for-debugging")
 
 SUPABASE_URL= os.getenv("SUPABASE_URL")
 SUPABASE_ROLE_KEY= os.getenv("SUPABASE_ROLE_KEY")
@@ -53,9 +51,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.gis',  # Required for PostGIS backend
+    # Remove GIS to avoid GDAL completely
+    # 'django.contrib.gis',  
     'rest_framework',
     'corsheaders',
+    # Re-enable your apps
     'apps.users',
     'apps.beans',
     'apps.farms',
@@ -118,7 +118,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        # Temporarily use regular PostgreSQL backend
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME"),
         "USER": os.getenv("DB_USER"),
         "PASSWORD": os.getenv("DB_PASSWORD"),
@@ -178,19 +179,31 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO',
+        'level': 'DEBUG',
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
             'propagate': False,
         },
     },

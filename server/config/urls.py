@@ -35,12 +35,12 @@ urlpatterns = [
     path('', health_check, name='health_check'),
     path('debug/', debug_imports, name='debug_imports'),
     path('admin/', admin.site.urls),
-    path('api/users/', include('apps.users.urls')),  # <- add this
+    path('api/users/', include('apps.users.urls')),
     path('api/activity/', include('apps.activitylogs.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
-    path('api/beans/', include('apps.beans.urls')),  # <- add this
-    path('api/farms/', include('apps.farms.urls')),  # <- add this
-    path('api/analytics/', include('apps.analytics.urls')),  # <- add this
+    path('api/beans/', include('apps.beans.urls')),
+    path('api/farms/', include('apps.farms.urls')),
+    path('api/analytics/', include('apps.analytics.urls')),
 ]
 
 # Serve media files in development
