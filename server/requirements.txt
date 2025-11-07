@@ -70,3 +70,4 @@ urllib3==2.5.0
 websockets==15.0.1
 pandas==2.2.2
 pytz==2025.2
+GDAL>=3.4.0,<4.0.0

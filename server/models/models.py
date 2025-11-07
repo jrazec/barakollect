@@ -1,13 +1,10 @@
-# from django.contrib.gis.db import models 
-# Not GDAL dependent model
-from django.db import models 
+from django.contrib.gis.db import models 
 
 
 
 class Location(models.Model):
     id = models.BigAutoField(primary_key=True)
-    # Temporarily using DecimalField for location; replace with PointField when GDAL is set up
-    location = models.DecimalField(max_digits=10, decimal_places=8, blank=True, null=True)
+    location = models.PointField(geography=True, blank=True, null=True)
     name = models.CharField(max_length=255, unique=True)
     
     class Meta:
