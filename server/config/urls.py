@@ -18,8 +18,14 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+
+def health_check(request):
+    return JsonResponse({'status': 'healthy', 'message': 'API is running'})
 
 urlpatterns = [
+    path('', health_check, name='health_check'),  # Root health check
+    path('api/', health_check, name='api_health_check'),  # API health check
     path('admin/', admin.site.urls),
     path('api/users/', include('apps.users.urls')),  # <- add this
     path('api/activity/', include('apps.activitylogs.urls')),

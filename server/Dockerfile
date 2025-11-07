@@ -5,17 +5,22 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies for GDAL and GEOS
+# Install system dependencies for GDAL, GEOS, and PostgreSQL
 RUN apt-get update && apt-get install -y \
     gdal-bin \
     libgdal-dev \
     libgeos-dev \
+    libproj-dev \
+    postgresql-client \
+    libpq-dev \
     build-essential \
+    pkg-config \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Dynamically detect and set GDAL and GEOS library paths
-RUN echo "export GDAL_LIBRARY_PATH=$(ldconfig -p | grep libgdal | head -n1 | awk '{print $4}')" >> /etc/environment && \
-    echo "export GEOS_LIBRARY_PATH=$(ldconfig -p | grep libgeos_c | head -n1 | awk '{print $4}')" >> /etc/environment
+# Set GDAL and GEOS library paths as environment variables
+ENV GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so
+ENV GEOS_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgeos_c.so
 
 # Set working directory
 WORKDIR /app
@@ -28,9 +33,18 @@ RUN pip install --upgrade pip && \
 # Copy project files
 COPY . .
 
-# Collect static files (ignore if not using Django staticfiles)
-RUN python manage.py collectstatic --noinput || true
+# Create necessary directories
+RUN mkdir -p /app/media/processed /app/logs /app/staticfiles
+
+# Make scripts executable
+RUN chmod +x start.sh validate_env.py
 
 # Railway dynamically injects PORT
 EXPOSE 8000
-CMD bash -c "source /etc/environment && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000}"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/ || exit 1
+
+# Use the startup script
+CMD ["./start.sh"]
