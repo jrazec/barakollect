@@ -68,6 +68,5 @@ ultralytics==8.3.196
 ultralytics-thop==2.0.17
 urllib3==2.5.0
 websockets==15.0.1
-
-# GDAL - installed separately via build script
-# GDAL will be installed by install_gdal.sh
+pandas>=2.0.0
+numpy>=1.24.0
