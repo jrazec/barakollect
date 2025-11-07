@@ -18,6 +18,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv()
 
+# GDAL Configuration for Railway
+if os.getenv("RAILWAY_ENVIRONMENT"):
+    # Railway deployment GDAL paths
+    os.environ.setdefault('GDAL_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/libgdal.so.30')
+    os.environ.setdefault('GEOS_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/libgeos_c.so.1')
+elif os.name == 'nt':  # Windows
+    # Windows GDAL paths (for local development)
+    os.environ.setdefault('GDAL_LIBRARY_PATH', r'C:\OSGeo4W64\bin\gdal304.dll')
+    os.environ.setdefault('GEOS_LIBRARY_PATH', r'C:\OSGeo4W64\bin\geos_c.dll')
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -81,6 +91,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',  # Add GIS support
     'rest_framework',
     'corsheaders',
     'apps.users',
@@ -154,11 +165,13 @@ if os.getenv("DATABASE_URL"):
             conn_health_checks=True,
         )
     }
+    # Use PostGIS engine for GIS support
+    DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
 else:
     # Fallback to individual environment variables
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.postgresql",
+            "ENGINE": "django.contrib.gis.db.backends.postgis",  # Use PostGIS
             "NAME": os.getenv("DB_NAME"),
             "USER": os.getenv("DB_USER"),
             "PASSWORD": os.getenv("DB_PASSWORD"),
