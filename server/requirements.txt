@@ -68,3 +68,5 @@ ultralytics==8.3.196
 ultralytics-thop==2.0.17
 urllib3==2.5.0
 websockets==15.0.1
+pandas==2.2.2
+pytz==2025.2
