@@ -19,6 +19,7 @@ RUN echo "=== Installing System Dependencies ===" && \
         libgdal-dev \
         libproj-dev \
         proj-data \
+        pkg-config \
         libgeos-dev \
         postgresql-client \
         libpq-dev \
@@ -33,9 +34,9 @@ RUN echo "=== Installing System Dependencies ===" && \
     # Verify GEOS installation (geos-config might not be in PATH, but libraries are installed)
     echo "=== Verifying GEOS installation ===" && \
     (geos-config --version 2>/dev/null && echo "GEOS version: $(geos-config --version 2>/dev/null)" || echo "ℹ INFO: geos-config not in PATH, but libgeos-dev is installed") && \
-    # Verify PROJ installation
+    # Verify PROJ installation (proj command has different syntax, use pkg-config instead)
     echo "=== Verifying PROJ installation ===" && \
-    (proj --version 2>/dev/null && echo "PROJ version: $(proj --version 2>/dev/null)" || echo "ℹ INFO: proj command not found, but libproj-dev is installed") && \
+    (pkg-config --modversion proj 2>/dev/null && echo "PROJ version: $(pkg-config --modversion proj 2>/dev/null)" || echo "ℹ INFO: PROJ libraries installed (libproj-dev)") && \
     # Clean up apt cache to reduce image size
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
@@ -73,7 +74,7 @@ RUN echo "=== Validating GeoDjango/GDAL Setup ===" && \
     echo "Checking system GEOS..." && \
     (geos-config --version 2>&1 && echo "✓ GEOS version: $(geos-config --version 2>&1)" || echo "✗ ERROR: geos-config not found") && \
     echo "Checking system PROJ..." && \
-    (proj --version 2>&1 && echo "✓ PROJ version: $(proj --version 2>&1)" || echo "✗ ERROR: proj not found") && \
+    (pkg-config --modversion proj 2>/dev/null && echo "✓ PROJ version: $(pkg-config --modversion proj 2>/dev/null)" || echo "ℹ INFO: PROJ version check skipped, but libproj-dev is installed") && \
     echo "Testing GEOS import..." && \
     (DJANGO_SETTINGS_MODULE=config.settings python -c "from django.contrib.gis import geos; print('✓ GEOS version:', geos.geos_version)" 2>&1 || echo "✗ ERROR: GEOS import failed - check logs above") && \
     echo "Testing GDAL import..." && \
