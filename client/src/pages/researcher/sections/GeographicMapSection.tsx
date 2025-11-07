@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, LayersControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import FarmViewModal from "../../../components/FarmViewModal";
+import { useCachedAdminService } from "../../../hooks/useCachedServices";
 
-// Fix Leaflet’s default marker icons
+// Fix Leaflet's default marker icons
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
@@ -14,11 +16,17 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-const farms = [
-  { id: "A", name: "Farm A", lat: 13.956626112464809, lng: 121.16317033767702, beans: 34, avgSize: 13.2, quality: 3.7 },
-  { id: "B", name: "Farm B", lat: 13.950, lng: 121.150, beans: 21, avgSize: 12.8, quality: 3.5 },
-  { id: "C", name: "Farm C", lat: 13.940, lng: 121.160, beans: 18, avgSize: 14.1, quality: 3.9 },
-];
+interface Farm {
+  id: string;
+  name: string;
+  lat?: number;
+  lng?: number;
+  hasLocation: boolean;
+  userCount: number;
+  imageCount: number;
+  avgBeanSize: number;
+  qualityRating: number;
+}
 
 const ClickHandler = () => {
   useMapEvents({
@@ -30,23 +38,136 @@ const ClickHandler = () => {
   return null;
 };
 
+const FARM_COLORS = [
+  "#FF5733", "#33FF57", "#3357FF", "#FF33F6", 
+  "#33FFF6", "#F6FF33", "#FF3333", "#33FFB5"
+];
+
+const getFarmColor = (index: number) => {
+  return FARM_COLORS[index % FARM_COLORS.length];
+};
+
+const markerHtmlStyles = (color: string) => `
+  background-color: ${color};
+  width: 2rem;
+  height: 2rem;
+  display: block;
+  position: relative;
+  border-radius: 3rem 3rem 0;
+  transform: rotate(45deg);
+  border: 1px solid #FFFFFF;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+`;
+
+const customIcon = (color: string) => L.divIcon({
+  className: "custom-pin",
+  html: `<span style="${markerHtmlStyles(color)}"></span>`,
+  iconSize: [30, 42],
+  iconAnchor: [15, 42],
+  popupAnchor: [0, -45]
+});
+
 const GeographicMapSection: React.FC = () => {
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+  const [farmViewData, setFarmViewData] = useState<any>(null);
+  const [showFarmViewModal, setShowFarmViewModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const mapRef = useRef<L.Map | null>(null);
+
+  // Initialize cached services
+  const cachedAdminService = useCachedAdminService();
+
+  // Load farms on component mount
+  useEffect(() => {
+    loadFarms();
+  }, []);
+
+  const loadFarms = async () => {
+    try {
+      setLoading(true);
+      const farmsData = await cachedAdminService.getFarms();
+      // Only show farms with valid locations
+      const validFarms = farmsData.filter(farm => farm.hasLocation && farm.lat && farm.lng);
+      setFarms(validFarms);
+    } catch (error) {
+      console.error("Error loading farms:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFarmClick = async (farmId: string) => {
+    try {
+      setSelectedFarmId(farmId);
+      const farmData = await cachedAdminService.getFarmView(farmId);
+      if (farmData) {
+        setFarmViewData(farmData);
+        setShowFarmViewModal(true);
+      }
+    } catch (error) {
+      console.error("Error loading farm view data:", error);
+    }
+  };
+
+  const closeFarmViewModal = () => {
+    setShowFarmViewModal(false);
+    setSelectedFarmId(null);
+    setFarmViewData(null);
+  };
+
+  const centerMapOnFarm = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const farmId = e.target.value;
+    const farm = farms.find(f => f.id === farmId);
+    if (farm?.lat && farm?.lng && mapRef.current) {
+      mapRef.current.setView([farm.lat, farm.lng], 16);
+    }
+  };
+
+  if (loading) {
+    return <div className="h-full flex items-center justify-center">Loading farm data...</div>;
+  }
+
   return (
-    <div className="bg-[var(--parchment)] rounded-lg shadow p-4 mb-4">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="font-main font-bold text-[var(--espresso-black)] text-lg">
-          &#128506; Geographic Data View
-        </span>
-        <span className="text-xs font-accent text-[var(--espresso-black)] ml-auto">
-          Farm locations and bean production statistics
-        </span>
+    <div className="h-full flex flex-col">
+      {/* Farm Selector */}
+      <div className="mb-4 flex items-center gap-4">
+        <select
+          className="w-64 h-10 px-3 rounded-md border border-input bg-white text-sm"
+          onChange={centerMapOnFarm}
+          defaultValue=""
+        >
+          <option value="" disabled>Select a farm to focus</option>
+          {farms.map((farm) => (
+            <option key={farm.id} value={farm.id}>
+              {farm.name}
+            </option>
+          ))}
+        </select>
+        
+        {/* Legend */}
+        {/* <div className="flex items-center gap-4 ml-auto">
+          {farms.map((farm, index) => (
+            <div key={farm.id} className="flex items-center gap-1">
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ backgroundColor: getFarmColor(index) }}
+              />
+              <span className="text-sm text-gray-600">{farm.name}</span>
+            </div>
+          ))}
+        </div> */}
       </div>
 
-      <div className="relative w-full h-80 bg-white rounded-lg overflow-hidden border border-[var(--mocha-beige)]">
+      {/* Map Container - Update z-index */}
+      <div className="flex-1 relative rounded-lg overflow-hidden" style={{ zIndex: 0 }}>
         <MapContainer
-          center={[13.956626112464809, 121.16317033767702]} 
-          zoom={15}
-          style={{ height: "100%", width: "100%" }}
+          center={farms[0]?.lat && farms[0]?.lng ? 
+            [farms[0].lat, farms[0].lng] : 
+            [13.956626112464809, 121.16317033767702]}
+          zoom={12}
+          style={{ height: "100%", width: "100%", position: "relative", zIndex: 0 }}
+          ref={mapRef}
         >
           <LayersControl position="topright">
             {/* Normal Map with Labels */}
@@ -78,13 +199,28 @@ const GeographicMapSection: React.FC = () => {
             </LayersControl.BaseLayer>
           </LayersControl>
 
-          {farms.map((farm) => (
-            <Marker key={farm.id} position={[farm.lat, farm.lng]}>
+          {farms.map((farm, index) => (
+            <Marker 
+              key={farm.id} 
+              position={[farm.lat!, farm.lng!]}
+              icon={customIcon(getFarmColor(index))}
+            >
               <Popup>
-                <div className="font-bold">{farm.name}</div>
-                <div>Bean Count: {farm.beans}</div>
-                <div>Avg Size: {farm.avgSize} mm</div>
-                <div>Quality: {farm.quality}</div>
+                <div className="min-w-[200px]">
+                  <div className="font-bold text-[var(--espresso-black)] mb-2">{farm.name}</div>
+                  <div className="space-y-1 text-sm">
+                    <div>Users: {farm.userCount || 0}</div>
+                    <div>Images: {farm.imageCount || 0}</div>
+                    {/* farm.avgBeanSize = 1.1123323mm x 12.asdasdmm */}
+                    <div>Avg Size: {(farm.avgBeanSize || 0)}</div>
+                  </div>
+                  <button
+                    onClick={() => handleFarmClick(farm.id)}
+                    className="w-full mt-3 px-3 py-1 bg-[var(--espresso-black)] text-white rounded text-sm hover:bg-opacity-90"
+                  >
+                    View Details
+                  </button>
+                </div>
               </Popup>
             </Marker>
           ))}
@@ -92,11 +228,18 @@ const GeographicMapSection: React.FC = () => {
         </MapContainer>
       </div>
 
-      <div className="flex justify-between text-xs text-stone-400 mt-2">
-        <span>Showing data from {farms.length} farms across the region</span>
-        <span>Active Farms</span>
-        <span>Selected Farms</span>
+      {/* Map Stats */}
+      <div className="mt-2 flex justify-between text-xs text-gray-500">
+        <span>Showing {farms.length} farms across the region</span>
+        <span>Last updated: {new Date().toLocaleDateString()}</span>
       </div>
+
+      {/* Farm View Modal */}
+      <FarmViewModal
+        isOpen={showFarmViewModal}
+        farmData={farmViewData}
+        onClose={closeFarmViewModal}
+      />
     </div>
   );
 };

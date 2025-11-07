@@ -2,17 +2,27 @@ import React, { useState, useEffect } from 'react';
 import StatCard from '@/components/StatCard';
 import CardComponent from '@/components/CardComponent';
 import UserActivityChart from '@/components/admin/UserActivityChart';
+import ScatterRatioRoundnessChart from '@/components/admin/ScatterRatioRoundnessChart';
 import BeanSubmissionsChart from '@/components/admin/BeanSubmissionsChart';
 import UserLogsComponent from '@/components/admin/UserLogsComponent';
 import SystemStatusComponent from '@/components/admin/SystemStatusComponent';
-import AdminService from '@/services/adminService';
-import type { 
-  AdminStats, 
-  UserActivity, 
-  BeanSubmission, 
-  UserLog, 
-  SystemStatus 
+import UploadStatisticsChart from '@/components/admin/UploadStatisticsChart';
+import CorrelationMatrixChart from '@/components/admin/CorrelationMatrixChart';
+import BeanAnalyticsChart from '@/components/admin/BeanAnalyticsChart';
+import { PieChartComponent, LinearProgressBar, HorizontalBarChartComponent } from '@/components/ChartComponent';
+import { useCachedAdminService } from '@/hooks/useCachedServices';
+import { useCache } from '@/contexts/CacheContext';
+import type {
+  AdminStats,
+  UserActivity,
+  BeanSubmission,
+  UserLog,
+  SystemStatus
 } from '@/interfaces/global';
+import DashboardHeader from '@/components/DashboardHeader';
+import { BarChart, DatabaseIcon, Pi, HardDrive as StorageIcon } from 'lucide-react';
+import ShapeSizeDistribution from '@/components/admin/ShapeSizeDistribution';
+import BoxPlotChart from '@/components/admin/BoxPlotChart';
 
 export default function AdminDashboard() {
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
@@ -20,8 +30,30 @@ export default function AdminDashboard() {
   const [beanSubmissions, setBeanSubmissions] = useState<BeanSubmission[]>([]);
   const [userLogs, setUserLogs] = useState<UserLog[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
+  const [boxPlotData, setBoxPlotData] = useState<Array<{ 
+    group: string; 
+    farms: string[];
+    data: Array<{ farm: string; value: number }>;
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const cachedAdminService = useCachedAdminService();
+  const cache = useCache();
+
+  const [sizeDb, setSizeDb] = useState<{
+    bucket: number;
+    database: number;
+  }>({ bucket: 1000, database: 500 });
+
+  // Update sizeDb based on payment plan
+  const updateSizeDbFromPlan = (planType: 'free' | 'pro') => {
+    if (planType === 'pro') {
+      setSizeDb({ bucket: 100000, database: 8000 });
+    } else {
+      setSizeDb({ bucket: 1000, database: 500 });
+    }
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -29,13 +61,13 @@ export default function AdminDashboard() {
         setLoading(true);
         setError(null);
 
-        // Fetch all dashboard data in parallel
+        // Fetch all dashboard data in parallel with caching
         const [stats, activity, submissions, logs, status] = await Promise.all([
-          AdminService.getAdminStats(),
-          AdminService.getUserActivity(),
-          AdminService.getBeanSubmissions(),
-          AdminService.getUserLogs(),
-          AdminService.getSystemStatus()
+          cachedAdminService.getAdminStats(),
+          cachedAdminService.getUserActivity(),
+          cachedAdminService.getBeanSubmissions(),
+          cachedAdminService.getUserLogs(),
+          cachedAdminService.getSystemStatus()
         ]);
 
         setAdminStats(stats);
@@ -43,6 +75,35 @@ export default function AdminDashboard() {
         setBeanSubmissions(submissions);
         setUserLogs(logs);
         setSystemStatus(status);
+
+        // Prepare boxplot data from boxplot_features
+        if (stats.boxplot_features) {
+          const features = Object.keys(stats.boxplot_features);
+          const boxData = features.map(featureName => {
+            const farms = stats.boxplot_features[featureName];
+            const farmNames = Object.keys(farms);
+            
+            // Flatten all farm values into single array with farm labels
+            const allValues: Array<{ farm: string; value: number }> = [];
+            farmNames.forEach(farmName => {
+              farms[farmName].forEach(value => {
+                allValues.push({ farm: farmName, value });
+              });
+            });
+            
+            return {
+              group: featureName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              farms: farmNames,
+              data: allValues
+            };
+          });
+          setBoxPlotData(boxData);
+        }
+
+        // Update sizeDb based on payment plan
+        if (status?.paymentPlan?.plan_type) {
+          updateSizeDbFromPlan(status.paymentPlan.plan_type);
+        }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Failed to load dashboard data. Please try again.');
@@ -54,12 +115,89 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
+  // Force refresh function that clears cache
+  const handleRefresh = async () => {
+    cache.invalidatePattern('admin-stats:');
+    cache.invalidatePattern('user-activity:');
+    cache.invalidatePattern('bean-submissions:');
+    cache.invalidatePattern('user-logs:');
+
+    setLoading(true);
+    try {
+      const [stats, activity, submissions, logs, status] = await Promise.all([
+        cachedAdminService.getAdminStats(),
+        cachedAdminService.getUserActivity(),
+        cachedAdminService.getBeanSubmissions(),
+        cachedAdminService.getUserLogs(),
+        cachedAdminService.getSystemStatus()
+      ]);
+
+      setAdminStats(stats);
+      setUserActivity(activity);
+      setBeanSubmissions(submissions);
+      setUserLogs(logs);
+      setSystemStatus(status);
+
+      // Prepare boxplot data from boxplot_features
+      if (stats.boxplot_features) {
+        const features = Object.keys(stats.boxplot_features);
+        const boxData = features.map(featureName => {
+          const farms = stats.boxplot_features[featureName];
+          const farmNames = Object.keys(farms);
+          
+          // Flatten all farm values into single array with farm labels
+          const allValues: Array<{ farm: string; value: number }> = [];
+          farmNames.forEach(farmName => {
+            farms[farmName].forEach(value => {
+              allValues.push({ farm: farmName, value });
+            });
+          });
+          
+          return {
+            group: featureName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            farms: farmNames,
+            data: allValues
+          };
+        });
+        setBoxPlotData(boxData);
+      }
+
+      // Update sizeDb based on payment plan
+      if (status?.paymentPlan?.plan_type) {
+        updateSizeDbFromPlan(status.paymentPlan.plan_type);
+      }
+    } catch (err) {
+      console.error('Error refreshing dashboard data:', err);
+      setError('Failed to refresh dashboard data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle payment plan update
+  const handlePlanUpdate = async () => {
+    try {
+      const status = await cachedAdminService.getSystemStatus();
+      setSystemStatus(status);
+      if (status?.paymentPlan?.plan_type) {
+        updateSizeDbFromPlan(status.paymentPlan.plan_type);
+      }
+      console.log('System status after plan update:', status);
+      console.log('Payment plan after update:', status?.paymentPlan);
+    } catch (err) {
+      console.error('Error refreshing system status:', err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-lvh bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
           <p className="text-gray-600 font-accent">Loading dashboard...</p>
+          <div className="mt-2 text-xs text-gray-500">
+            Cache stats: {cache.getStats().hitRate.toFixed(1)}% hit rate
+          </div>
         </div>
       </div>
     );
@@ -70,12 +208,20 @@ export default function AdminDashboard() {
       <div className="min-h-lvh bg-gray-50 p-4 sm:p-6 flex items-center justify-center">
         <div className="text-center max-w-md">
           <p className="text-red-600 font-accent mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-[var(--arabica-brown)] text-[var(--parchment)] rounded-lg font-accent hover:bg-opacity-90 transition-colors"
-          >
-            Retry
-          </button>
+          <div className="space-x-2">
+            <button
+              onClick={handleRefresh}
+              className="px-4 py-2 bg-[var(--arabica-brown)] text-[var(--parchment)] rounded-lg font-accent hover:bg-opacity-90 transition-colors"
+            >
+              Refresh
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg font-accent hover:bg-opacity-90 transition-colors"
+            >
+              Hard Reload
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -90,89 +236,339 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-lvh bg-gray-50 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-main font-bold text-[var(--espresso-black)] mb-2">
-            Admin Dashboard
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600 font-accent">
-            Monitor system performance, user activity, and manage platform operations
-          </p>
-        </div>
+    <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
+      <div>
+        <DashboardHeader title="Admin Dashboard" subtitle='' />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <StatCard
             label="Total Users"
-            value={adminStats.totalUsers.toLocaleString()}
+            value={adminStats.users}
             subtext="Registered users across all roles"
           />
           <StatCard
-            label="Active Users"
-            value={adminStats.activeUsers.toLocaleString()}
-            subtext="Users active in the last 30 days"
-          />
-          <StatCard
             label="Total Uploads"
-            value={adminStats.totalUploads.toLocaleString()}
+            value={adminStats.uploads}
             subtext="Bean samples uploaded to date"
           />
           <StatCard
+            label="Validated Images"
+            value={adminStats.validated}
+            subtext="Images reviewed by researchers"
+          />
+          <StatCard
             label="Pending Validations"
-            value={adminStats.pendingValidations.toString()}
+            value={adminStats.pending}
             subtext="Samples awaiting researcher review"
           />
+
         </div>
 
-        {/* Main Content Grid */}
+        {/* System Status and Storage Usage - 2 Column Layout */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {/* User Activity Chart */}
-          <div className="min-h-[400px]">
+          {/* Left Column: System Status */}
+          <div className="w-full min-h-[400px]">
             <CardComponent
               item={{
-                title: "User Activity",
-                subtitle: "Monthly activity trends by role",
-                content: <UserActivityChart data={userActivity} />,
-                description: "Filter by role to view specific user activity patterns"
+                title: "System Status",
+                subtitle: "Database uptime, Supabase status, and payment plan",
+                content: (
+                  <SystemStatusComponent
+                    data={systemStatus}
+                    onPlanUpdate={handlePlanUpdate}
+                  />
+                ),
+                description: "Monitor system health and manage subscription"
               }}
             />
           </div>
 
-          {/* Bean Submissions Chart */}
-          <div className="min-h-[400px]">
-            <CardComponent
-              item={{
-                title: "Bean Submissions",
-                subtitle: "Submission statistics and status distribution",
-                content: <BeanSubmissionsChart data={beanSubmissions} />,
-                description: "View submissions by type and status with role filtering"
-              }}
-            />
-          </div>
-        </div>
-
-        {/* User Logs and System Status */}
-        <div className="grid grid-cols-1 gap-4 sm:gap-6">
-          {/* User Logs */}
-          <div className="bg-[var(--parchment)] rounded-lg shadow p-4 sm:p-6 min-h-[500px]">
-            <UserLogsComponent data={userLogs} />
-          </div>
-
-          {/* System Status */}
-          <div className="bg-[var(--parchment)] rounded-lg shadow p-4 sm:p-6 min-h-[500px]">
-            <div className="mb-4">
-              <h3 className="text-lg font-main font-bold text-[var(--espresso-black)] mb-2">
-                System Status
-              </h3>
-              <p className="text-sm font-accent text-gray-600">
-                Monitor system health, payments, and storage
-              </p>
+          {/* Right Column: Storage Usage */}
+          <div className="w-full min-h-[400px] space-y-4">
+            {/* Database Storage */}
+            <div className="min-h-[200px]">
+              <CardComponent
+                item={{
+                  side: (<DatabaseIcon className="text-[var(--arabica-brown)]" />),
+                  title: "Database Storage",
+                  subtitle: `${sizeDb.database} MB limit`,
+                  content: (
+                    <LinearProgressBar
+                      data={{
+                        total_size: sizeDb.database,
+                        size: adminStats.db_size.total
+                      }}
+                    />
+                  ),
+                  description: "Database storage usage"
+                }}
+              />
             </div>
-            <SystemStatusComponent data={systemStatus} />
+
+            {/* Image Bucket Storage */}
+            <div className="min-h-[200px]">
+              <CardComponent
+                item={{
+                  side: (<StorageIcon className="text-[var(--arabica-brown)]" />),
+                  title: "Image Bucket Storage",
+                  subtitle: `${sizeDb.bucket} MB limit`,
+                  content: (
+                    <LinearProgressBar
+                      data={{
+                        total_size: sizeDb.bucket,
+                        size: adminStats.img_bucket[0].total_size
+                      }}
+                    />
+                  ),
+                  description: "Image storage usage"
+                }}
+              />
+            </div>
           </div>
         </div>
+
+        {/* Database Tables Distribution */}
+        <div className="grid grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="min-h-[400px] col-span-1">
+            <CardComponent
+              item={{
+                title: "Database Tables Distribution",
+                subtitle: "Storage usage by table",
+                content: (
+                  <PieChartComponent
+                    data={adminStats.db_size.tables.filter(table => {
+                      const publicTables = [
+                        'spatial_ref_sys',
+                        'activity_logs',
+                        'extracted_features',
+                        'annotations',
+                        'roles',
+                        'user_roles',
+                        'users',
+                        'predictions',
+                        'user_images',
+                        'role_permissions',
+                        'notifications',
+                        'locations',
+                        'bean_detections',
+                        'images',
+                        'permissions'
+                      ];
+                      return publicTables.includes(table.table_name);
+                    }).map(table => {
+                      const sizeStr = table.total_size;
+                      let sizeInMB = 0;
+
+                      if (sizeStr.includes('bytes')) {
+                        sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, '')) / (1024 * 1024);
+                      } else if (sizeStr.includes('kB')) {
+                        sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, '')) / 1024;
+                      } else if (sizeStr.includes('MB')) {
+                        sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, ''));
+                      } else if (sizeStr.includes('GB')) {
+                        sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, '')) * 1024;
+                      }
+
+
+
+
+                      return {
+                        name: table.table_name,
+                        uv: sizeInMB
+                      };
+                    })}
+                  />
+                ),
+                description: "Overview of database storage distribution by table"
+              }}
+            />
+          </div>
+          <div className="min-h-[400px] col-span-2">
+            <CardComponent
+              item={{
+                title: " ",
+                subtitle: " ",
+                content: (
+                  <HorizontalBarChartComponent
+                    data={adminStats.db_size.tables.filter(table => {
+                      const publicTables = [
+                        'spatial_ref_sys',
+                        'activity_logs',
+                        'extracted_features',
+                        'annotations',
+                        'roles',
+                        'user_roles',
+                        'users',
+                        'predictions',
+                        'user_images',
+                        'role_permissions',
+                        'notifications',
+                        'locations',
+                        'bean_detections',
+                        'images',
+                        'permissions'
+                      ];
+                      return publicTables.includes(table.table_name);
+                    }).map(table => {
+
+
+                      return {
+                        name: table.table_name,
+                        uv: table.estimated_rows
+                      };
+                    })}
+                  />
+                ),
+                description: " "
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Bean Analytics Section */}
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="min-h-[500px]">
+            <BeanAnalyticsChart
+              totalPredictions={adminStats.total_predictions}
+              avgConfidence={adminStats.avg_confidence}
+              minConfidence={adminStats.min_confidence}
+              maxConfidence={adminStats.max_confidence}
+              featureStats={adminStats.feature_stats}
+              boxplotFeatures={adminStats.boxplot_features}
+            />
+          </div>
+        </div>
+
+        {/* Correlation Matrix */}
+        <div className='grid grid-cols-1 mb-6'>
+          <div className="min-h-[400px]">
+            <CardComponent
+              item={{
+                title: "Feature Correlation Matrix",
+                subtitle: "Correlation analysis of bean features",
+                content: <CorrelationMatrixChart data={adminStats.corr_feats} />,
+                description: "Heat map showing correlations between different bean features"
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Upload Statistics Grid */}
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="min-h-[400px]">
+            <CardComponent
+              item={{
+                title: "Upload Statistics",
+                subtitle: "Farm data, top uploaders, and bean type distribution",
+                content: <UploadStatisticsChart
+                  farmData={adminStats.farms}
+                  topUploaderData={adminStats.top_uploaders}
+                  beanTypeData={adminStats.bean_types}
+                />,
+                description: "Comprehensive upload analytics across farms and users"
+              }}
+            />
+          </div>
+        </div>
+
+
+
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          
+                  {/* Outlier Detection - Boxplots Section */}
+        <div className="mt-6 mb-6">
+          {loading ? (
+            <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+              <div className="flex items-center justify-center h-[500px]">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
+                  <p className="text-gray-600 font-accent">Loading outlier analysis...</p>
+                </div>
+              </div>
+            </div>
+          ) : boxPlotData && boxPlotData.length > 0 ? (
+            <CardComponent
+              item={{
+                title: "Outlier Detection - Bean Feature Analysis",
+                subtitle: "Boxplot distribution showing quartiles, whiskers, and outliers",
+                content: (
+                  <div className="w-full">
+                    <BoxPlotChart
+                      data={boxPlotData}
+                      yAxisLabel="Feature Value"
+                    />
+                  </div>
+                )
+              }}
+            />
+          ) : (
+            <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+              <div className="flex items-center justify-center h-[400px] text-gray-500">
+                <div className="text-center">
+                  <p>No feature data available for outlier analysis</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Shape-Size Distribution Section */}
+        <div className="mt-6 mb-6">
+          {loading ? (
+            <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+              <div className="flex items-center justify-center h-[500px]">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
+                  <p className="text-gray-600 font-accent">Loading shape analysis...</p>
+                </div>
+              </div>
+            </div>
+          ) : adminStats && adminStats.shape_size_distribution && Object.keys(adminStats.shape_size_distribution).length > 0 ? (
+            <CardComponent
+              item={{
+                title: "Bean Shape & Size Distribution",
+                subtitle: "Comparison of round vs teardrop beans across size categories",
+                content: (
+                  <div className="w-full">
+                    <ShapeSizeDistribution
+                      data={adminStats.shape_size_distribution}
+                      farmNames={adminStats.shape_size_farm_names || []}
+                      thresholds={adminStats.size_thresholds}
+                    />
+                  </div>
+                )
+              }}
+            />
+          ) : (
+            <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+              <div className="flex items-center justify-center h-[400px] text-gray-500">
+                <div className="text-center">
+                  <p>No shape-size distribution data available</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+
+          {/* Scatter Ratio and Roundness */}
+          <div className="min-h-[400px]">
+            <CardComponent
+              item={{
+                title: "Scatter Ratio and Roundness",
+                subtitle: "Analysis of bean shape characteristics",
+                content: <ScatterRatioRoundnessChart data={adminStats.scatter_ratio_roundness} data2={adminStats.hist_aspect} data3={adminStats.hist_roundness} />,
+                description: "Explore the relationship between scatter ratio and roundness"
+              }}
+            />
+          </div>
+        </div>
+
+
+
+
+
       </div>
     </div>
   );

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import PageContainer from '../../components/PageContainer';
 import PageHeader from '../../components/PageHeader';
 import TabComponent from '@/components/TabComponent';
 import GallerySection from './sections/GallerySection';
@@ -8,8 +7,7 @@ const FarmerBeansGallery: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Validated');
 
   return (
-    <PageContainer>
-      <div className="w-full max-w-6xl bg-[var(--mocha-beige)] rounded-xl shadow p-6">
+      <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
 
         {/* Header */}
         <PageHeader
@@ -26,7 +24,7 @@ const FarmerBeansGallery: React.FC = () => {
         <GallerySection activeTab={activeTab} />
 
       </div>
-    </PageContainer>
+
   );
 };
 

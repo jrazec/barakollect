@@ -1,3 +1,1196 @@
 from django.shortcuts import render
+from rest_framework.decorators import api_view
+from django.http import JsonResponse
+from django.db import connection
+from services.supabase_service import supabase
+from models.models import UserImage, User
+import math
+import numpy as np
+import pandas as pd
+from collections import Counter
+import requests
+from datetime import datetime, timedelta
+from django.utils import timezone
 
-# Create your views here.
+# === Farmer Dashboard ファルマー　❘ 農家
+@api_view(['GET'])
+def render_farmer_dashboard(request, uiid):
+    """
+    Dashboard API: returns summary stats for a given farmer (user) and global averages.
+    """
+
+    # Get location_id for this user
+    location = User.objects.filter(id=uiid).values('location_id').first()
+    if not location or not location['location_id']:
+        return JsonResponse({"error": "User location not found"}, status=404)
+
+    location_id = location['location_id']
+
+    def fetch_stats(where_clause, params):
+        with connection.cursor() as cursor:
+            #Avg area
+            cursor.execute(f"""
+                SELECT AVG(area)
+                FROM bean_detections bd
+                JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                JOIN predictions p ON ef.prediction_id = p.id
+                JOIN images i ON p.image_id = i.id
+                {where_clause}
+            """, params)
+            avg_area = cursor.fetchone()
+            
+            # Avg size
+            cursor.execute(f"""
+                SELECT AVG(length_mm), AVG(width_mm)
+                FROM bean_detections bd
+                JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                JOIN predictions p ON ef.prediction_id = p.id
+                JOIN images i ON p.image_id = i.id
+                {where_clause}
+            """, params)
+            avg_size = cursor.fetchone()
+
+            # Largest bean: include dimensions, bbox, and image_url
+            cursor.execute(f"""
+                SELECT bd.id AS bean_id,
+                    bd.length_mm, bd.width_mm,
+                    bd.bbox_x, bd.bbox_y, bd.bbox_width, bd.bbox_height,
+                    i.image_url
+                FROM bean_detections bd
+                JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                JOIN predictions p ON ef.prediction_id = p.id
+                JOIN images i ON p.image_id = i.id
+                {where_clause}
+                ORDER BY bd.length_mm DESC
+                LIMIT 1
+            """, params)
+            largest = cursor.fetchone()
+
+            # Shape consistency
+            cursor.execute(f"""
+                SELECT AVG(length_mm / NULLIF(width_mm, 0)),
+                       STDDEV(length_mm / NULLIF(width_mm, 0))
+                FROM bean_detections bd
+                JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                JOIN predictions p ON ef.prediction_id = p.id
+                JOIN images i ON p.image_id = i.id
+                {where_clause}
+            """, params)
+            shape_consistency = cursor.fetchone()
+
+            # Total submitted image count (number of images uploaded by user)
+            cursor.execute(f"""
+                SELECT COUNT(DISTINCT i.id)
+                FROM images i
+                {where_clause}
+            """, params)
+            total_bean_count = cursor.fetchone()
+
+            # Density indicators
+            cursor.execute(f"""
+                SELECT AVG(solidity), AVG(extent)
+                FROM extracted_features ef
+                JOIN predictions p ON ef.prediction_id = p.id
+                JOIN images i ON p.image_id = i.id
+                {where_clause}
+            """, params)
+            density = cursor.fetchone()
+
+        return {
+            "average_area": float(avg_area[0]) if avg_area[0] else 0,
+            "average_size": {
+                "length_mm": float(avg_size[0]) if avg_size[0] else 0,
+                "width_mm": float(avg_size[1]) if avg_size[1] else 0,
+            },
+            "largest_bean": {
+                "bean_id": int(largest[0]) if largest and largest[0] else None,
+                "length_mm": float(largest[1]) if largest and largest[1] else 0,
+                "width_mm": float(largest[2]) if largest and largest[2] else 0,
+                "bbox_x": float(largest[3]) if largest and largest[3] else 0,
+                "bbox_y": float(largest[4]) if largest and largest[4] else 0,
+                "bbox_width": float(largest[5]) if largest and largest[5] else 0,
+                "bbox_height": float(largest[6]) if largest and largest[6] else 0,
+                # !! temporary ↴
+                # "image_url": largest[7] if largest and largest[7] else None, 
+                "image_url": (
+                    supabase.storage.from_("Beans").get_public_url(largest[7])
+                    if largest and largest[7] else None
+                ),
+            },
+            "shape_consistency": {
+                "avg_aspect_ratio": float(shape_consistency[0]) if shape_consistency[0] else 0,
+                "std_aspect_ratio": float(shape_consistency[1]) if shape_consistency[1] else 0,
+            },
+            "total_bean_count": int(total_bean_count[0]) if total_bean_count[0] else 0,
+            "density_fullness": {
+                "solidity": float(density[0]) if density[0] else 0,
+                "extent": float(density[1]) if density[1] else 0,
+            }
+        }
+
+    # Farmer-specific stats
+    farmer_stats = fetch_stats("WHERE i.location_id = %s", [location_id])
+
+    # Global (all farms) stats
+    global_stats = fetch_stats("", [])
+
+    # Additional analytics for charts
+    with connection.cursor() as cursor:
+        # First, calculate dynamic thresholds based on data distribution
+        # Using 33rd and 67th percentiles for Small/Medium/Large categories based on area
+        cursor.execute("""
+            SELECT 
+                PERCENTILE_CONT(0.33) WITHIN GROUP (ORDER BY ef.area) as p33_area,
+                PERCENTILE_CONT(0.67) WITHIN GROUP (ORDER BY ef.area) as p67_area,
+                MIN(ef.area) as min_area,
+                MAX(ef.area) as max_area,
+                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.area) as median_area
+            FROM bean_detections bd
+            JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+            JOIN predictions p ON ef.prediction_id = p.id
+            JOIN images i ON p.image_id = i.id
+        """)
+        thresholds = cursor.fetchone()
+        
+        if thresholds and thresholds[0]:
+            p33_area, p67_area = float(thresholds[0]), float(thresholds[1])
+            min_area, max_area, median_area = float(thresholds[2]), float(thresholds[3]), float(thresholds[4])
+        else:
+            # Fallback to default values if no data
+            p33_area, p67_area = 200.0, 400.0
+            min_area, max_area, median_area = 100.0, 600.0, 300.0
+
+        # 1. Bean Size Distribution (for bar chart comparison) - Dynamic categorization based on area
+        cursor.execute("""
+            SELECT 
+                size_category,
+                COUNT(*) as farmer_count
+            FROM (
+                SELECT 
+                    CASE 
+                        WHEN ef.area < %s THEN 'Small'
+                        WHEN ef.area BETWEEN %s AND %s THEN 'Medium'
+                        ELSE 'Large'
+                    END AS size_category
+                FROM bean_detections bd
+                JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                JOIN predictions p ON ef.prediction_id = p.id
+                JOIN images i ON p.image_id = i.id
+                WHERE i.location_id = %s
+            ) AS categorized
+            GROUP BY size_category
+            ORDER BY 
+                CASE size_category
+                    WHEN 'Small' THEN 1
+                    WHEN 'Medium' THEN 2
+                    WHEN 'Large' THEN 3
+                END
+        """, [p33_area, p33_area, p67_area, location_id])
+        farmer_size_dist = cursor.fetchall()
+
+        cursor.execute("""
+            SELECT 
+                size_category,
+                COUNT(*) as global_count
+            FROM (
+                SELECT 
+                    CASE 
+                        WHEN ef.area < %s THEN 'Small'
+                        WHEN ef.area BETWEEN %s AND %s THEN 'Medium'
+                        ELSE 'Large'
+                    END AS size_category
+                FROM bean_detections bd
+                JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+                JOIN predictions p ON ef.prediction_id = p.id
+                JOIN images i ON p.image_id = i.id
+            ) AS categorized
+            GROUP BY size_category
+            ORDER BY 
+                CASE size_category
+                    WHEN 'Small' THEN 1
+                    WHEN 'Medium' THEN 2
+                    WHEN 'Large' THEN 3
+                END
+        """, [p33_area, p33_area, p67_area])
+        global_size_dist = cursor.fetchall()
+
+        # Combine distributions
+        size_distribution = {}
+        for category, count in farmer_size_dist:
+            if category not in size_distribution:
+                size_distribution[category] = {"category": category, "farmer": 0, "global": 0}
+            size_distribution[category]["farmer"] = int(count)
+        
+        for category, count in global_size_dist:
+            if category not in size_distribution:
+                size_distribution[category] = {"category": category, "farmer": 0, "global": 0}
+            size_distribution[category]["global"] = int(count)
+
+        # 2. Yield vs Quality (scatter plot data)
+        cursor.execute("""
+            SELECT 
+                i.id as image_id,
+                DATE(i.upload_date) as date,
+                COUNT(bd.id) as yield,
+                AVG(ef.area) as avg_area,
+                AVG(ef.solidity) as avg_solidity
+            FROM images i
+            JOIN predictions p ON i.id = p.image_id
+            JOIN extracted_features ef ON p.id = ef.prediction_id
+            JOIN bean_detections bd ON ef.id = bd.extracted_features_id
+            WHERE i.location_id = %s
+            GROUP BY i.id, i.upload_date
+            ORDER BY i.upload_date DESC
+            LIMIT 50
+        """, [location_id])
+        yield_quality = cursor.fetchall()
+
+        # 3. Enhanced Farm Comparison (compare with top farms and province average)
+        cursor.execute("""
+            SELECT 
+                AVG(bd.length_mm) as avg_length,
+                AVG(bd.width_mm) as avg_width,
+                AVG(ef.solidity) as avg_solidity,
+                AVG(bd.length_mm / NULLIF(bd.width_mm, 0)) as avg_aspect_ratio,
+                AVG(ef.eccentricity) as avg_eccentricity
+            FROM bean_detections bd
+            JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+            JOIN predictions p ON ef.prediction_id = p.id
+            JOIN images i ON p.image_id = i.id
+            WHERE i.location_id = %s
+        """, [location_id])
+        farmer_comparison = cursor.fetchone()
+
+        cursor.execute("""
+            SELECT 
+                AVG(bd.length_mm) as avg_length,
+                AVG(bd.width_mm) as avg_width,
+                AVG(ef.solidity) as avg_solidity,
+                AVG(bd.length_mm / NULLIF(bd.width_mm, 0)) as avg_aspect_ratio,
+                AVG(ef.eccentricity) as avg_eccentricity
+            FROM bean_detections bd
+            JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+            JOIN predictions p ON ef.prediction_id = p.id
+            JOIN images i ON p.image_id = i.id
+        """)
+        province_comparison = cursor.fetchone()
+
+        # Get top 5 farms by bean count for comparison
+        cursor.execute("""
+            SELECT 
+                i.location_id,
+                l.name,
+                AVG(bd.length_mm) as avg_length,
+                AVG(bd.width_mm) as avg_width,
+                AVG(ef.solidity) as avg_solidity,
+                AVG(ef.area) as avg_area,
+                COUNT(bd.id) as bean_count
+            FROM bean_detections bd
+            JOIN extracted_features ef ON bd.extracted_features_id = ef.id
+            JOIN predictions p ON ef.prediction_id = p.id
+            JOIN images i ON p.image_id = i.id
+            JOIN locations l ON i.location_id = l.id
+            GROUP BY i.location_id, l.name
+            ORDER BY bean_count DESC
+            LIMIT 5
+        """)
+        top_farms = cursor.fetchall()
+
+    return JsonResponse({
+        "farmer": farmer_stats,
+        "global": global_stats,
+        "size_distribution": list(size_distribution.values()),
+        "size_thresholds": {
+            "small_max": round(p33_area, 2),
+            "medium_min": round(p33_area, 2),
+            "medium_max": round(p67_area, 2),
+            "large_min": round(p67_area, 2),
+            "min_area": round(min_area, 2),
+            "max_area": round(max_area, 2),
+            "median_area": round(median_area, 2)
+        },
+        "yield_quality": [
+            {
+                "image_id": image_id,
+                "date": str(date),
+                "yield": int(yield_val),
+                "avg_area": float(avg_area) if avg_area else 0,
+                "avg_solidity": float(avg_solidity) if avg_solidity else 0
+            }
+            for image_id, date, yield_val, avg_area, avg_solidity in yield_quality
+        ],
+        "farm_comparison": {
+            "farmer": {
+                "length": float(farmer_comparison[0]) if farmer_comparison[0] else 0,
+                "width": float(farmer_comparison[1]) if farmer_comparison[1] else 0,
+                "solidity": float(farmer_comparison[2]) if farmer_comparison[2] else 0,
+                "aspect_ratio": float(farmer_comparison[3]) if farmer_comparison[3] else 0,
+                "eccentricity": float(farmer_comparison[4]) if farmer_comparison[4] else 0
+            },
+            "province": {
+                "length": float(province_comparison[0]) if province_comparison[0] else 0,
+                "width": float(province_comparison[1]) if province_comparison[1] else 0,
+                "solidity": float(province_comparison[2]) if province_comparison[2] else 0,
+                "aspect_ratio": float(province_comparison[3]) if province_comparison[3] else 0,
+                "eccentricity": float(province_comparison[4]) if province_comparison[4] else 0
+            },
+            "top_farms": [
+                {
+                    "farm_id": int(location_id),
+                    "farm_name": farm_name if farm_name else f"Farm {location_id}",
+                    "avg_length": float(avg_length) if avg_length else 0,
+                    "avg_width": float(avg_width) if avg_width else 0,
+                    "avg_solidity": float(avg_solidity) if avg_solidity else 0,
+                    "avg_area": float(avg_area) if avg_area else 0,
+                    "bean_count": int(bean_count)
+                }
+                for location_id, farm_name, avg_length, avg_width, avg_solidity, avg_area, bean_count in top_farms
+            ]
+        }
+    })
+
+# === Researcher Dashboard　リサーチャー　｜　研究者
+def render_researcher_dashboard(request, uiid):
+    # query for researcher dashboard data
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT ...
+            FROM ...
+            WHERE user_id = %s
+        """, [uiid])
+        researcher_data = cursor.fetchall()
+
+    return JsonResponse({
+        "researcher": researcher_data
+    })
+
+# === Admin Dashboard　アドミン　
+@api_view(['GET'])
+def render_admin_dashboard(request):
+    # query 
+    data = {}
+    location_id = None # 6 -> 7 -> 8 ->
+    role = None  # "researcher"
+    year = None  # 2025
+    with connection.cursor() as cursor:
+        image_count = """
+        SELECT COUNT(*) FROM images;
+        """
+        user_count = """
+        SELECT COUNT(*) FROM users WHERE is_deleted = FALSE;
+        """
+
+        validated_count = """
+        SELECT COUNT(DISTINCT image_id) FROM annotations WHERE (label->>'is_validated')::boolean = true;
+        """
+        unvalidated_count = """
+        SELECT COUNT(DISTINCT image_id) FROM annotations WHERE (label->>'is_validated')::boolean = false;
+        """          
+
+        count_bean_types = """
+        SELECT predicted_label->>'bean_type' AS bean_type, COUNT(DISTINCT predictions.id) as count
+        FROM predictions
+        JOIN images ON predictions.image_id = images.id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        """
+        count_top_uploaders = """
+        SELECT users.id, users.first_name, users.last_name, COUNT(DISTINCT images.id) as upload_count
+        FROM users
+        JOIN user_images ON users.id = user_images.user_id
+        JOIN images ON user_images.image_id = images.id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        """
+        total_beans_predicted_per_farm = """
+        SELECT images.location_id as loc_id,  
+                COUNT(DISTINCT CASE 
+                  WHEN (a.label->>'is_validated')::boolean = false 
+                  THEN a.id 
+                END
+                ) as pending, 
+                COUNT(DISTINCT CASE 
+                  WHEN (a.label->>'is_validated')::boolean = true 
+                  THEN a.id 
+                END
+                ) as validated
+        FROM images 
+        JOIN annotations a ON images.id = a.image_id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        """
+
+        beans_features = """
+        SELECT ef.major_axis_length, ef.minor_axis_length, ef.perimeter, ef.area, ef.solidity, ef.extent, ef.eccentricity, ef.mean_intensity
+        FROM extracted_features ef TABLESAMPLE SYSTEM (100)
+        JOIN predictions p ON ef.prediction_id = p.id
+        JOIN images ON p.image_id = images.id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        """
+        if location_id or role or year:
+            count_bean_types += " WHERE"
+            count_top_uploaders += " WHERE"
+            total_beans_predicted_per_farm += " WHERE"
+
+            conditions = []
+            params = []
+            if location_id:
+                conditions.append(" images.location_id = %s")
+                params.append(location_id)
+            if role:
+                conditions.append(" roles.name = %s")
+                params.append(role)
+            if year:
+                conditions.append(" EXTRACT(YEAR FROM images.upload_date) = %s")
+                params.append(year)
+            count_bean_types += " AND".join(conditions)
+            count_top_uploaders += " AND".join(conditions)
+            total_beans_predicted_per_farm += " AND".join(conditions)
+        count_bean_types += " GROUP BY bean_type;"
+        count_top_uploaders += " GROUP BY users.id, users.first_name, users.last_name ORDER BY upload_count DESC LIMIT 10;"
+        total_beans_predicted_per_farm += " GROUP BY images.location_id;"
+
+        # System Statistics Queries
+
+        # DB SIZE with 500mb limit on free plan while in pro 8gb
+        db_size_distribution_stats = """
+        SELECT relname AS table_name,
+            pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
+            n_live_tup AS estimated_rows
+        FROM pg_stat_user_tables
+        ORDER BY pg_total_relation_size(relid) DESC;
+        """
+        total_db_size = """
+        SELECT pg_size_pretty(pg_database_size(current_database())) AS db_size;
+        """
+
+        # IMG Bucket Size 1GB limit on free plan pro 100GB
+        image_bucket_stats = """
+        SELECT bucket_id,
+            COUNT(*) AS file_count,
+            SUM( (metadata->>'size')::bigint ) AS total_bytes,
+            pg_size_pretty( SUM( (metadata->>'size')::bigint ) ) AS total_size
+        FROM storage.objects
+        GROUP BY bucket_id
+        ORDER BY total_bytes DESC;
+        """
+
+            
+        cursor.execute(image_count)
+        uploads = cursor.fetchall()
+        cursor.execute(user_count)
+        users = cursor.fetchall()
+        cursor.execute(validated_count)
+        validated = cursor.fetchall()
+        cursor.execute(unvalidated_count)
+        unvalidated = cursor.fetchall()
+        cursor.execute(count_bean_types, [location_id, role, year])
+        bean_types = cursor.fetchall()
+        
+        cursor.execute(db_size_distribution_stats)
+        db_size = cursor.fetchall()
+        cursor.execute(image_bucket_stats)
+        img_bucket = cursor.fetchall()
+        cursor.execute(total_db_size)
+        total_db = cursor.fetchall()
+
+        bean_type_data = {}
+        for bean_type, count in bean_types:
+            bean_type_data[bean_type] = count
+        cursor.execute(count_top_uploaders, [location_id, role, year])
+        top_uploaders = cursor.fetchall()
+        top_uploader_data = []
+        for user_id, first_name, last_name, upload_count in top_uploaders:
+            top_uploader_data.append({
+                "user_id": user_id,
+                "name": f"{first_name} {last_name}",
+                "upload_count": upload_count
+            })
+        cursor.execute(total_beans_predicted_per_farm, [location_id, role, year])
+        farms = cursor.fetchall()
+        farm_data = {}
+        for loc_id, pend, val in farms:
+            farm_data[f"{loc_id}"] = {
+                "pending": pend,
+                "validated": val
+            }
+        # Total beans predicted, Avg , Median and Mode(round into two decimal places first) Bean Features, Total Predictions, Average Confidence score, min and max of confidence score.
+
+        # Bean Analytics Queries
+        
+        # Total predictions query
+        total_predictions_query = """
+        SELECT COUNT(*) FROM predictions p
+        JOIN images ON p.image_id = images.id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        """
+        
+        # Confidence score statistics
+        confidence_stats_query = """
+        SELECT AVG(CAST(predicted_label->>'confidence' AS FLOAT)) as avg_confidence,
+               MIN(CAST(predicted_label->>'confidence' AS FLOAT)) as min_confidence,
+               MAX(CAST(predicted_label->>'confidence' AS FLOAT)) as max_confidence
+        FROM predictions p
+        JOIN images ON p.image_id = images.id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        """
+        
+        # Feature statistics per farm
+        features_stats_query = """
+        SELECT images.location_id,
+               l.name as farm_name,
+               -- Area statistics
+               AVG(ef.area) as area_mean,
+               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.area) as area_median,
+               MODE() WITHIN GROUP (ORDER BY ROUND(ef.area, 2)) as area_mode,
+               -- Perimeter statistics  
+               AVG(ef.perimeter) as perimeter_mean,
+               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.perimeter) as perimeter_median,
+               MODE() WITHIN GROUP (ORDER BY ROUND(ef.perimeter, 2)) as perimeter_mode,
+               -- Major axis length statistics
+               AVG(ef.major_axis_length) as major_axis_length_mean,
+               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.major_axis_length) as major_axis_length_median,
+               MODE() WITHIN GROUP (ORDER BY ROUND(ef.major_axis_length, 2)) as major_axis_length_mode,
+               -- Minor axis length statistics
+               AVG(ef.minor_axis_length) as minor_axis_length_mean,
+               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.minor_axis_length) as minor_axis_length_median,
+               MODE() WITHIN GROUP (ORDER BY ROUND(ef.minor_axis_length, 2)) as minor_axis_length_mode,
+               -- Extent statistics
+               AVG(ef.extent) as extent_mean,
+               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.extent) as extent_median,
+               MODE() WITHIN GROUP (ORDER BY ROUND(ef.extent, 2)) as extent_mode,
+               -- Eccentricity statistics
+               AVG(ef.eccentricity) as eccentricity_mean,
+               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.eccentricity) as eccentricity_median,
+               MODE() WITHIN GROUP (ORDER BY ROUND(ef.eccentricity, 2)) as eccentricity_mode,
+               -- Convex area statistics
+               AVG(ef.convex_area) as convex_area_mean,
+               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.convex_area) as convex_area_median,
+               MODE() WITHIN GROUP (ORDER BY ROUND(ef.convex_area, 2)) as convex_area_mode,
+               -- Solidity statistics
+               AVG(ef.solidity) as solidity_mean,
+               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.solidity) as solidity_median,
+               MODE() WITHIN GROUP (ORDER BY ROUND(ef.solidity, 2)) as solidity_mode,
+               -- Mean intensity statistics
+               AVG(ef.mean_intensity) as mean_intensity_mean,
+               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.mean_intensity) as mean_intensity_median,
+               MODE() WITHIN GROUP (ORDER BY ROUND(ef.mean_intensity, 2)) as mean_intensity_mode,
+               -- Equivalent diameter statistics
+               AVG(ef.equivalent_diameter) as equivalent_diameter_mean,
+               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ef.equivalent_diameter) as equivalent_diameter_median,
+               MODE() WITHIN GROUP (ORDER BY ROUND(ef.equivalent_diameter, 2)) as equivalent_diameter_mode
+        FROM extracted_features ef
+        JOIN predictions p ON ef.prediction_id = p.id
+        JOIN images ON p.image_id = images.id
+        JOIN locations l ON images.location_id = l.id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        """
+        
+        # Apply filters if needed
+        if location_id or role or year:
+            total_predictions_query += " WHERE"
+            confidence_stats_query += " WHERE"
+            features_stats_query += " WHERE"
+            
+            conditions = []
+            params = []
+            if location_id:
+                conditions.append(" images.location_id = %s")
+                params.append(location_id)
+            if role:
+                conditions.append(" roles.name = %s")
+                params.append(role)
+            if year:
+                conditions.append(" EXTRACT(YEAR FROM images.upload_date) = %s")
+                params.append(year)
+            
+            condition_str = " AND".join(conditions)
+            total_predictions_query += condition_str
+            confidence_stats_query += condition_str
+            features_stats_query += condition_str
+            
+            cursor.execute(total_predictions_query, params)
+            total_predictions = cursor.fetchone()
+            cursor.execute(confidence_stats_query, params)
+            confidence_stats = cursor.fetchone()
+            cursor.execute(features_stats_query + " GROUP BY images.location_id, l.name", params)
+            features_stats = cursor.fetchall()
+        else:
+            cursor.execute(total_predictions_query)
+            total_predictions = cursor.fetchone()
+            cursor.execute(confidence_stats_query)
+            confidence_stats = cursor.fetchone()
+            cursor.execute(features_stats_query + " GROUP BY images.location_id, l.name")
+            features_stats = cursor.fetchall()
+        
+        # Process feature statistics data
+        feature_stats_data = {}
+        feature_names = [
+            'area', 'perimeter', 'major_axis_length', 'minor_axis_length', 
+            'extent', 'eccentricity', 'convex_area', 'solidity', 
+            'mean_intensity', 'equivalent_diameter'
+        ]
+        
+        for feature in feature_names:
+            feature_stats_data[feature] = {
+                'mean': [],
+                'median': [], 
+                'mode': []
+            }
+        
+        for row in features_stats:
+            location_id_stats = row[0]
+            farm_name = row[1] if row[1] else f'Farm {location_id_stats}'
+            for i, feature in enumerate(feature_names):
+                mean_idx = 2 + (i * 3)
+                median_idx = 3 + (i * 3)
+                mode_idx = 4 + (i * 3)
+                
+                feature_stats_data[feature]['mean'].append({
+                    'farm': farm_name,
+                    'value': float(row[mean_idx]) if row[mean_idx] is not None else 0
+                })
+                feature_stats_data[feature]['median'].append({
+                    'farm': farm_name,
+                    'value': float(row[median_idx]) if row[median_idx] is not None else 0
+                })
+                feature_stats_data[feature]['mode'].append({
+                    'farm': farm_name,
+                    'value': float(row[mode_idx]) if row[mode_idx] is not None else 0
+                })
+
+        # Feature Correlations
+
+        # Correlation Matrix for Bean Features
+        features_query = """
+        SELECT ef.major_axis_length, ef.minor_axis_length, ef.perimeter, ef.area, ef.solidity, 
+               ef.extent, ef.eccentricity, ef.mean_intensity, ef.convex_area, ef.equivalent_diameter
+        FROM extracted_features ef 
+        JOIN predictions p ON ef.prediction_id = p.id
+        JOIN images ON p.image_id = images.id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        """
+        
+        if location_id or role or year:
+            features_query += " WHERE"
+            conditions = []
+            params = []
+            if location_id:
+                conditions.append(" images.location_id = %s")
+                params.append(location_id)
+            if role:
+                conditions.append(" roles.name = %s")
+                params.append(role)
+            if year:
+                conditions.append(" EXTRACT(YEAR FROM images.upload_date) = %s")
+                params.append(year)
+            features_query += " AND".join(conditions)
+            cursor.execute(features_query, params)
+        else:
+            cursor.execute(features_query)
+        
+        features_data = cursor.fetchall()
+
+        # Create DataFrame for correlation calculation
+        feature_columns = [
+            'major_axis_length', 'minor_axis_length', 'perimeter', 'area', 'solidity',
+            'extent', 'eccentricity', 'mean_intensity', 'convex_area', 'equivalent_diameter'
+        ]
+        
+        corr_feats = []
+        if features_data:
+            df = pd.DataFrame(features_data, columns=feature_columns)
+            print(f"DataFrame shape: {df.shape}")
+            print(f"Features data length: {len(features_data)}")
+            print(df.head())
+            corr = df.corr()
+            print(f"Correlation matrix shape: {corr.shape}")
+            print(corr)
+            
+            # Convert to a JSON structure usable by frontend
+            for row_var in corr.index:
+                row_data = {
+                    "id": row_var,
+                    "data": [{"x": col_var, "y": float(corr.at[row_var, col_var])} for col_var in corr.columns]
+                }
+                corr_feats.append(row_data)
+            print(corr_feats)
+        
+
+        # Aspect Ratio and Roundness (Checking for Patterns in Bean Shapes)
+        cursor.execute(beans_features, [location_id, role, year])
+        beans_features = cursor.fetchall()
+        scatter_ratio_roundness = []
+
+        for bean in beans_features:
+            scatter_ratio_roundness.append({
+                "aspect_ratio": float(bean[0]) / float(bean[1]) if bean[1] != 0 else 0,
+                "roundness": (4 * 3.1416 * float(bean[3])) / (float(bean[2]) ** 2) if bean[2] != 0 else 0
+            })
+        
+        # Histogram
+        bin_size = 0.1
+        aspect_ratios = [d["aspect_ratio"] for d in scatter_ratio_roundness]
+        roundnesses = [d["roundness"] for d in scatter_ratio_roundness]
+
+        hist_aspect = make_histogram(aspect_ratios, bin_size=0.1)
+        hist_roundness = make_histogram(roundnesses, bin_size=0.05)
+        
+        # Raw feature data for boxplot analysis (all records) grouped by farm
+        raw_features_query = """
+        SELECT images.location_id, l.name as farm_name,
+               ef.area, ef.perimeter, ef.major_axis_length, ef.minor_axis_length, 
+               ef.extent, ef.eccentricity, ef.solidity, ef.mean_intensity,
+               ef.convex_area, ef.equivalent_diameter
+        FROM extracted_features ef 
+        JOIN predictions p ON ef.prediction_id = p.id
+        JOIN images ON p.image_id = images.id
+        JOIN locations l ON images.location_id = l.id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        """
+        
+        if location_id or role or year:
+            raw_features_query += " WHERE"
+            conditions = []
+            params = []
+            if location_id:
+                conditions.append(" images.location_id = %s")
+                params.append(location_id)
+            if role:
+                conditions.append(" roles.name = %s")
+                params.append(role)
+            if year:
+                conditions.append(" EXTRACT(YEAR FROM images.upload_date) = %s")
+                params.append(year)
+            raw_features_query += " AND".join(conditions)
+            cursor.execute(raw_features_query, params)
+        else:
+            cursor.execute(raw_features_query)
+        
+        raw_features = cursor.fetchall()
+        
+        # Structure raw features for boxplot grouped by farm
+        # Format: { 'area': { 'Farm 1': [values], 'Farm 2': [values] }, ... }
+        boxplot_features_by_farm = {}
+        feature_names = [
+            'area', 'perimeter', 'major_axis_length', 'minor_axis_length',
+            'extent', 'eccentricity', 'solidity', 'mean_intensity',
+            'convex_area', 'equivalent_diameter'
+        ]
+        
+        for feature in feature_names:
+            boxplot_features_by_farm[feature] = {}
+        
+        for row in raw_features:
+            farm_id = row[0]
+            farm_name = row[1] if row[1] else f"Farm {farm_id}"
+            
+            # Initialize farm arrays if not exists
+            for feature in feature_names:
+                if farm_name not in boxplot_features_by_farm[feature]:
+                    boxplot_features_by_farm[feature][farm_name] = []
+            
+            # Add values to respective feature arrays (indices 2-11)
+            boxplot_features_by_farm['area'][farm_name].append(float(row[2]) if row[2] is not None else 0)
+            boxplot_features_by_farm['perimeter'][farm_name].append(float(row[3]) if row[3] is not None else 0)
+            boxplot_features_by_farm['major_axis_length'][farm_name].append(float(row[4]) if row[4] is not None else 0)
+            boxplot_features_by_farm['minor_axis_length'][farm_name].append(float(row[5]) if row[5] is not None else 0)
+            boxplot_features_by_farm['extent'][farm_name].append(float(row[6]) if row[6] is not None else 0)
+            boxplot_features_by_farm['eccentricity'][farm_name].append(float(row[7]) if row[7] is not None else 0)
+            boxplot_features_by_farm['solidity'][farm_name].append(float(row[8]) if row[8] is not None else 0)
+            boxplot_features_by_farm['mean_intensity'][farm_name].append(float(row[9]) if row[9] is not None else 0)
+            boxplot_features_by_farm['convex_area'][farm_name].append(float(row[10]) if row[10] is not None else 0)
+            boxplot_features_by_farm['equivalent_diameter'][farm_name].append(float(row[11]) if row[11] is not None else 0)
+            
+        # Calculate size thresholds based on area
+        cursor.execute("""
+            SELECT 
+                PERCENTILE_CONT(0.33) WITHIN GROUP (ORDER BY ef.area) as p33_area,
+                PERCENTILE_CONT(0.67) WITHIN GROUP (ORDER BY ef.area) as p67_area
+            FROM extracted_features ef
+            JOIN predictions p ON ef.prediction_id = p.id
+            JOIN images ON p.image_id = images.id
+            JOIN users ON images.location_id = users.location_id
+            JOIN user_roles ON users.id = user_roles.user_id
+            JOIN roles ON user_roles.role_id = roles.id
+        """)
+        thresholds = cursor.fetchone()
+        p33_area = thresholds[0] if thresholds and thresholds[0] else 200.0
+        p67_area = thresholds[1] if thresholds and thresholds[1] else 400.0
+
+        # Shape-Size Distribution Query
+        # Classify beans by shape (Round vs Teardrop) and size (Small, Medium, Large)
+        # Grouped by farm for detailed analysis
+        # Shape formula: aspect_ratio < 1.3 AND eccentricity < 0.6 AND extent > 0.75 = Round
+        # Size classification based on area
+        shape_size_dist_query = """
+        SELECT 
+            l.name as farm_name,
+            CASE 
+                WHEN ef.area < %s THEN 'Small'
+                WHEN ef.area BETWEEN %s AND %s THEN 'Medium'
+                ELSE 'Large'
+            END AS size_category,
+            CASE 
+                WHEN (ef.major_axis_length / NULLIF(ef.minor_axis_length, 0)) < 1.5 
+                     AND ef.eccentricity < 0.8 
+                     AND ef.extent > 0.75 THEN 'Round'
+                ELSE 'Teardrop'
+            END AS shape_category,
+            COUNT(*) as count
+        FROM extracted_features ef
+        JOIN predictions p ON ef.prediction_id = p.id
+        JOIN images ON p.image_id = images.id
+        JOIN locations l ON images.location_id = l.id
+        JOIN users ON images.location_id = users.location_id
+        JOIN user_roles ON users.id = user_roles.user_id
+        JOIN roles ON user_roles.role_id = roles.id
+        WHERE ef.major_axis_length IS NOT NULL 
+          AND ef.minor_axis_length IS NOT NULL 
+          AND ef.minor_axis_length > 0
+          AND ef.eccentricity IS NOT NULL
+          AND ef.extent IS NOT NULL
+          AND ef.area IS NOT NULL
+        """
+        
+        if location_id or role or year:
+            conditions = []
+            params = [p33_area, p33_area, p67_area]
+            if location_id:
+                conditions.append(" AND images.location_id = %s")
+                params.append(location_id)
+            if role:
+                conditions.append(" AND roles.name = %s")
+                params.append(role)
+            if year:
+                conditions.append(" AND EXTRACT(YEAR FROM images.upload_date) = %s")
+                params.append(year)
+            shape_size_dist_query += "".join(conditions)
+            shape_size_dist_query += " GROUP BY l.name, size_category, shape_category ORDER BY l.name, size_category, shape_category"
+            cursor.execute(shape_size_dist_query, params)
+        else:
+            shape_size_dist_query += " GROUP BY l.name, size_category, shape_category ORDER BY l.name, size_category, shape_category"
+            cursor.execute(shape_size_dist_query, [p33_area, p33_area, p67_area])
+        
+        shape_size_results = cursor.fetchall()
+        
+        # Structure data for grouped bar chart with farm filtering
+        # Format: { 'Farm A': [{ size: 'Small', Round: count, Teardrop: count }, ...], 'Overall': [...] }
+        shape_size_by_farm = {}
+        overall_distribution = {}
+        
+        for farm_name, size, shape, count in shape_size_results:
+            # Per-farm data
+            if farm_name not in shape_size_by_farm:
+                shape_size_by_farm[farm_name] = {}
+            if size not in shape_size_by_farm[farm_name]:
+                shape_size_by_farm[farm_name][size] = {'size': size, 'Round': 0, 'Teardrop': 0}
+            shape_size_by_farm[farm_name][size][shape] = int(count)
+            
+            # Overall aggregated data
+            if size not in overall_distribution:
+                overall_distribution[size] = {'size': size, 'Round': 0, 'Teardrop': 0}
+            overall_distribution[size][shape] += int(count)
+        
+        # Structure db_size and img_bucket info
+        data_db_size_rep = []
+        for table_name, total_size, estimated_rows in db_size:
+            data_db_size_rep.append({
+                "table_name": table_name,
+                "total_size": total_size,
+                "estimated_rows": estimated_rows
+            })
+        data_db_size = { "total": total_db[0][0] if total_db[0][0] is not None else 0 , "tables": data_db_size_rep }
+
+        data_img_bucket = []
+        for bucket_id, file_count, total_bytes, total_size in img_bucket:
+            data_img_bucket.append({
+                "bucket_id": bucket_id,
+                "file_count": file_count,
+                "total_bytes": total_bytes,
+                "total_size": total_size
+            })
+
+        # Convert to lists and ensure proper ordering
+        size_order = {'Small': 1, 'Medium': 2, 'Large': 3}
+        
+        shape_size_dist_by_farm = {}
+        for farm_name, sizes in shape_size_by_farm.items():
+            shape_size_dist_by_farm[farm_name] = sorted(
+                sizes.values(), 
+                key=lambda x: size_order.get(x['size'], 4)
+            )
+        
+        # Add overall distribution
+        shape_size_dist_by_farm['Overall'] = sorted(
+            overall_distribution.values(), 
+            key=lambda x: size_order.get(x['size'], 4)
+        )
+        
+        # Get list of farm names for filter
+        farm_names = sorted([farm for farm in shape_size_by_farm.keys()])
+
+        # Data to be returned
+        data = {
+            "uploads": uploads[0][0] if uploads[0][0] is not None else 0,
+            "users": users[0][0] if users[0][0] is not None else 0,
+            "validated": validated[0][0] if validated[0][0] is not None else 0,
+            "pending": unvalidated[0][0] if unvalidated[0][0] is not None else 0,
+            "bean_types": bean_type_data,
+            "top_uploaders": top_uploader_data,
+            "farms": farm_data,
+            "scatter_ratio_roundness" : scatter_ratio_roundness,
+            "hist_aspect": hist_aspect,
+            "hist_roundness": hist_roundness,
+            "corr_feats": corr_feats,
+            "total_predictions": total_predictions[0] if total_predictions[0] is not None else 0,
+            "avg_confidence": float(confidence_stats[0]) if confidence_stats[0] is not None else 0,
+            "min_confidence": float(confidence_stats[1]) if confidence_stats[1] is not None else 0,
+            "max_confidence": float(confidence_stats[2]) if confidence_stats[2] is not None else 0,
+            "feature_stats": feature_stats_data,
+            "boxplot_features": boxplot_features_by_farm,
+            "shape_size_distribution": shape_size_dist_by_farm,
+            "shape_size_farm_names": farm_names,
+            "size_thresholds": {
+                "small_max": round(p33_area, 2),
+                "medium_min": round(p33_area, 2),
+                "medium_max": round(p67_area, 2),
+                "large_min": round(p67_area, 2)
+            },
+            "db_size": data_db_size,
+            "img_bucket": data_img_bucket
+        }
+
+
+    return JsonResponse({'data': (data)})
+
+# System Status for Payment Plan Management
+@api_view(['GET', 'POST'])
+def system_status(request):
+    """
+    GET: Return system status including uptime, Supabase status, and payment plan
+    POST: Update payment plan information
+    """
+    if request.method == 'POST':
+        # Handle payment plan update
+        plan_type = request.data.get('plan_type', 'free')
+        end_date = request.data.get('end_date', None)
+        
+        try:
+            with connection.cursor() as cursor:
+                if plan_type == 'pro':
+                    if end_date:
+                        # Validate and parse the end_date
+                        try:
+                            end_dt = datetime.fromisoformat(end_date)
+                            days_remaining = (end_dt - datetime.now()).days
+                        except:
+                            end_dt = datetime.now() + timedelta(days=30)
+                            end_date = end_dt.isoformat()
+                            days_remaining = 30
+                    else:
+                        end_dt = datetime.now() + timedelta(days=30)
+                        end_date = end_dt.isoformat()
+                        days_remaining = 30
+                    
+                    current_bill = 25.0
+                    
+                    # Update or insert into plans table
+                    cursor.execute("""
+                       UPDATE public.plans SET 
+                            plan_type = %s,
+                            end_date = %s,
+                            current_bill = %s,
+                            updated_at = NOW()
+                    """, [plan_type, end_date, current_bill])
+                    
+                else:
+                    # Free plan
+                    end_date = None
+                    current_bill = 0.0
+                    days_remaining = None
+                    
+                    # Update or insert into plans table
+                    cursor.execute("""
+                        UPDATE public.plans SET 
+                            plan_type = %s,
+                            end_date = %s,
+                            current_bill = %s,
+                            updated_at = NOW()
+                    """, [plan_type, end_date, current_bill])
+            
+            return JsonResponse({
+                'status': 'success',
+                'plan_type': plan_type,
+                'end_date': end_date,
+                'current_bill': current_bill if plan_type == 'pro' else 0.0,
+                'days_remaining': days_remaining,
+                'message': f'Plan updated to {plan_type}'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Failed to update plan: {str(e)}'
+            }, status=500)
+    # GET request - return system status
+    try:
+        with connection.cursor() as cursor:
+            # 1. System Uptime - check database uptime
+            cursor.execute("SELECT pg_postmaster_start_time() as uptime;")
+            uptime_result = cursor.fetchone()
+            
+            if uptime_result and uptime_result[0]:
+                uptime_start = uptime_result[0]
+                current_time = timezone.now()
+                # Convert to timezone-aware datetime if needed
+                if uptime_start.tzinfo is None:
+                    uptime_start = timezone.make_aware(uptime_start)
+                
+                uptime_delta = current_time - uptime_start
+                uptime_days = uptime_delta.days
+                uptime_str = f"{uptime_days} days"
+            else:
+                uptime_str = "Unknown"
+        
+        # 2. Supabase Status - check external API
+        try:
+            response = requests.get('https://status.supabase.com/api/v2/summary.json', timeout=10)
+            if response.status_code == 200:
+                status_data = response.json()
+                
+                # Check overall status
+                overall_status = status_data.get('status', {}).get('indicator', 'unknown')
+                
+                # Check specific components (Database and Storage)
+                components = status_data.get('components', [])
+                database_status = 'unknown'
+                storage_status = 'unknown'
+                
+                for component in components:
+                    if 'database' in component.get('name', '').lower():
+                        database_status = component.get('status', 'unknown')
+                    elif 'storage' in component.get('name', '').lower():
+                        storage_status = component.get('status', 'unknown')
+                
+                # Get last update
+                last_update = status_data.get('page', {}).get('updated_at', '')
+                if last_update:
+                    try:
+                        last_update_dt = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
+                        last_update_str = last_update_dt.strftime('%Y-%m-%d %H:%M UTC')
+                    except:
+                        last_update_str = last_update
+                else:
+                    last_update_str = 'Unknown'
+                    
+            else:
+                overall_status = 'unknown'
+                database_status = 'unknown'
+                storage_status = 'unknown'
+                last_update_str = 'Failed to fetch'
+                
+        except Exception as e:
+            print(f"Error fetching Supabase status: {e}")
+            overall_status = 'unknown'
+            database_status = 'unknown'
+            storage_status = 'unknown'
+            last_update_str = 'API unavailable'
+        
+        # 3. Payment Plan Status - get from database
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT plan_type, end_date, current_bill, 
+                    CASE 
+                    WHEN end_date IS NOT NULL AND end_date > NOW() 
+                    THEN EXTRACT(DAY FROM (end_date - NOW()))::INTEGER
+                    ELSE NULL
+                    END as days_remaining
+                FROM public.plans 
+                ORDER BY updated_at DESC 
+                LIMIT 1
+                """)
+                plan_result = cursor.fetchone()
+                print(f"Plan result: {plan_result}")
+            
+            if plan_result:
+                payment_plan = {
+                    'plan_type': plan_result[0] if plan_result[0] else 'free',
+                    'end_date': plan_result[1].isoformat() if plan_result[1] else None,
+                    'current_bill': float(plan_result[2]) if plan_result[2] else 0,
+                    'days_remaining': int(plan_result[3]) if plan_result[3] else None
+                }
+            else:
+                # No plan found, create default free plan
+                cursor.execute("""
+                    INSERT INTO public.plans (plan_type, end_date, current_bill, created_at, updated_at)
+                    VALUES ('free', NULL, 0, NOW(), NOW())
+                """)
+                payment_plan = {
+                    'plan_type': 'free',
+                    'end_date': None,
+                    'current_bill': 0,
+                    'days_remaining': None
+                }
+        except Exception as e:
+            print(f"Error fetching payment plan: {e}")
+            # Fallback to free plan if database error
+            payment_plan = {
+            'plan_type': 'free',
+            'end_date': None,
+            'current_bill': 0,
+            'days_remaining': None
+            }
+        
+        # For demo, you could store this in a simple model or settings
+        # Here we'll just return mock data
+        
+        return JsonResponse({
+            'systemUptime': uptime_str,
+            'serverStatus': overall_status,
+            'databaseStatus': database_status,
+            'storageStatus': storage_status,
+            'lastBackup': last_update_str,
+            'activeSubscriptions': 1,
+            'paymentPlan': payment_plan
+        })
+        
+    except Exception as e:
+        print(f"Error in system_status view: {e}")
+        return JsonResponse({
+            'error': 'Failed to fetch system status',
+            'systemUptime': 'Unknown',
+            'serverStatus': 'unknown',
+            'databaseStatus': 'unknown', 
+            'storageStatus': 'unknown',
+            'lastBackup': 'Unknown',
+            'activeSubscriptions': 0,
+            'paymentPlan': {
+                'plan_type': 'free',
+                'end_date': None,
+                'current_bill': 0,
+                'days_remaining': None
+            }
+        }, status=500)
+
+def make_histogram(data, bin_size):
+    # Round each value to nearest bin (like 1.1, 1.2, etc.)
+    bins = [round(math.floor(x / bin_size) * bin_size, 2) for x in data]
+    counts = Counter(bins)
+    # Turn into list of {bin, count} for Recharts
+    return [{"value": b, "count": c} for b, c in sorted(counts.items())]

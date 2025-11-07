@@ -1,10 +1,13 @@
 import './App.css'
 import AppRoute from "./routes/index";
+import { CacheProvider } from '@/contexts/CacheContext';
 
 function App() {
 
   return (
-    <AppRoute />
+    <CacheProvider>
+      <AppRoute />
+    </CacheProvider>
   );
 }
 

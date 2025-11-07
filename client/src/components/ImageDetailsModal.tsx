@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
 
 type PredictedImage = {
     src: string;
@@ -69,6 +71,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
     const [editMode, setEditMode] = useState(isEditing);
     const [editedData, setEditedData] = useState<any>(image);
     const [showDetailedFeatures, setShowDetailedFeatures] = useState(false);
+    const { showSuccess, showError } = useNotification();
 
     if (!isOpen) return null;
 
@@ -82,7 +85,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                 onClose();
             } catch (error) {
                 console.error('Failed to delete image:', error);
-                alert('Failed to delete image. Please try again.');
+                showError("Failed to delete image", "Please try again.");
             } finally {
                 setIsDeleting(false);
             }
@@ -97,7 +100,7 @@ const ImageDetailsModal: React.FC<ImageDetailsModalProps> = ({
                 setEditMode(false);
             } catch (error) {
                 console.error('Failed to save changes:', error);
-                alert('Failed to save changes. Please try again.');
+                showError("Failed to save changes", "Please try again.");
             } finally {
                 setIsSaving(false);
             }

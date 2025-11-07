@@ -151,13 +151,13 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black/65  flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 max-w-md mx-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-red-600">Camera Error</h3>
             <button
               onClick={handleClose}
-              className="text-gray-500 hover:text-gray-700"
+              className="button-accent"
             >
               ✕
             </button>
@@ -192,7 +192,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/65 bg-opacity-90 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-4 max-w-2xl max-h-[90vh] w-full mx-4">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold text-[var(--espresso-black)]">
@@ -200,7 +200,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
           </h3>
           <button
             onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="button-accent"
           >
             ✕
           </button>
@@ -239,7 +239,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
             autoPlay
             playsInline
             muted
-            className="w-full h-64 object-cover rounded bg-black"
+            className="w-full h-[60vh] object-cover rounded bg-black"
           />
           <canvas ref={canvasRef} className="hidden" />
         </div>

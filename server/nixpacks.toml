@@ -1,8 +1,0 @@
-[phases.setup]
-aptPkgs = [
-  "gdal-bin",
-  "libgdal-dev",
-  "binutils",
-  "libproj-dev",
-  "libpq-dev"
-]

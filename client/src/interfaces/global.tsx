@@ -1,10 +1,9 @@
-import type { SignInWithPasswordCredentials } from "@supabase/supabase-js";
-
 export interface CardAttributes {
     title: string,
     subtitle: string,
     content: React.ReactNode,
     description?: React.ReactNode,
+    side?: React.ReactNode
 };
 
 
@@ -20,10 +19,11 @@ export interface NotifAttributes {
   message: string;
   timestamp: string;
   read: boolean;
-  type?: 'info' | 'warning' | 'error';
+  type: 'info' | 'alert' | 'system';
 }
 
 export interface User {
+    id: string;  // Now required
     name: string,
     role: string
 }
@@ -71,14 +71,22 @@ export interface UserLog {
 
 export interface SystemStatus {
   systemUptime: string;
-  pendingPayments: number;
-  duePayments: number;
-  totalRevenue: string;
+  pendingPayments?: number; // Legacy field
+  duePayments?: number; // Legacy field
+  totalRevenue?: string; // Legacy field
   activeSubscriptions: number;
-  serverStatus: 'online' | 'offline' | 'maintenance';
+  serverStatus: 'online' | 'offline' | 'maintenance' | 'operational' | 'unknown';
+  databaseStatus: 'operational' | 'unknown' | 'offline';
+  storageStatus: 'operational' | 'unknown' | 'offline';
   lastBackup: string;
-  storageUsed: string;
-  storageTotal: string;
+  storageUsed?: string; // Legacy field
+  storageTotal?: string; // Legacy field
+  paymentPlan: {
+    plan_type: 'free' | 'pro';
+    end_date?: string | null;
+    current_bill: number;
+    days_remaining?: number | null;
+  };
 }
 
 export interface BeanSubmission {
@@ -100,10 +108,71 @@ export interface UserActivity {
 }
 
 export interface AdminStats {
-  totalUsers: number;
-  activeUsers: number;
-  totalUploads: number;
-  pendingValidations: number;
+  users: number;
+  validated: number;
+  uploads: number;
+  pending: number;
+  scatter_ratio_roundness: [{
+    aspect_ratio: number;
+    roundness: number;
+  }];
+  hist_aspect: {value: number, count: number}[];
+  hist_roundness: {value: number, count: number}[];
+  bean_types: { [key: string]: number };
+  top_uploaders: Array<{
+    user_id: number;
+    name: string;
+    upload_count: number;
+  }>;
+  farms: { [key: string]: { pending: number; validated: number } };
+  corr_feats: Array<{
+    id: string;
+    data: Array<{ x: string; y: number }>;
+  }>;
+  total_predictions: number;
+  avg_confidence: number;
+  min_confidence: number;
+  max_confidence: number;
+  feature_stats: {
+    [featureName: string]: {
+      mean: Array<{ farm: string; value: number }>;
+      median: Array<{ farm: string; value: number }>;
+      mode: Array<{ farm: string; value: number }>;
+    };
+  };
+  boxplot_features: {
+    [featureName: string]: {
+      [farmName: string]: number[];
+    };
+  };
+  shape_size_distribution: {
+    [farmName: string]: Array<{
+      size: string;
+      Round: number;
+      Teardrop: number;
+    }>;
+  };
+  shape_size_farm_names: string[];
+  size_thresholds: {
+    small_max: number;
+    medium_min: number;
+    medium_max: number;
+    large_min: number;
+  };
+  img_bucket: Array<{
+    bucket_id: string;
+    file_count: number;
+    total_bytes: number;
+    total_size: string;
+  }>;
+  db_size: {
+    tables: Array<{
+      table_name: string;
+      total_size: string;
+      estimated_rows: number;
+    }>;
+    total: string;
+  };
 }
 
 export interface UserManagementUser {
@@ -187,6 +256,8 @@ export interface PaginationData {
   totalPages: number;
   totalItems: number;
   itemsPerPage: number;
+  hasNext?: boolean;
+  hasPrevious?: boolean;
 }
 
 // New interfaces for bean validation features
@@ -226,33 +297,6 @@ export interface FarmFolder {
   imageCount: number;
   validatedCount: number;
   type: 'own' | 'farm';
-}
-
-export interface AccessRequest {
-  id: string;
-  researcherId: string;
-  researcherName: string;
-  farmId: string;
-  farmName: string;
-  farmOwnerId: string;
-  message: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  createdAt: string;
-  respondedAt?: string;
-}
-
-export interface NotificationItem {
-  id: string;
-  type: 'access_request' | 'access_granted' | 'access_denied' | 'general';
-  title: string;
-  message: string;
-  fromUserId?: string;
-  fromUserName?: string;
-  relatedEntityId?: string; // farm id, request id, etc.
-  read: boolean;
-  createdAt: string;
-  actionRequired?: boolean;
-  actionData?: any;
 }
 
 // New interfaces for multiple bean detection
@@ -305,4 +349,9 @@ export interface MultiImageProcessingResponse {
 export type Location = {
     id: string;
     name: string;
+};
+
+export type ScatterRatioRoundness = {
+    aspect_ratio: number;
+    roundness: number;
 };

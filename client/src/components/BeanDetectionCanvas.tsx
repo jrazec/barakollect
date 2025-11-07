@@ -23,6 +23,7 @@ interface BeanDetectionCanvasProps {
   zoomLevel?: number;
   showZoomControls?: boolean;
   onZoomChange?: (zoom: number) => void;
+  focusBeanId?: number; // New prop to center on specific bean
 }
 
 const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
@@ -35,7 +36,8 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
   showBeanBoxes = true,
   zoomLevel = 1,
   showZoomControls = false,
-  onZoomChange
+  onZoomChange,
+  focusBeanId // New prop
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -61,6 +63,48 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
     image.src = imageSrc;
     imageRef.current = image;
   }, [imageSrc]);
+
+  // Auto-center on focused bean
+  useEffect(() => {
+    if (focusBeanId && imageLoaded && imageRef.current && canvasRef.current) {
+      const focusBean = beans.find(bean => bean.bean_id === focusBeanId);
+      if (focusBean) {
+        const canvas = canvasRef.current;
+        const image = imageRef.current;
+        
+        // Calculate scale and dimensions
+        const baseScale = Math.min(canvas.width / image.width, canvas.height / image.height);
+        const scale = baseScale * zoomLevel;
+        
+        // Get bean center coordinates
+        const [bx, by, bwidth, bheight] = focusBean.bbox;
+        const beanCenterX = bx + bwidth / 2;
+        const beanCenterY = by + bheight / 2;
+        
+        // Calculate where the bean center should be in canvas coordinates (center of canvas)
+        const canvasCenterX = canvas.width / 2;
+        const canvasCenterY = canvas.height / 2;
+        
+        // Calculate required pan offset to center the bean
+        const targetX = canvasCenterX - (beanCenterX * scale);
+        const targetY = canvasCenterY - (beanCenterY * scale);
+        
+        // Calculate base offset (where image would be centered at 1x zoom)
+        const scaledWidth = image.width * scale;
+        const scaledHeight = image.height * scale;
+        const baseOffsetX = (canvas.width - scaledWidth) / 2;
+        const baseOffsetY = (canvas.height - scaledHeight) / 2;
+        
+        // Set pan offset to center on bean
+        setPanOffset({
+          x: targetX - baseOffsetX,
+          y: targetY - baseOffsetY
+        });
+        
+        console.log(`Centered on bean #${focusBeanId} at (${beanCenterX}, ${beanCenterY})`);
+      }
+    }
+  }, [focusBeanId, zoomLevel, imageLoaded, beans]);
 
   useEffect(() => {
     if (imageLoaded) {
@@ -302,24 +346,24 @@ const BeanDetectionCanvas: React.FC<BeanDetectionCanvasProps> = ({
       
       {/* Zoom Controls */}
       {showZoomControls && (
-        <div className="absolute top-2 left-2 bg-[rgba(0,0,0,0.35)] bg-opacity-75 text-white text-xs p-2 rounded flex flex-col gap-1">
+        <div className="mini-glass !bg-[var(--fadin-gray)] absolute !rounded-4xl top-2 left-2 bg-opacity-75 text-white text-xs flex flex-col gap-1">
           <button
             onClick={handleZoomIn}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="button-accent rounded"
             title="Zoom In"
           >
             +
           </button>
           <button
             onClick={handleZoomOut}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="button-accent rounded"
             title="Zoom Out"
           >
             -
           </button>
           <button
             onClick={handleZoomReset}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+            className="button-accent rounded text-xs"
             title="Reset Zoom"
           >
             1:1

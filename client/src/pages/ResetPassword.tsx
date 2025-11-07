@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import NotificationsService from "@/services/notificationsService";
 import '../assets/styles/global.css'
 
 export default function ResetPassword() {
@@ -44,6 +45,23 @@ export default function ResetPassword() {
             setMessage(error.message);
             return;
         }
+
+        // Send notification for successful password reset
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user?.id) {
+                await NotificationsService.sendPersonalNotification({
+                    userId: user.id,
+                    title: 'Password Reset Successful',
+                    message: 'Your password has been successfully reset. Your account is now secure with the new password.',
+                    type: 'info'
+                });
+            }
+        } catch (notificationError) {
+            console.error('Failed to send password reset notification:', notificationError);
+            // Don't break the flow if notification fails
+        }
+
         setStage("done");
     };
 

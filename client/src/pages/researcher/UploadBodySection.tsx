@@ -7,6 +7,8 @@ import PredictionLoadingModal from '../../components/PredictionLoadingModal';
 import CameraCapture from '../../components/CameraCapture';
 import { supabase } from '../../lib/supabaseClient';
 import type { MultiImageProcessingResponse } from '../../interfaces/global';
+import useNotification from '@/hooks/useNotification';
+import NotificationModal from '@/components/ui/NotificationModal';
 
 interface UploadBodySectionProps {
   activeTab: string;
@@ -29,6 +31,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
   } | null>(null);
   const [multiImageResults, setMultiImageResults] = useState<MultiImageProcessingResponse | null>(null);
   const [comment, setComment] = useState('');
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
 
   const handleFileSelect = (files: FileList) => {
     const newFiles = Array.from(files).slice(0, 5 - selectedFiles.length);
@@ -63,7 +66,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
       const user_id = data.session?.user?.id;
 
       if (!user_id) {
-        alert('User not authenticated');
+        showError("User not authenticated", "Please log in and try again.", { autoClose: false });
         return;
       }
 
@@ -107,11 +110,11 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
           } else {
             // All images failed or no beans detected
             const errorMessages = response.images.map(img => img.error || 'No beans detected').join(', ');
-            alert(`Prediction failed: ${errorMessages}`);
+            showError("Prediction failed", errorMessages, { autoClose: false });
           }
         } else {
           console.error('Prediction response:', response);
-          alert('Prediction failed or no results returned');
+          showError("Prediction failed", "No results returned", { autoClose: false });
         }
       } else if (activeTab === 'Submit Image') {
         response = await storageService.submitImage({
@@ -120,7 +123,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         });
         
         if (response?.success) {
-          alert('Images uploaded successfully!');
+          showSuccess("Images uploaded successfully", "Your images have been uploaded.", { autoClose: false });
           // Reset state and clear preview images
           setCapturedImages([]);
           setSelectedFiles([]);
@@ -136,7 +139,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
       }
     } catch (error: any) {
       setIsPredicting(false);
-      alert(`Upload failed: ${error.message}`);
+      showError("Upload failed", error.message, { autoClose: false });
     } finally {
       setIsUploading(false);
     }
@@ -154,15 +157,15 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
 
   if (activeTab === 'Predict Image' || activeTab === 'Submit Image') {
     return (
-      <div className="w-full">
+      <div className="glass-div w-full p-4 rounded-lg shadow-sm">
         {/* Toggle Buttons */}
-        <div className="flex mb-4 bg-gray-100 rounded p-1">
+        <div className="flex mb-4 bg-gray-100 rounded p-1 gap-2">
           <button
             onClick={() => setUploadMode('file')}
             className={`flex-1 py-2 px-4 rounded text-sm font-medium transition-colors ${
               uploadMode === 'file'
-                ? 'bg-white text-[var(--espresso-black)] shadow'
-                : 'text-gray-600 hover:text-gray-800'
+                ? ''
+                : 'button-secondary'
             }`}
           >
             📁 Select Files
@@ -171,8 +174,8 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
             onClick={() => setUploadMode('camera')}
             className={`flex-1 py-2 px-4 rounded text-sm font-medium transition-colors ${
               uploadMode === 'camera'
-                ? 'bg-white text-[var(--espresso-black)] shadow'
-                : 'text-gray-600 hover:text-gray-800'
+                ? '!bg-[var(--arabica-brown)] !text-white'
+                : 'button-secondary'
             }`}
           >
             📷 Take Photos
@@ -183,7 +186,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         {uploadMode === 'file' && (
           <div className="w-full">
             <div
-              className="w-full min-h-[10rem] bg-white border border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center cursor-pointer mb-2"
+              className="w-full min-h-[20rem] bg-white border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center cursor-pointer mb-2 hover:border-[var(--arabica-brown)] border-2 transition-colors"
               onDragOver={e => e.preventDefault()}
               onDrop={e => {
                 e.preventDefault();
@@ -199,8 +202,8 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
                 multiple
                 onChange={e => e.target.files && handleFileSelect(e.target.files)}
               />
-              <span className="text-3xl text-[var(--espresso-black)] mb-2">&#8682;</span>
-              <span className="text-xs text-[var(--espresso-black)] font-accent">
+              <span className="text-6xl !text-[var(--arabica-brown)] mb-2">&#8682;</span>
+              <span className="text-sm text-[var(--espresso-black)] font-accent">
                 Drop your images here or click to browse (Max 5 images) - {selectedFiles.length}/5 selected
               </span>
             </div>
@@ -215,7 +218,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
                       placeholder="Add optional comment for analysis..."
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded text-sm resize-none h-16"
+                      className="w-full bg-white p-2 border border-gray-300 rounded text-sm resize-none h-16"
                       maxLength={500}
                     />
                   </div>
@@ -234,7 +237,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         {/* Camera Mode */}
         {uploadMode === 'camera' && (
           <div className="w-full">
-            <div className="w-full min-h-[10rem] bg-white border border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center mb-2">
+            <div className="w-full min-h-[20rem] bg-white border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center cursor-pointer mb-2 hover:border-[var(--arabica-brown)] border-2 transition-colors">
               <span className="text-4xl text-[var(--espresso-black)] mb-2">📷</span>
               <span className="text-xs text-[var(--espresso-black)] font-accent mb-3">
                 Take up to 5 photos with your camera
@@ -259,7 +262,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
                       placeholder="Add optional comment for analysis..."
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded text-sm resize-none h-16"
+                      className="w-full p-2 border bg-white border-gray-300 rounded text-sm resize-none h-16"
                       maxLength={500}
                     />
                   </div>
@@ -312,25 +315,27 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
           onClose={() => setShowMultiImageResult(false)}
           results={multiImageResults}
         />
+
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          onClose={hideNotification}
+          mode={notification.mode}
+          title={notification.title}
+          message={notification.message}
+          confirmText={notification.confirmText}
+          cancelText={notification.cancelText}
+          onConfirm={notification.onConfirm}
+          onCancel={notification.onCancel}
+          showCancel={notification.showCancel}
+          autoClose={notification.autoClose}
+          autoCloseDelay={notification.autoCloseDelay}
+        />
       </div>
     );
   }
 
-  if (activeTab === 'Find Largest Bean') {
-    return (
-      <div className="w-full">
-        <div className="w-full min-h-[10rem] bg-white border border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center mb-2">
-          <span className="text-4xl text-[var(--espresso-black)] mb-2">&#128247;</span>
-          <div className="font-main font-bold text-[var(--espresso-black)] mb-1">Live Camera View</div>
-          <div className="text-xs text-[var(--espresso-black)] font-accent mb-2">Position your coffee beans in the camera view to auto-detect the largest bean.</div>
-          <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-1 rounded font-main text-xs shadow">Open Camera</button>
-        </div>
-        <div className="bg-[#FDE9DD] rounded p-2 text-xs text-[var(--espresso-black)] font-accent text-center">
-          This feature requires camera access. In a real implementation, this would open your device camera and use computer vision to find the largest bean in view.
-        </div>
-      </div>
-    );
-  }
+
   return null;
 };
 

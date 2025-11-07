@@ -2,6 +2,10 @@ import cv2, os
 import numpy as np
 from skimage.measure import label, regionprops
 from ultralytics import YOLO
+from skimage import color, filters, morphology, measure, segmentation, util
+from scipy import ndimage as ndi
+from skimage.feature import peak_local_max
+
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 MODEL = os.path.join(current_dir, "my_model", "cv_yolov11.pt")
@@ -13,7 +17,6 @@ class BeanFeatureExtractor:
         self.mm_per_px = None
         self.marker_length = marker_length
         self.model = YOLO(MODEL)
-
 
     # ---------- Calibration ----------
     def extract_mm_per_px(self, img):
@@ -49,39 +52,49 @@ class BeanFeatureExtractor:
     # ---------- Watershed helper ----------
     def apply_watershed(self, img, mask):
         """
-        Apply watershed algorithm to split touching beans.
-        img  - original BGR image
-        mask - binary mask of beans (255 = bean, 0 = background)
+        Apply watershed algorithm using scikit-image to split touching beans.
         """
-        ret, thresh = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+        mask_bool = mask > 0
 
-        kernel = np.ones((3,3), np.uint8)
-        opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2)
-        sure_bg = cv2.dilate(opening, kernel, iterations=3)
+        # Distance transform
+        distance = ndi.distance_transform_edt(mask_bool)
 
-        dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
-        ret, sure_fg = cv2.threshold(dist_transform, 0.5 * dist_transform.max(), 255, 0)
-        sure_fg = np.uint8(sure_fg)
+        # Local maxima as markers
+        coords = peak_local_max(distance, footprint=np.ones((3, 3)), labels=mask_bool)
+        markers = np.zeros_like(distance, dtype=int)
+        for i, (r, c) in enumerate(coords, start=1):
+            markers[r, c] = i
 
-        unknown = cv2.subtract(sure_bg, sure_fg)
+        # Watershed segmentation
+        labels_ws = segmentation.watershed(-distance, markers, mask=mask_bool)
 
-        ret, markers = cv2.connectedComponents(sure_fg)
-        markers = markers + 1
-        markers[unknown == 255] = 0
-
-        markers = cv2.watershed(img, markers)
-
+        # Segmented mask
         segmented_mask = np.zeros_like(mask)
-        segmented_mask[markers > 1] = 255
+        segmented_mask[labels_ws > 0] = 255
 
-        return segmented_mask, markers
+        return segmented_mask, labels_ws
 
     # ---------- Preprocessing ----------
     def preprocess_image(self, img):
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        aruco_mask = np.ones_like(gray, dtype=np.uint8) * 255
+        # Step 0: Grayscale + scale-aware denoising
+        gray = color.rgb2gray(img)
+
+        # Define blur radius in mm (tunable)
+        blur_radius_mm = 0.5
+
+        if self.mm_per_px is not None:
+            # convert to pixels, ensure at least 1
+            blur_radius_px = max(1, int(round(blur_radius_mm / self.mm_per_px)))
+        else:
+            # fallback if not calibrated
+            blur_radius_px = 5
+
+        gray_denoised = filters.median(gray, morphology.disk(blur_radius_px))
+        gray_uint8 = util.img_as_ubyte(gray_denoised)
+
 
         # Mask out ArUco markers if found
+        aruco_mask = np.ones_like(gray_uint8, dtype=np.uint8) * 255
         try:
             aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
             parameters = cv2.aruco.DetectorParameters()
@@ -93,38 +106,66 @@ class BeanFeatureExtractor:
         except Exception:
             pass
 
-        # Step 1: YOLO detections → coarse bean mask
-        results = self.model(img)
-        bean_mask = np.zeros_like(gray, dtype=np.uint8)
-
+        # Step 1: YOLO coarse mask
+        bean_mask = np.zeros_like(gray_uint8, dtype=np.uint8)
+        predictions = []
+        results = self.model(img, conf=0.6)
         for result in results:
+            # Print confidence level of each result in results
+            print(f"Result: {result.boxes.conf.tolist()}")
             if result.boxes is not None:
-                for box in result.boxes:
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    cv2.rectangle(bean_mask, (x1, y1), (x2, y2), 255, -1)
+              for box in result.boxes:
+                  x1, y1, x2, y2 = map(int, box.xyxy[0])
+                  confidence = float(box.conf[0])
+                  class_id = int(box.cls[0])
 
-        # Step 2: Clean up mask
+                  predictions.append({
+                      "bbox": (x1, y1, x2, y2),
+                      "confidence": confidence,
+                      "class_id": class_id
+                  })
+                  bean_mask[y1:y2, x1:x2] = 255
+        # Apply ArUco mask
         bean_mask = cv2.bitwise_and(bean_mask, aruco_mask)
-        bean_mask = cv2.morphologyEx(bean_mask, cv2.MORPH_OPEN, np.ones((5,5), np.uint8))
-        bean_mask = cv2.morphologyEx(bean_mask, cv2.MORPH_CLOSE, np.ones((7,7), np.uint8))
+
+        # Step 2: Refine each YOLO box individually
+        refined_mask = np.zeros_like(bean_mask)
+        labeled_boxes = measure.label(bean_mask)
+        for region in measure.regionprops(labeled_boxes):
+            minr, minc, maxr, maxc = region.bbox
+            roi_gray = gray_uint8[minr:maxr, minc:maxc]
+
+            # Pixel-level thresholding inside bounding box
+            from skimage.filters import threshold_otsu
+            try:
+                thresh_val = threshold_otsu(roi_gray)
+            except:
+                thresh_val = np.mean(roi_gray)
+            roi_mask = (roi_gray < thresh_val).astype(np.uint8) * 255
+
+            # Morphology cleanup
+            roi_mask = morphology.opening(roi_mask, morphology.square(3))
+            roi_mask = morphology.closing(roi_mask, morphology.square(5))
+
+            refined_mask[minr:maxr, minc:maxc] = roi_mask
 
         # Step 3: Watershed segmentation
-        segmented_mask, markers = self.apply_watershed(img, bean_mask)
+        segmented_mask, markers = self.apply_watershed(img, refined_mask)
 
-        # Step 4: Recompute bean bboxes from watershed regions
+        # Step 4: Compute bean bboxes from refined mask
         bean_bboxes = []
-        labeled = label(segmented_mask)
-        props = regionprops(labeled)
+        labeled = measure.label(segmented_mask)
+        props = measure.regionprops(labeled)
         for prop in props:
-            if prop.area > 100:  # skip tiny noise
+            if prop.area > 100:
                 minr, minc, maxr, maxc = prop.bbox
                 bean_bboxes.append((minc, minr, maxc - minc, maxr - minr))
 
-        # Visualization mask
+        # Step 5: Visualization mask
         black_bg = np.zeros_like(img)
         black_bg[segmented_mask == 255] = img[segmented_mask == 255]
 
-        return black_bg, segmented_mask, gray, bean_bboxes
+        return black_bg, segmented_mask, gray_denoised, bean_bboxes, predictions
 
     # ---------- Visualization ----------
     def draw_bbox(self, img, bboxes):
@@ -134,58 +175,30 @@ class BeanFeatureExtractor:
             cv2.rectangle(debug_img, (x, y), (x+w, y+h), (0, 255, 0), 2)
             if self.mm_per_px is not None:
                 cv2.putText(debug_img, f"{w*self.mm_per_px:.1f}x{h*self.mm_per_px:.1f}mm",
-                           (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-            cv2.putText(debug_img, f"Bean {i+1}", (x, y-25),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                           (x, y-10), cv2.FONT_HERSHEY_COMPLEX, 2, (0, 0, 0), 3)
+            cv2.putText(debug_img, f"Bean {i+1}", (x, y-60),
+                       cv2.FONT_HERSHEY_COMPLEX, 2, (0, 0, 0), 3)
         return debug_img
-
 
     # ---------- Feature extraction ----------
     def extract_features_for_all_beans(self, mask, gray, bean_bboxes):
         all_beans = []
-        
-        # If no YOLO detections, fall back to connected components
-        if not bean_bboxes:
-            labeled = label(mask)
-            props = regionprops(labeled, intensity_image=gray)
-            
-            for i, bean in enumerate(props):
-                if bean.area > 100:  # Filter small noise
-                    features = self._calculate_bean_features(bean)
-                    minr, minc, maxr, maxc = bean.bbox
-                    bbox = (minc, minr, maxc-minc, maxr-minr)
-                    
-                    all_beans.append({
-                        "bean_id": i + 1,
-                        "length_mm": features["major_axis_length_mm"],
-                        "width_mm": features["minor_axis_length_mm"],
-                        "bbox": bbox,
-                        "features": features
-                    })
-        else:
-            # Process each YOLO detected bean
-            for i, (x, y, w, h) in enumerate(bean_bboxes):
-                # Extract region for this bean
-                bean_region_mask = np.zeros_like(mask)
-                bean_region_mask[y:y+h, x:x+w] = mask[y:y+h, x:x+w]
-                
-                # Get properties for this specific bean region
-                labeled = label(bean_region_mask)
-                props = regionprops(labeled, intensity_image=gray)
-                
-                if props:
-                    # Take the largest component in this region
-                    bean = max(props, key=lambda x: x.area)
-                    features = self._calculate_bean_features(bean)
-                    
-                    all_beans.append({
-                        "bean_id": i + 1,
-                        "length_mm": features["major_axis_length_mm"],
-                        "width_mm": features["minor_axis_length_mm"],
-                        "bbox": (x, y, w, h),
-                        "features": features
-                    })
-        
+        labeled = label(mask)
+        props = regionprops(labeled, intensity_image=gray)
+
+        for i, bean in enumerate(props):
+            if bean.area > 100:
+                features = self._calculate_bean_features(bean)
+                minr, minc, maxr, maxc = bean.bbox
+                bbox = (minc, minr, maxc-minc, maxr-minr)
+
+                all_beans.append({
+                    "bean_id": i + 1,
+                    "length_mm": features["major_axis_length_mm"],
+                    "width_mm": features["minor_axis_length_mm"],
+                    "bbox": bbox,
+                    "features": features
+                })
         return all_beans
 
     def _calculate_bean_features(self, bean_props):

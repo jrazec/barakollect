@@ -1,150 +1,165 @@
+import React, { useState, useEffect } from 'react';
 import CardComponent from '@/components/CardComponent';
 import DashboardHeader from '@/components/DashboardHeader';
-import { BarChartComponent, PieChartComponent, CorrelationGrid, ScatterChartComponent, LineChartComponent } from '@/components/ChartComponent';
 import StatCard from '@/components/StatCard';
-import type { CardAttributes, Stat } from '@/interfaces/global';
-import React from 'react';
-
+import ScatterRatioRoundnessChart from '@/components/admin/ScatterRatioRoundnessChart';
+import BeanAnalyticsChart from '@/components/admin/BeanAnalyticsChart';
+import { useCachedAdminService } from '@/hooks/useCachedServices';
+import type { AdminStats } from '@/interfaces/global';
 
 const ResearcherDashboard: React.FC = () => {
-  const chartCards: CardAttributes[] = [
-    {
-      title: "Size Distribution Analysis",
-      subtitle: "Box Plot: Size Distribution",
-      description: "",
-      content: <BarChartComponent />,
-    },
-    {
-      title: "Bean Distribution Analysis",
-      subtitle: "Bean Type Distribution",
-      description: (<>
-        <div className="flex justify-center gap-2 mt-2 text-xs text-stone-400">
-          <span>Libérica 65%</span>
-          <span>Excelsa 25%</span>
-          <span>Unclassified 10%</span>
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize cached services
+  const cachedAdminService = useCachedAdminService();
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch admin stats for analytics data
+        const stats = await cachedAdminService.getAdminStats();
+        setAdminStats(stats);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white p-4 sm:p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
+          <p className="text-gray-600 font-accent">Loading dashboard...</p>
         </div>
-      </>),
-      content: <PieChartComponent />,
-    },
-    {
-      title: "Morphological Trends",
-      subtitle: "Size Distribution Analysis",
-      description: (<>
-        <div className="flex justify-center gap-2 mt-2 text-xs text-stone-400">
-          <span>Area</span>
-          <span>Perimeter</span>
-          <span>Export Data</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white p-4 sm:p-6 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <p className="text-red-600 font-accent mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-[var(--arabica-brown)] text-[var(--parchment)] rounded-lg font-accent hover:bg-opacity-90 transition-colors"
+          >
+            Retry
+          </button>
         </div>
-      </>),
-      content: <LineChartComponent />,
-    },
+      </div>
+    );
+  }
 
-    // Mid
-    {
-      title: "Size Distribution",
-      subtitle: "Box Plot:Size Distribution",
-      content: <BarChartComponent />,
-    },
-    {
-      title: "Axis Correlation",
-      subtitle: "2D Scatter: Major vs Minor Axis",
-      content: <ScatterChartComponent />,
-    },
+  if (!adminStats) {
+    return (
+      <div className="min-h-screen bg-white p-4 sm:p-6 flex items-center justify-center">
+        <p className="text-gray-600 font-accent">No data available</p>
+      </div>
+    );
+  }
 
-    // second to the last
+  const statCards = [
     {
-      title: "Farm Feature Analysis",
-      subtitle: "Feature Averages by Farm",
-      content: < BarChartComponent />,
+      label: "Total Uploads",
+      value: adminStats.uploads.toString(),
+      subtext: "Bean samples uploaded"
     },
     {
-      title: "Feature Correlation Matrix",
-      subtitle: "Feature Correlation",
-      content: <CorrelationGrid />,
-    },
-
-    // LAST
-    {
-      title: "Farm Volume Analysis",
-      subtitle: "Feature Averages by Farm",
-      description: (<>
-        <div className="flex justify-center gap-2 mt-2 text-xs text-stone-400">
-          <span>High Volume</span>
-          <span>Medium Volume</span>
-          <span>Low Volume</span>
-        </div>
-      </>),
-      content: <ScatterChartComponent />,
-    },
-
-
-  ]
-  const statCards: Stat[] = [
-    {
-      label: "Total Samples",
-      value: "2847",
-      subtext: "from last month"
-    },
-    {
-      label: "Verified Samples",
-      value: "2103",
-      subtext: "from last month"
-    },
-    {
-      label: "Average Bean Size",
-      value: "17.8 mm",
-      subtext: "from last month"
-    },
-    {
-      label: "Classification Accuracy",
-      value: "92.4%",
-      subtext: "from last month"
+      label: "Validated Samples",
+      value: adminStats.validated.toString(),
+      subtext: "Reviewed by researchers"
     }
   ];
 
   return (
-
-    <div className="min-h-screen bg-[var(--mocha-beige)] pt-8 pb-4 px-2 md:px-8 overflow-x-hidden">
+    <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
       {/* Header */}
       <DashboardHeader
         title='Researcher Dashboard'
         subtitle='Morphological analysis and data insights'
-        actions={
-          <>
-            <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-3 py-1 rounded font-main text-xs shadow">Data Range</button>
-            <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-3 py-1 rounded font-main text-xs shadow">Filter by Farm</button>
-            <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-3 py-1 rounded font-main text-xs shadow">Bean Type</button>
-          </>
+        
+            />
 
-        }
-      />
+        {/* Stat Cards */}
+        <div className="w-full flex flex-row gap-4 mb-6">
+          {statCards.map((card, index) => (
+            <div className="flex-1 min-w-0" key={index}>
+              <StatCard 
+                label={card.label} 
+                value={card.value} 
+                subtext={card.subtext} 
+              />
+            </div>
+          ))}
+        </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {statCards.length > 0 &&
-          statCards.map(card => {
-            return <StatCard label={card.label} value={card.value} subtext={card.subtext} />;
-          })
-        }
+      {/* Bean Analytics Section */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <div className="min-h-[500px]">
+          <CardComponent
+            item={{
+              title: "Bean Analytics & Feature Statistics",
+              subtitle: "Comprehensive feature analysis across farms",
+              description: "View mean, median, and mode statistics for each bean feature",
+              content: <BeanAnalyticsChart 
+                totalPredictions={adminStats.total_predictions}
+                avgConfidence={adminStats.avg_confidence}
+                minConfidence={adminStats.min_confidence}
+                maxConfidence={adminStats.max_confidence}
+                featureStats={adminStats.feature_stats}
+                boxplotFeatures={adminStats.boxplot_features}
+              />
+            }}
+          />
+        </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {chartCards && chartCards.map((card) => {
-          return <CardComponent item={card} />
-        })
-        }
+      {/* Scatter Ratio Section */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        {/* Scatter Ratio and Roundness */}
+        <div className="min-h-[400px]">
+          <CardComponent
+            item={{
+              title: "Bean Shape Analysis",
+              subtitle: "Scatter ratio, roundness, and distribution histograms",
+              description: "Explore the relationship between aspect ratio and roundness with detailed distributions",
+              content: <ScatterRatioRoundnessChart 
+                data={adminStats.scatter_ratio_roundness} 
+                data2={adminStats.hist_aspect} 
+                data3={adminStats.hist_roundness} 
+              />
+            }}
+          />
+        </div>
       </div>
-
-
 
       {/* Footer Actions */}
-      <div className="flex flex-wrap gap-2 justify-center ">
-        <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded font-main text-xs shadow">Upload Bean</button>
-        <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded font-main text-xs shadow">Validation Queue</button>
-        <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded font-main text-xs shadow">Analytics Hub</button>
-        <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded font-main text-xs shadow">Export Report</button>
-      </div>
+      {/* <div className="flex flex-wrap gap-2 justify-center">
+        <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded font-main text-xs shadow hover:bg-opacity-90 transition-colors">
+          Upload Bean
+        </button>
+        <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded font-main text-xs shadow hover:bg-opacity-90 transition-colors">
+          Validation Queue
+        </button>
+        <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded font-main text-xs shadow hover:bg-opacity-90 transition-colors">
+          Analytics Hub
+        </button>
+        <button className="bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded font-main text-xs shadow hover:bg-opacity-90 transition-colors">
+          Export Report
+        </button>
+      </div> */}
     </div>
   );
 };

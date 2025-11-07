@@ -69,8 +69,8 @@ const BeansGallery: React.FC = () => {
   }));
 
   return (
-    <PageContainer>
-      <div className="w-full max-w-6xl bg-[var(--mocha-beige)] rounded-xl shadow p-6">
+
+      <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
 
         {/* Header */}
         <PageHeader
@@ -92,7 +92,6 @@ const BeansGallery: React.FC = () => {
         />
 
       </div>
-    </PageContainer>
   );
 };
 
