@@ -33,8 +33,8 @@ def get_farms(request):
                 DISTINCT
                 loc.id,  
                 loc.name, 
-                ST_X(loc.location::geometry) AS lon,
-                ST_Y(loc.location::geometry) AS lat,
+                loc.longitude AS lon,
+                loc.latitude AS lat,
                 (
                 SELECT CONCAT(us.first_name, '',us.last_name)
                 FROM public.users AS us
@@ -49,7 +49,7 @@ def get_farms(request):
                 LIMIT 1
                 ) AS owner, 
                 COUNT(DISTINCT us.id) AS userCount,
-                (CASE WHEN loc.location IS NULL THEN false ELSE true END) AS hasLocation,
+                (CASE WHEN loc.latitude IS NULL OR loc.longitude IS NULL THEN false ELSE true END) AS hasLocation,
                 COUNT(DISTINCT ui.ID) as imageCount,
                 CONCAT(ROUND(AVG(ef.major_axis_length),2),'long x ',ROUND(AVG(ef.minor_axis_length),2), 'wide') as avgBeanSize,
                 'Good Quality' as qualityRating,
@@ -171,11 +171,11 @@ def update_farm_location(request, farm_id):
         if not all([lat, lng]):
             return JsonResponse({"error": "Missing required fields"}, status=400)
 
-        # Update the Location instance using raw SQL to handle geometry field
+        # Update the Location instance using simple latitude/longitude fields
         with connection.cursor() as cursor:
             cursor.execute(
-                "UPDATE public.locations SET location = ST_SetSRID(ST_MakePoint(%s, %s), 4326) WHERE id = %s",
-                [lng, lat, farm_id]
+                "UPDATE public.locations SET latitude = %s, longitude = %s WHERE id = %s",
+                [lat, lng, farm_id]
             )
         log_user_activity(
             user_id=request.data.get('user_id', None),
@@ -498,8 +498,8 @@ def get_farm_view(request, farm_id):
                 SELECT 
                     id, 
                     name,
-                    ST_X(location::geometry) AS lon,
-                    ST_Y(location::geometry) AS lat
+                    longitude AS lon,
+                    latitude AS lat
                 FROM public.locations 
                 WHERE id = %s
             """, [farm_id])
