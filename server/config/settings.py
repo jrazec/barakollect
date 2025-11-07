@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',  # Required for GeoDjango
     'rest_framework',
     'corsheaders',
     'apps.users',
@@ -103,7 +104,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
@@ -116,11 +116,14 @@ DATABASES = {
         "USER": os.getenv("DB_USER"),
         "PASSWORD": os.getenv("DB_PASSWORD"),
         "HOST": os.getenv("DB_HOST"),
-        "PORT": os.getenv("DB_PORT"),
+        "PORT": os.getenv("DB_PORT", "5432"),
         "OPTIONS": {
             "sslmode": "require",  # must enable SSL for Supabase
-            "options": "-c search_path=public"
-        }
+            "options": "-c search_path=public",
+            "connect_timeout": 10,
+        },
+        "CONN_MAX_AGE": 600,  # Connection pooling for Railway
+        "CONN_HEALTH_CHECKS": True,
     }
 }
 
@@ -159,8 +162,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -183,3 +187,8 @@ if not DEBUG:
     railway_domain = os.getenv('RAILWAY_STATIC_URL', '').replace('https://', '').replace('http://', '')
     if railway_domain:
         ALLOWED_HOSTS.append(railway_domain)
+    
+    # Railway-specific domain handling
+    railway_public_url = os.getenv('RAILWAY_PUBLIC_DOMAIN')
+    if railway_public_url:
+        ALLOWED_HOSTS.append(railway_public_url)

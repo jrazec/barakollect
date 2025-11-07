@@ -1,206 +1,56 @@
-# Use GDAL-enabled Ubuntu image as base for GeoDjango support# Use GDAL-enabled Ubuntu image as base for GeoDjango support# Use GDAL-enabled Ubuntu image as base for GeoDjango support# Use Debian-based Python image
-
-FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.0
-
+# Use GDAL-enabled Ubuntu image as base for GeoDjango support
 FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.0
 
 # Set environment variables for Python
-
-ENV PYTHONDONTWRITEBYTECODE=1FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.0FROM python:3.12-slim
-
+ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
 
-ENV DEBIAN_FRONTEND=noninteractive# Set environment variables for Python
-
-
-
-# Install system dependenciesENV PYTHONDONTWRITEBYTECODE=1
-
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-
-    python3 \ENV PYTHONUNBUFFERED=1
-
+    python3 \
     python3-pip \
-
-    python3-dev \ENV DEBIAN_FRONTEND=noninteractive# Set environment variables for Python# Disable .pyc files + enable unbuffered logs
-
+    python3-dev \
     python3-venv \
-
     libpq-dev \
-
     postgresql-client \
-
-    build-essential \# Install system dependenciesENV PYTHONDONTWRITEBYTECODE=1ENV PYTHONDONTWRITEBYTECODE=1
-
+    build-essential \
+    pkg-config \
     curl \
+    && rm -rf /var/lib/apt/lists/*
 
-    && rm -rf /var/lib/apt/lists/*RUN apt-get update && apt-get install -y \
-
-
-
-# Create symlink for python command    python3 \ENV PYTHONUNBUFFERED=1ENV PYTHONUNBUFFERED=1
-
+# Create symlink for python command
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
-    python3-pip \
-
 # Set working directory
+WORKDIR /app
 
-WORKDIR /app    python3-dev \ENV DEBIAN_FRONTEND=noninteractive
-
-
-
-# Copy requirements first for better Docker layer caching    python3-venv \
-
+# Copy requirements first for better Docker layer caching
 COPY requirements.txt .
 
-    libpq-dev \# Install system dependencies for PostgreSQL
-
 # Install Python dependencies
-
-RUN pip3 install --upgrade pip && \    postgresql-client \
-
+RUN pip3 install --upgrade pip && \
     pip3 install --no-cache-dir -r requirements.txt
-
-    build-essential \# Install system dependenciesRUN apt-get update && apt-get install -y \
 
 # Copy project files
+COPY . .
 
-COPY . .    curl \
-
-
-
-# Create necessary directories    && rm -rf /var/lib/apt/lists/*RUN apt-get update && apt-get install -y \    postgresql-client \
-
-RUN mkdir -p /app/staticfiles /app/media /app/logs
-
-
-
-# Collect static files (but don't run migrations automatically)
-
-RUN python manage.py collectstatic --noinput --clear# Create symlink for python command    python3 \    libpq-dev \
-
-
-
-# Make any shell scripts executableRUN ln -sf /usr/bin/python3 /usr/bin/python
-
-RUN find . -name "*.sh" -exec chmod +x {} \;
-
-    python3-pip \    build-essential \
-
-# Expose port 8000
-
-EXPOSE 8000# Set working directory
-
-
-
-# Health checkWORKDIR /app    python3-dev \    pkg-config \
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-
-    CMD curl -f http://localhost:8000/ || exit 1
-
-
-
-# Start command - no automatic migrations# Copy requirements first for better Docker layer caching    python3-venv \    curl \
-
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
-COPY requirements.txt .
-
-    libpq-dev \    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
-
-RUN pip3 install --upgrade pip && \    postgresql-client \
-
-    pip3 install --no-cache-dir -r requirements.txt
-
-    build-essential \# Set working directory
-
-# Copy project files
-
-COPY . .    curl \WORKDIR /app
-
-
-
-# Create necessary directories    && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /app/staticfiles /app/media /app/logs
-
-# Copy dependency list and install Python packages
-
-# Collect static files (but don't run migrations automatically)
-
-RUN python manage.py collectstatic --noinput --clear# Create symlink for python commandCOPY requirements.txt .
-
-
-
-# Make any shell scripts executableRUN ln -sf /usr/bin/python3 /usr/bin/python
-
-RUN find . -name "*.sh" -exec chmod +x {} \;
-
-# Install Python requirements
-
-# Expose port 8000
-
-EXPOSE 8000# Set working directoryRUN pip install --upgrade pip && \
-
-
-
-# Health checkWORKDIR /app    pip install --no-cache-dir -r requirements.txt
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-
-    CMD curl -f http://localhost:8000/ || exit 1
-
-
-
-# Start command - no automatic migrations# Copy requirements first for better Docker layer caching# Copy project files
-
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
-COPY requirements.txt .COPY . .
-
-
-
-# Install Python dependencies# Create necessary directories
-
-RUN pip3 install --upgrade pip && \RUN mkdir -p /app/media/processed /app/logs /app/staticfiles
-
-    pip3 install --no-cache-dir -r requirements.txt
+# Create necessary directories
+RUN mkdir -p /app/staticfiles /app/media/processed /app/logs
 
 # Make scripts executable (if they exist)
+RUN if [ -f start.sh ]; then chmod +x start.sh; fi
+RUN if [ -f cleanup_temp_images.sh ]; then chmod +x cleanup_temp_images.sh; fi
 
-# Copy project filesRUN if [ -f start.sh ]; then chmod +x start.sh; fi
+# Collect static files (but don't run migrations automatically)
+RUN python manage.py collectstatic --noinput --clear
 
-COPY . .RUN if [ -f cleanup_temp_images.sh ]; then chmod +x cleanup_temp_images.sh; fi
-
-
-
-# Create necessary directories# Railway dynamically injects PORT
-
-RUN mkdir -p /app/staticfiles /app/media /app/logsEXPOSE $PORT
-
+# Expose port 8000 (Railway will override with $PORT)
 EXPOSE 8000
 
-# Collect static files
-
-RUN python manage.py collectstatic --noinput --clear# Health check (simplified for Railway)
-
+# Health check (simplified for Railway)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-
-# Make any shell scripts executable    CMD curl -f http://localhost:${PORT:-8000}/api/ || exit 1
-
-RUN find . -name "*.sh" -exec chmod +x {} \;
+    CMD curl -f http://localhost:${PORT:-8000}/ || exit 1
 
 # Start the application using the startup script
-
-# Expose port 8000CMD ["./start.sh"]
-
-EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
-
-# Start command will be defined in railway.json
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
+CMD ["./start.sh"]

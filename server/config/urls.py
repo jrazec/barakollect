@@ -18,8 +18,15 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+
+# Health check view
+def health_check(request):
+    return JsonResponse({"status": "healthy", "service": "BaraKollect API"})
 
 urlpatterns = [
+    path('', health_check, name='health'),  # Root health check
+    path('api/', health_check, name='api_health'),  # API health check
     path('admin/', admin.site.urls),
     path('api/users/', include('apps.users.urls')),  # <- add this
     path('api/activity/', include('apps.activitylogs.urls')),
