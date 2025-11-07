@@ -1,2 +1,7 @@
 libgl1
 libglib2.0-0
+
+binutils
+libproj-dev
+gdal-bin
+libgdal-dev
