@@ -1,17 +1,17 @@
-# Use GDAL-enabled Ubuntu image as base for GeoDjango support
-FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.0
+# Use Python 3.11 base image for better package compatibility
+FROM python:3.11-slim
 
 # Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies
+# Install system dependencies including GDAL
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-dev \
-    python3-venv \
+    gdal-bin \
+    libgdal-dev \
+    binutils \
+    libproj-dev \
     libpq-dev \
     postgresql-client \
     build-essential \
@@ -19,8 +19,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create symlink for python command
-RUN ln -sf /usr/bin/python3 /usr/bin/python
+# Set GDAL environment variables
+ENV GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so
+ENV GEOS_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgeos_c.so
 
 # Set working directory
 WORKDIR /app
@@ -29,8 +30,8 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
 COPY . .
