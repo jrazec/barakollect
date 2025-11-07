@@ -3,14 +3,41 @@
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.Python
 .venv/
+venv/
+env/
 .env
+.env.local
+.env.production
 
 # Django
 db.sqlite3
+db.sqlite3-journal
 media/
-static/
+staticfiles/
 logs/
+*.log
 
-# VSCode
+# IDEs
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Railway
+.railway/
+
+# Docker (if you add them back later)
+docker-compose.yml
+.dockerignore

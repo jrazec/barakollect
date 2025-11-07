@@ -166,3 +166,20 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# GeoDjango settings for GDAL, GEOS, and PROJ
+# These paths are set automatically in the GDAL Docker image, but we can override if needed
+GDAL_LIBRARY_PATH = os.getenv('GDAL_LIBRARY_PATH', None)
+GEOS_LIBRARY_PATH = os.getenv('GEOS_LIBRARY_PATH', None)
+
+# Production settings
+if not DEBUG:
+    # Security settings for production
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    
+    # Add Railway domain to allowed hosts
+    railway_domain = os.getenv('RAILWAY_STATIC_URL', '').replace('https://', '').replace('http://', '')
+    if railway_domain:
+        ALLOWED_HOSTS.append(railway_domain)
