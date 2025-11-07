@@ -1,0 +1,15 @@
+# Railway configuration file
+# This tells Railway to use the Procfile and treat this as a Python app
+
+[build]
+provider = "python"
+
+[deploy]
+startCommand = "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi:application"
+healthcheckPath = "/"
+healthcheckTimeout = 100
+
+[env]
+# Railway will inject DATABASE_URL automatically when you provision a PostgreSQL database
+# You only need to set these manually:
+# SECRET_KEY, DEBUG, SUPABASE_URL, SUPABASE_KEY, etc.
