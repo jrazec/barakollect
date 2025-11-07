@@ -47,8 +47,8 @@ RUN echo "=== Installing System Dependencies ===" && \
     rm -rf /var/lib/apt/lists/* && \
     echo "=== System dependencies setup complete ==="
 
-# Copy requirements file
-COPY requirements.txt /app/
+# Copy requirements file (from server directory)
+COPY server/requirements.txt /app/requirements.txt
 
 # Upgrade pip and install Python dependencies
 RUN echo "=== Installing Python Dependencies ===" && \
@@ -64,8 +64,8 @@ RUN echo "=== Installing Python Dependencies ===" && \
     python -c "import torch; print('✓ PyTorch:', torch.__version__)" || echo "⚠ WARNING: PyTorch not installed" && \
     echo "=== Package verification complete ==="
 
-# Copy project files
-COPY . /app/
+# Copy project files (from server directory - copy contents, not the directory)
+COPY server/. /app/
 
 # Collect static files
 RUN echo "=== Collecting Static Files ===" && \
