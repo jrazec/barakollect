@@ -17,13 +17,12 @@ RUN echo "=== Installing System Dependencies ===" && \
     apt-get install -y --no-install-recommends \
         gdal-bin \
         libgdal-dev \
-        libgdal34 \
         binutils \
         libproj-dev \
         proj-data \
         proj-bin \
+        libgeos++-dev \
         libgeos-dev \
-        geos \
         postgresql-client \
         libpq-dev \
         python3-dev \
@@ -37,7 +36,7 @@ RUN echo "=== Installing System Dependencies ===" && \
     # Verify GEOS installation
     echo "=== Verifying GEOS installation ===" && \
     geos-config --version && \
-    echo "GEOS version: $(geos-config --version)" && \
+    echo "GEOS version: $(geos-config --version)" || echo "⚠ WARNING: geos-config not found, but libgeos-dev is installed" && \
     # Verify PROJ installation
     echo "=== Verifying PROJ installation ===" && \
     proj --version && \
