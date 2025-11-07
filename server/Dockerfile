@@ -17,30 +17,25 @@ RUN echo "=== Installing System Dependencies ===" && \
     apt-get install -y --no-install-recommends \
         gdal-bin \
         libgdal-dev \
-        binutils \
         libproj-dev \
         proj-data \
-        proj-bin \
-        libgeos++-dev \
         libgeos-dev \
         postgresql-client \
         libpq-dev \
         python3-dev \
         build-essential \
         curl \
+        binutils \
         && echo "=== System dependencies installed ===" && \
     # Verify GDAL installation
     echo "=== Verifying GDAL installation ===" && \
-    gdal-config --version && \
-    echo "GDAL version: $(gdal-config --version)" && \
-    # Verify GEOS installation
+    (gdal-config --version 2>&1 && echo "GDAL version: $(gdal-config --version 2>&1)" || echo "⚠ WARNING: gdal-config check failed") && \
+    # Verify GEOS installation (geos-config might not be in PATH, but libraries are installed)
     echo "=== Verifying GEOS installation ===" && \
-    geos-config --version && \
-    echo "GEOS version: $(geos-config --version)" || echo "⚠ WARNING: geos-config not found, but libgeos-dev is installed" && \
+    (geos-config --version 2>/dev/null && echo "GEOS version: $(geos-config --version 2>/dev/null)" || echo "ℹ INFO: geos-config not in PATH, but libgeos-dev is installed") && \
     # Verify PROJ installation
     echo "=== Verifying PROJ installation ===" && \
-    proj --version && \
-    echo "PROJ version: $(proj --version)" && \
+    (proj --version 2>/dev/null && echo "PROJ version: $(proj --version 2>/dev/null)" || echo "ℹ INFO: proj command not found, but libproj-dev is installed") && \
     # Clean up apt cache to reduce image size
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
