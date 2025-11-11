@@ -5,12 +5,13 @@ import logo1 from "@/assets/images/barakollect_logo.svg";
 import logo2 from "@/assets/images/logo.svg";
 import { supabase } from "@/lib/supabaseClient";
 import type { LoginFormType } from "@/interfaces/global";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import useNotification from '@/hooks/useNotification';
 import NotificationModal from '@/components/ui/NotificationModal';
 import GlassSurface from '@/components/GlassSurface';
 
 export default function Login() {
+    const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState<LoginFormType>({
         email : "",
@@ -47,7 +48,7 @@ export default function Login() {
                 if (!response.ok) return;
                 const user = result.data && result.data[0];
                 const role = user && user["userrole__role__name"] ? user["userrole__role__name"].toLowerCase() : "";
-                if (role) window.location.href = `/${role}/dashboard`;
+                if (role) navigate(`/${role}/dashboard`);
             } catch {}
         };
         autoRedirectIfRemembered();
@@ -83,7 +84,7 @@ export default function Login() {
                    const user = result.data && result.data[0];
                    if (user && user["userrole__role__name"]) {
                        const role = user["userrole__role__name"].toLowerCase();
-                       window.location.href = `/${role}/dashboard`;
+                       navigate(`/${role}/dashboard`);
                    } else {
                        setLoginError("User role not found");
                        showError("User role not found", "Cannot redirect.");

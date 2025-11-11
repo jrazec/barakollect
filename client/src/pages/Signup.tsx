@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import '../assets/styles/global.css'
 import logo1 from "@/assets/images/barakollect_logo.svg";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { storageService } from "@/services/storageService";
 import type { Location } from "@/interfaces/global";
 import useNotification from '@/hooks/useNotification';
@@ -20,6 +20,7 @@ type ProfilePayload = {
 
 
 export default function Signup() {
+    const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [profile, setProfile] = useState<ProfilePayload>({
@@ -32,7 +33,7 @@ export default function Signup() {
     const [loading, setLoading] = useState(false);
     const [locations, setLocations] = useState<Location[]>([]);
     const [role, setRole] = useState<'researcher' | 'farmer'>("researcher");
-    const { showSuccess, showError } = useNotification();
+    const { showError } = useNotification();
 
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -82,7 +83,7 @@ export default function Signup() {
 
             // Expect backend to return role or fallback to selected
             const resolvedRole = (result.role || role).toLowerCase();
-            window.location.href = `/${resolvedRole}/dashboard`;
+            navigate(`/${resolvedRole}/dashboard`);
         } catch (err) {
             showError("Network error", err instanceof Error ? err.message : "Unknown error");
         } finally {
