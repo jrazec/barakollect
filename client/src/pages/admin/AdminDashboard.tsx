@@ -245,7 +245,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* System & Infrastructure Section */}
-        <section className="space-y-6 sm:space-y-8 mb-8 sm:mb-12">
+        <section className="space-y-6 sm:space-y-8 mt-12 mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <DatabaseIcon className="h-6 w-6 text-[var(--arabica-brown)]" />
             <div>
@@ -271,8 +271,8 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <div className="w-full min-h-[400px] space-y-4">
-              <div className="min-h-[200px]">
+            <div className="w-full h-full flex flex-col space-y-4">
+              <div className="flex-1">
                 <CardComponent
                   item={{
                     side: (<DatabaseIcon className="text-[var(--arabica-brown)]" />),
@@ -291,7 +291,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              <div className="min-h-[200px]">
+              <div className="flex-1">
                 <CardComponent
                   item={{
                     side: (<StorageIcon className="text-[var(--arabica-brown)]" />),
@@ -404,7 +404,7 @@ export default function AdminDashboard() {
         </section>
 
         {/* Dataset Verification Section */}
-        <section className="space-y-6 sm:space-y-8">
+        <section className="space-y-6 sm:space-y-8 mt-12 mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <BarChart className="h-6 w-6 text-[var(--arabica-brown)]" />
             <div>
@@ -425,27 +425,26 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-              <div className="min-h-[460px]">
-                <CardComponent
-                  item={{
-                    title: "Upload Statistics",
-                    subtitle: "Farm activity, top contributors, and bean type mix",
-                    content: (
-                      <div className="w-full">
-                        <UploadStatisticsChart
-                          farmData={adminStats.farms}
-                          topUploaderData={adminStats.top_uploaders}
-                          beanTypeData={adminStats.bean_types}
-                        />
-                      </div>
-                    ),
-                    description: "Monitor upload distribution across farms and roles"
-                  }}
-                />
-              </div>
+            <div className="min-h-[420px]">
+              <CardComponent
+                item={{
+                  title: "Upload Statistics",
+                  subtitle: "Farm activity, top contributors, and bean type mix",
+                  content: (
+                    <div className="w-full">
+                      <UploadStatisticsChart
+                        farmData={adminStats.farms}
+                        topUploaderData={adminStats.top_uploaders}
+                        beanTypeData={adminStats.bean_types}
+                      />
+                    </div>
+                  ),
+                  description: "Monitor upload distribution across farms and roles"
+                }}
+              />
+            </div>
 
-              <div className="min-h-[460px]">
+            <div className="min-h-[460px]">
                 {loading ? (
                   <div className="bg-[var(--parchment)] rounded-lg shadow p-6 h-full flex items-center justify-center">
                     <div className="text-center">
@@ -475,13 +474,12 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 )}
-              </div>
             </div>
           </div>
         </section>
 
         {/* Shape & Pattern Analysis Section */}
-        <section className="space-y-6 sm:space-y-8">
+        <section className="space-y-6 sm:space-y-8 mt-12 mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <BarChart className="h-6 w-6 text-[var(--arabica-brown)]" />
             <div>

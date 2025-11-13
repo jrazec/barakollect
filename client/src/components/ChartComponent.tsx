@@ -1,5 +1,5 @@
 
-import { PieChart, Area, Tooltip, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Pie, LineChart, Line, BarChart, Bar, ScatterChart, Scatter } from 'recharts';
+import { PieChart, Area, Tooltip, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Pie, LineChart, Line, BarChart, Bar, ScatterChart, Scatter, Cell } from 'recharts';
 const data = [
     { name: 'Page A', uv: 1000, pv: 2400, amt: 2400 },
     { name: 'Page B', uv: 5300, pv: 2400, amt: 2400 },
@@ -23,11 +23,23 @@ const TempChart = () => (
         </AreaChart>
     </ResponsiveContainer>
 );
+const PIE_COLORS = ['#5D3A1A', '#8C4A2F', '#A1653A', '#C58F63', '#E6B67B', '#F5DDB8'];
+
 const PieChartComponent = ({ data }: { data: { name: string; uv: number; }[] }) => (
     <ResponsiveContainer width="100%" height="100%">
         <PieChart data={data}>
-            <Pie dataKey="uv" cx="50%" cy="50%" innerRadius={60} outerRadius={120} fill="#8884d8" />
-            <Tooltip />
+            <Pie dataKey="uv" cx="50%" cy="50%" innerRadius={60} outerRadius={120} fill="#8884d8">
+                {data.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                ))}
+            </Pie>
+            <Tooltip
+                contentStyle={{
+                    backgroundColor: 'var(--parchment)',
+                    border: '1px solid rgba(92, 59, 44, 0.15)',
+                    borderRadius: '8px'
+                }}
+            />
         </PieChart>
     </ResponsiveContainer>
 );
