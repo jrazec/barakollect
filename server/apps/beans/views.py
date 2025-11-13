@@ -258,11 +258,10 @@ def get_user_beans(request, user_id):
                 
                 # Process predictions using pre-extracted data
                 bean_type = img_data['bean_type']
-                
 
                 for detection in bean_detections:
                     features = extracted_features_data.get(detection['extracted_feature_id'], {})
-                    confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence']) if extracted_features_data[detection['extracted_feature_id']] else 0.0
+                    confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence']) if img_data['confidence'] else 0.8
                     predictions.append({
                         "bean_id": detection['bean_id'],
                         "is_validated": is_validated,
@@ -315,8 +314,6 @@ def get_user_beans(request, user_id):
         import traceback
         print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
         return JsonResponse({"error": str(e)}, status=500)
-
-
 
 extractor = BeanFeatureExtractor()
 
@@ -993,7 +990,6 @@ def get_annotations(request):
                     'solidity': row[20],
                     'mean_intensity': row[21],
                     'equivalent_diameter': row[22],
-                    'confidence': row[12],
                 }
         
         for img_data in images_data.values():
@@ -1019,11 +1015,11 @@ def get_annotations(request):
                 
                 # Process predictions using pre-extracted data
                 bean_type = img_data['bean_type'] or "Unknown"
-                
+                confidence = float(img_data['confidence']) if img_data['confidence'] else 0.0
 
                 for detection in bean_detections:
                     features = extracted_features_data.get(detection['extracted_feature_id'], {})
-                    confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence']) if extracted_features_data[detection['extracted_feature_id']] else 0.0
+                    
                     predictions.append({
                         "bean_id": detection['bean_id'],
                         "is_validated": is_validated,
@@ -1106,7 +1102,7 @@ def get_annotations(request):
         import traceback
         print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
         return Response({"error": str(e)}, status=500)
-
+    
 @api_view(['GET'])
 def get_all_beans(request):
     try:
@@ -1354,7 +1350,7 @@ def get_all_beans(request):
                 
                 # Process predictions using pre-extracted data
                 bean_type = img_data['bean_type'] or "Unknown"
-                
+                confidence = float(img_data['confidence']) if img_data['confidence'] else 0.0
                 extracted_features_data = {}
                 for row in all_rows:
                     extracted_features_data[row[23]] = { # per ef id
@@ -1372,11 +1368,8 @@ def get_all_beans(request):
                         'confidence': row[12],
                     }
 
-                    
-
-
                 for detection in bean_detections:
-                    confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence']) if extracted_features_data[detection['extracted_feature_id']] else 0.0
+                    confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence']) if extracted_features_data[detection['extracted_feature_id']] else 0.8
                     predictions.append({
                         "bean_id": detection['bean_id'],
                         "is_validated": is_validated,
@@ -1478,7 +1471,7 @@ def get_all_beans(request):
         import traceback
         print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
         return Response({"error": str(e)}, status=500)
-
+    
 @api_view(['POST'])
 def validate_beans(request):
     """
