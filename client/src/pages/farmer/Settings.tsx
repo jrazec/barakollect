@@ -222,7 +222,7 @@ export default function FarmerSettings() {
   );
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50">
+    <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
       <EmailModal />
       
       <div className="flex justify-between items-center">

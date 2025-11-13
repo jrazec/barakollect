@@ -9,7 +9,6 @@ import { supabase } from "@/lib/supabaseClient";
 import BeanImageExtractor from "@/components/BeanImageExtractor";
 import {
     BeanSizeDistribution,
-    YieldQualityScatter,
     FarmComparison
 } from "@/components/farmer/FarmerCharts";
 
@@ -19,7 +18,6 @@ const FarmerDashboard: React.FC = () => {
     const [globalStats, setGlobalStats] = useState<any>(null);
     const [sizeDistribution, setSizeDistribution] = useState<any[]>([]);
     const [sizeThresholds, setSizeThresholds] = useState<any>(null);
-    const [yieldQuality, setYieldQuality] = useState<any[]>([]);
     const [farmComparison, setFarmComparison] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
@@ -64,7 +62,6 @@ const FarmerDashboard: React.FC = () => {
                 setGlobalStats(data.global);
                 setSizeDistribution(data.size_distribution || []);
                 setSizeThresholds(data.size_thresholds || null);
-                setYieldQuality(data.yield_quality || []);
                 setFarmComparison(data.farm_comparison || null);
             } catch (err) {
                 console.error('Error fetching dashboard data:', err);
@@ -121,16 +118,6 @@ const FarmerDashboard: React.FC = () => {
                 label: "Total Bean Count",
                 value: farmerStats.total_bean_count.toString(),
                 subtext: "Total beans submitted"
-            },
-            {
-                label: "Density (Solidity)",
-                value: farmerStats.density_fullness.solidity.toFixed(2),
-                subtext: "Higher = fuller beans"
-            },
-            {
-                label: "Shape Consistency",
-                value: farmerStats.shape_consistency.avg_aspect_ratio.toFixed(2),
-                subtext: `Variation ±${farmerStats.shape_consistency.std_aspect_ratio.toFixed(2)}`
             }
         ]
         : [];
@@ -178,18 +165,11 @@ const FarmerDashboard: React.FC = () => {
             <DashboardHeader 
                 title='Farmer Dashboard'
                 subtitle='Manage your farm and view analytics'
-                // actions={
-                //     <div className="flex flex-col gap-2 mt-2 md:mt-0">
-                //         <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-2 rounded">Predict Images</button>
-                //         <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-2 rounded">Submit Images</button>
-                //         <button className="bg-[var(--espresso-black)] text-[var(--parchment)] px-4 py-2 rounded">Find Largest Bean</button>
-                //     </div>
-                // }
                 image={logo2}
             />
 
             {/* Stat cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 {statCards.map((card, i) => (
                     <StatCard key={i} label={card.label} value={card.value} subtext={card.subtext} />
                 ))}
@@ -226,24 +206,10 @@ const FarmerDashboard: React.FC = () => {
             </div>
             {/* !! TO REPLACE with smth else mayhaps*/}
             {/* Charts Grid - Row 2: Yield vs Quality & Farm Comparison */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <div className="mb-6">
                 <CardComponent 
                     item={{
-                        title: "Yield vs. Quality Analysis",
-                        subtitle: "Find the sweet spot between quantity and quality",
-                        description: "Explore the relationship between yield and bean characteristics",
-                        content: yieldQuality.length > 0 ? (
-                            <YieldQualityScatter data={yieldQuality} />
-                        ) : (
-                            <div className="flex items-center justify-center h-[300px] text-gray-500">
-                                No yield-quality data available
-                            </div>
-                        )
-                    }}
-                />
-                <CardComponent 
-                    item={{
-                        title: "Farm Benchmarking",
+                        title: "Farm Comparison",
                         subtitle: "Compare your beans against other farms",
                         description: "See how your farm performs across key quality metrics",
                         content: farmComparison ? (

@@ -129,28 +129,6 @@ export const BeanSizeDistribution: React.FC<BeanSizeDistributionProps> = ({ data
             </ResponsiveContainer>
             
             {/* Summary comparison */}
-            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs text-blue-900 font-semibold mb-2">📊 Quick Comparison:</p>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                    {pieData.map((item) => {
-                        const totalGlobal = data.reduce((sum, d) => sum + d.global, 0);
-                        const globalPercent = ((item.global / totalGlobal) * 100).toFixed(1);
-                        const diff = (parseFloat(item.percentage) - parseFloat(globalPercent)).toFixed(1);
-                        const diffSign = Number(diff) > 0 ? '+' : '';
-                        
-                        return (
-                            <div key={item.category} className="bg-white p-2 rounded border border-blue-100">
-                                <p className="font-medium text-blue-900">{item.category}</p>
-                                <p className="text-blue-700">You: {item.percentage}%</p>
-                                <p className="text-blue-600">Avg: {globalPercent}%</p>
-                                <p className={`font-semibold ${Number(diff) > 0 ? 'text-green-600' : Number(diff) < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                                    {diffSign}{diff}%
-                                </p>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
             
             {thresholds && (
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -405,7 +383,7 @@ export const FarmComparison: React.FC<FarmComparisonProps> = ({ data }) => {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors !border-2 ${
                 selectedMetric === 'avg_area'
                     ? 'bg-[var(--arabica-brown)] text-white shadow-md !border-[var(--arabica-brown)]'
-                    : '!bg-gray-100 !text-gray-700 !hover:bg-gray-200 !border-[var(--arabica-brown)]'
+                    : 'button-secondary'
                 }`}
             >
                 Area
@@ -415,7 +393,7 @@ export const FarmComparison: React.FC<FarmComparisonProps> = ({ data }) => {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors !border-2 ${
                 selectedMetric === 'avg_solidity'
                     ? 'bg-[var(--arabica-brown)] text-white shadow-md !border-[var(--arabica-brown)]'
-                    : '!bg-gray-100 !text-gray-700 !hover:bg-gray-200 !border-[var(--arabica-brown)]'
+                    : 'button-secondary'
                 }`}
             >
                 Solidity
@@ -425,7 +403,7 @@ export const FarmComparison: React.FC<FarmComparisonProps> = ({ data }) => {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors !border-2 ${
                 selectedMetric === 'avg_length'
                     ? 'bg-[var(--arabica-brown)] text-white shadow-md !border-[var(--arabica-brown)]'
-                    : '!bg-gray-100 !text-gray-700 !hover:bg-gray-200 !border-[var(--arabica-brown)]'
+                    : 'button-secondary'
                 }`}
             >
                 Length
@@ -435,7 +413,7 @@ export const FarmComparison: React.FC<FarmComparisonProps> = ({ data }) => {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors !border-2 ${
                 selectedMetric === 'avg_width'
                     ? 'bg-[var(--arabica-brown)] text-white shadow-md !border-[var(--arabica-brown)]'
-                    : '!bg-gray-100 !text-gray-700 !hover:bg-gray-200 !border-[var(--arabica-brown)]'
+                    : 'button-secondary'
                 }`}
             >
                 Width

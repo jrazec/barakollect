@@ -72,7 +72,7 @@ export default function ClientLayout() {
           />
         )}
 
-        <div className="flex-1 pt-[64px] overflow-y-auto text-black bg-[var(--mocha-beige)]">
+        <div className="flex-1 pt-[64px] overflow-y-auto text-black">
           <Outlet />
         </div>
       </div>
