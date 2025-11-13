@@ -613,6 +613,23 @@ class StorageService {
       throw new Error(error.message || "Failed to retrieve locations");
     }
   }
+  async getMaxUploadImages(): Promise<number> {
+    try {
+      const response = await fetch(`${this.baseURL}/max-upload-images/`, {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || "Failed to retrieve max upload images");
+      }
+
+      const data = await response.json();
+      return data.max_upload_images;
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to retrieve max upload images");
+    }
+  }
 }
 
 export const storageService = new StorageService();

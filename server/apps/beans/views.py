@@ -325,6 +325,34 @@ def process_bean(request):
     """
     Process single or multiple images for bean detection and feature extraction
     """
+    system_settings = {}
+
+    # Fetch system settings from the database
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT save_image, accept_predictions, image_accepted_count
+            FROM public.plans
+            LIMIT 1
+        """)
+        row = cursor.fetchone()
+        if row:
+            system_settings = {
+                'save_images': row[0],
+                'accept_predictions': row[1],
+                'max_images': row[2]
+            }
+        else:
+            system_settings = {
+                'save_images': True,
+                'accept_predictions': True,
+                'max_images': 5
+            }
+
+    if system_settings['accept_predictions'] is False:
+        return Response({"error": "System is not accepting predictions at this time."}, status=403)
+
+    
+
     # Handle both single image and multiple images
     images = []
     
@@ -460,14 +488,14 @@ def process_bean(request):
                     file_obj.seek(0)  # Reset file pointer
                     
                     print(f"DEBUG: Uploading to Supabase: {original_filename}")
-                    try:
+
+                    # THIS
+                    if system_settings['save_images']: 
                         supabase_upload = supabase.storage.from_("Beans").upload(original_filename, file_obj.read())
                         print(f"DEBUG: Supabase upload result: {supabase_upload}")
-                        # Check if upload was successful by checking if we got a valid response
-                        if not hasattr(supabase_upload, 'path') or not supabase_upload.path:
-                            raise Exception(f"Supabase upload failed: Invalid response")
-                    except Exception as upload_error:
-                        raise Exception(f"Failed to upload to Supabase: {str(upload_error)}")
+                    else:
+                        print(f"DEBUG: Skipping Supabase upload as per system settings")
+
                     
                     # Create Image record with Supabase storage URL
                     print(f"DEBUG: Creating Image record")
@@ -1834,3 +1862,29 @@ def upload_records(request):
         print(f"DEBUG: Error in upload_records: {str(e)}")
         print(f"DEBUG: Full traceback: {traceback.format_exc()}")
         return Response({"error": f"Upload failed: {str(e)}"}, status=500)
+    
+@api_view(['GET'])
+def get_max_upload_images(request):
+    """
+    Return the maximum number of images allowed per upload from system settings
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT image_accepted_count FROM plans")
+            row = cursor.fetchone()
+            if not row:
+                return Response({"error": "System settings not found"}, status=500)
+
+            max_images = row[0]  # Assuming the count is stored in the first column
+
+        
+        print(f"DEBUG: Max upload images limit: {max_images}")
+        
+        return Response({
+            "max_upload_images": max_images
+        }, status=200)
+        
+    except Exception as e:
+        print(f"DEBUG: Error in get_max_upload_images: {str(e)}")
+        print(f"DEBUG: Full traceback: {traceback.format_exc()}")
+        return Response({"error": f"Failed to retrieve max upload images: {str(e)}"}, status=500)
