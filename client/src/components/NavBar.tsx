@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowRightFromLine, PanelLeftClose, BellIcon} from "lucide-react"
+import { ArrowRightFromLine, PanelLeftClose, BellIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 
 const NavBar = ({showSideBar,setShowSideBar, logo, role}:{showSideBar:boolean,setShowSideBar:Function,logo:string[],role:string}) => {
@@ -15,7 +15,7 @@ const NavBar = ({showSideBar,setShowSideBar, logo, role}:{showSideBar:boolean,se
                 </div>
                 <div className={`minimize ${showSideBar ? "" : "collapsed"} cursor-pointer`} onClick={() => setShowSideBar(!showSideBar)}>
                     <div className=" glass-hover text-gray-700 p-1 transition-colors duration-200 rounded-md">
-                        {showSideBar ? <PanelLeftClose /> : "'"}
+                        {showSideBar ? <PanelLeftClose /> : <ArrowRightFromLine />}
                     </div>
                 </div>
             </div>

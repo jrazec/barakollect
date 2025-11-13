@@ -148,8 +148,10 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
 
                     <div className={`userInfo ${show ? "" : "collapsed"}`}>
                         <div className={`userAvatarImg ${show ? "" : "collapsed"}`}>
-                            <ScanFaceIcon className="userAvatar" />
-                            {/* <img src="/src/assets/react.svg" alt="User Avatar" className="userAvatar" /> */}
+                            {/* BADET */}
+                            {role === 'admin' && <Settings className="userAvatar" />}
+                            {role === 'researcher' && <ChartBar className="userAvatar" />}
+                            {role === 'farmer' && <ScanFaceIcon className="userAvatar" />}
                         </div>
                         {show && (
                             <div className="userDetails">

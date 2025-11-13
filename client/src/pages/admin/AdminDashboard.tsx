@@ -523,7 +523,7 @@ export default function AdminDashboard() {
               ) : adminStats && adminStats.shape_size_distribution && Object.keys(adminStats.shape_size_distribution).length > 0 ? (
                 <CardComponent
                   item={{
-                    title: "Bean Shape &amp; Size Distribution",
+                    title: "Bean Shape and Size Distribution",
                     subtitle: "Comparison of round vs teardrop beans across size categories",
                     content: (
                       <div className="w-full">

@@ -526,7 +526,7 @@ def process_bean(request):
                             confidence_score=confidence,
                             predicted_label={
                                 "bean_number": bean['bean_id'],
-                                "bean_type": "Alleged Liberica",
+                                "bean_type": "Unlabeled",
                                 "confidence": confidence
                             }
                         )
