@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import GlassSurface from '@/components/GlassSurface';
 // To change these badet
+import logo_barakollect from '@/assets/images/barakollect_logo.svg';
 import testImg from '@/assets/images/test.jpeg';
 import sample1 from '@/assets/images/test.jpeg';
 import sample2 from '@/assets/images/test.jpeg';
@@ -85,7 +86,7 @@ function LandingSection({ onSwitch }: { onSwitch: () => void }) {
         >
           <nav className="px-8 py-4 w-full">
             <div className="flex justify-between items-center w-full">
-              <img src="/src/assets/images/barakollect_logo.svg" alt="BaraKollect" className="h-12" />
+              <img src={logo_barakollect} alt="BaraKollect" className="h-12" />
               <div className="flex gap-6 items-center">
                 <button
                   onClick={onSwitch}
