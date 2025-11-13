@@ -3,6 +3,7 @@ import { ActivityIcon, ChartBar, DatabaseIcon, ImageIcon, LayoutDashboard, LogOu
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
+import LogoutConfirmationModal from "./LogoutConfirmationModal";
 
 
 const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User }) => {
@@ -105,11 +106,6 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 label: "Farm Management",
                 route: "/admin/farm-map"
             },
-            // {
-            //     icon: (<Monitor />),
-            //     label: "System Monitor",
-            //     route: "/admin/monitoring"
-            // },
             {
                 icon: (<ActivityIcon />),
                 label: "Activity Logs",
@@ -209,38 +205,11 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 </div>
             </div>
 
-            {/* Logout Confirmation Modal */}
-            {showLogoutModal && (
-               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 relative z-51">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                                <LogOutIcon className="w-6 h-6 text-red-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">Confirm Logout</h3>
-                                <p className="text-sm text-gray-600">Are you sure you want to log out?</p>
-                            </div>
-                        </div>
-                        
-                        <div className="flex gap-3 justify-end mt-6">
-                            <button
-                                onClick={handleCancelLogout}
-                                className="button-secondary cancel px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleConfirmLogout}
-                                className="px-4 py-2 text-sm font-medium text-white !bg-red-700 rounded-md hover:bg-red-700 transition-colors"
-                            >
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
+            <LogoutConfirmationModal
+                isOpen={showLogoutModal}
+                onConfirm={handleConfirmLogout}
+                onCancel={handleCancelLogout}
+            />
         </>
     );
 };
