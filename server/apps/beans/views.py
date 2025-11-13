@@ -1352,7 +1352,7 @@ def get_all_beans(request):
                 
                 # Process predictions using pre-extracted data
                 bean_type = img_data['bean_type'] or "Unknown"
-                confidence = float(img_data['confidence']) if img_data['confidence'] else 0.0
+                
                 extracted_features_data = {}
                 for row in all_rows:
                     extracted_features_data[row[23]] = { # per ef id
@@ -1366,11 +1366,15 @@ def get_all_beans(request):
                         'solidity': row[20],
                         'mean_intensity': row[21],
                         'equivalent_diameter': row[22],
-                        'extracted_feature_id': row[23]
+                        'extracted_feature_id': row[23],
+                        'confidence': row[12],
                     }
 
-                for detection in bean_detections:
                     
+
+
+                for detection in bean_detections:
+                    confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence']) if extracted_features_data[detection['extracted_feature_id']] else 0.0
                     predictions.append({
                         "bean_id": detection['bean_id'],
                         "is_validated": is_validated,
@@ -1546,11 +1550,8 @@ def validate_beans(request):
             prediction_update_data = {
                 "predicted_label": {
                     "bean_number": bean_id,
-                    "bean_type": bean_type,
-                    "confidence": 1.0  # Set confidence to 1.0 for validated beans
-                },
-                "confidence_score": 1.0,
-                "model_used": "human_validated"
+                    "bean_type": bean_type
+                }
             }
             
             # Add annotated_by information if available
