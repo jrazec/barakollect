@@ -4,7 +4,7 @@ import PageHeader from '@/components/PageHeader';
 
 const FarmMap: React.FC = () => {
   return (
-    <div className="w-full h-[calc(100vh-6rem)] bg-white">
+    <div className="w-full h-full max-w-7xl bg-white p-6 mx-auto">
       <div className="h-full flex flex-col">
         <PageHeader 
           title="Geographic Distribution" 

@@ -1,12 +1,31 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import GlassSurface from '@/components/GlassSurface';
 // To change these badet
 import testImg from '@/assets/images/test.jpeg';
 import sample1 from '@/assets/images/test.jpeg';
 import sample2 from '@/assets/images/test.jpeg';
 import sample3 from '@/assets/images/test.jpeg';
+import admin_dashboard from '@/assets/images/manual_imgs/admin_dashboard.png';
+import admin_user_mgt from '@/assets/images/manual_imgs/admin_user_mgt.png';
+import admin_gallery from '@/assets/images/manual_imgs/admin_gallery.png';
+import admin_metadata from '@/assets/images/manual_imgs/admin_metadata.png';
+import admin_farm_map from '@/assets/images/manual_imgs/admin_farm_map.png';
+import admin_activity_logs from '@/assets/images/manual_imgs/admin_activity_logs.png';
+import rschr_dashboard from '@/assets/images/manual_imgs/rschr_dashboard.png';
+import rschr_gallery from '@/assets/images/manual_imgs/rschr_gallery.png';
+import rschr_upload from '@/assets/images/manual_imgs/rschr_upload.png';
+import rschr_annotation from '@/assets/images/manual_imgs/rschr_annotation.png';
+import rschr_analytics from '@/assets/images/manual_imgs/rschr_analytics.png';
+import rschr_farm_map from '@/assets/images/manual_imgs/rschr_map.png';
+import frmr_dashboard from '@/assets/images/manual_imgs/frmr_dashboard.png';
+import frmr_upload from '@/assets/images/manual_imgs/frmr_upload.png';
+import frmr_gallery from '@/assets/images/manual_imgs/frmr_gallery.png';
+import frmr_farm_map from '@/assets/images/manual_imgs/frmr_map.png';
+
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+
 
 // ---------------- Modal Component ----------------
 function ImageModal({ isOpen, onClose, imageSrc, title }: { 
@@ -24,7 +43,7 @@ function ImageModal({ isOpen, onClose, imageSrc, title }: {
           <h3 className="text-2xl font-bold text-[#3c2715]">{title}</h3>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-[#4b2f1a] text-white hover:opacity-80 transition"
+            className="button-accent w-10 h-10 rounded-full bg-[#4b2f1a] text-white hover:opacity-80 transition"
           >
             ✕
           </button>
@@ -50,31 +69,41 @@ function LandingSection({ onSwitch }: { onSwitch: () => void }) {
       </div>
 
       {/* Glassmorphism Navbar */}
-      <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-6xl bg-white/20 backdrop-blur-xl border border-white/30 rounded-2xl px-8 py-4 z-50 shadow-2xl">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-extrabold text-[#3c2715]">☕ BaraKollect</h1>
-          <div className="flex gap-6 items-center">
-            <a
-              href="#features"
-              className="text-[#3c2715] hover:text-[#6f4e37] font-medium transition-colors duration-300"
-            >
-              Features
-            </a>
-            <button
-              onClick={onSwitch}
-              className="text-[#3c2715] hover:text-[#6f4e37] font-medium transition-colors duration-300"
-            >
-              User Manual
-            </button>
-            <Link
-              to="/login"
-              className="px-6 py-2 rounded-xl bg-[#4b2f1a] text-white shadow-lg hover:opacity-90 hover:scale-105 transition-all duration-300"
-            >
-              Login
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-6xl z-50">
+        <GlassSurface
+          width="100%" 
+          backgroundOpacity={0.7}
+          borderRadius={16} 
+          displace={5}
+          redOffset={40}
+          blueOffset={10}
+          greenOffset={20}
+          blur={20}
+          brightness={50}
+          saturation={1.3}
+          distortionScale={-200}
+        >
+          <nav className="px-8 py-4 w-full">
+            <div className="flex justify-between items-center w-full">
+              <img src="/src/assets/images/barakollect_logo.svg" alt="BaraKollect" className="h-12" />
+              <div className="flex gap-6 items-center">
+                <button
+                  onClick={onSwitch}
+                  className="button-accent text-[#3c2715] hover:text-[#6f4e37] font-medium transition-colors duration-300"
+                >
+                  User Manual
+                </button>
+                <Link
+                  to="/login"
+                  className="button px-6 py-2 rounded-xl bg-[#4b2f1a] text-white shadow-lg hover:opacity-90 hover:scale-105 transition-all duration-300"
+                >
+                  Login
+                </Link>
+              </div>
+            </div>
+          </nav>
+        </GlassSurface>
+      </div>
 
       {/* Full Screen Hero Section */}
       <div className="h-screen flex items-center justify-center px-8 pt-20">
@@ -93,13 +122,13 @@ function LandingSection({ onSwitch }: { onSwitch: () => void }) {
             <div className="flex gap-6">
               <Link
                 to="/login"
-                className="px-8 py-4 bg-[#6f4e37] text-white rounded-xl shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-300 text-lg font-semibold"
+                className="z-10 button px-8 py-4  rounded-xl shadow-lg hover:scale-105 hover:shadow-2xl transition-all duration-300 text-lg font-semibold"
               >
                 Get Started
               </Link>
               <button
                 onClick={onSwitch}
-                className="px-8 py-4 bg-white/30 border border-white/40 text-[#3c2715] backdrop-blur-md rounded-xl hover:opacity-90 hover:scale-105 transition-all duration-300 text-lg font-semibold"
+                className="button-secondary px-8 py-4 bg-white/30 border border-white/40 text-[#3c2715] backdrop-blur-md rounded-xl hover:opacity-90 hover:scale-105 transition-all duration-300 text-lg font-semibold"
               >
                 View User Manual
               </button>
@@ -110,7 +139,7 @@ function LandingSection({ onSwitch }: { onSwitch: () => void }) {
           <div className="flex justify-center">
             <div className="w-96 h-96 rounded-3xl overflow-hidden border border-white/30 shadow-2xl backdrop-blur-sm bg-white/20 hover:scale-105 transition-transform duration-500">
               <img
-                src={testImg}
+                src={"https://www.teofilocoffeecompany.com/wp-content/uploads/2025/04/COFFEEBEANS_GREENBEANS_8411b54e-c449-4525-990a-489941b9644a.jpg"}
                 alt="Coffee cup"
                 className="w-full h-full object-cover"
               />
@@ -123,7 +152,7 @@ function LandingSection({ onSwitch }: { onSwitch: () => void }) {
 
       {/* Footer */}
       <footer className="text-center text-sm py-8 text-[#4b382a] bg-white/10 backdrop-blur-md">
-        © {new Date().getFullYear()} BaraKollect — Crafted for Coffee Collaboration ☕
+        © {new Date().getFullYear()} BaraKollect — Crafted by Razberie ☕
       </footer>
     </div>
   );
@@ -159,49 +188,57 @@ function UserManualSection({ onBack }: { onBack: () => void }) {
       path: "/admin/dashboard",
       title: "Admin Dashboard",
       description: "Overview of system KPIs, user statistics, and app-wide data management.",
-      useCases: ["Monitor system health", "View analytics", "Track user activity"]
+      useCases: ["Monitor system health", "View analytics", "Track user activity"],
+      imgSrc: admin_dashboard
     },
     {
       path: "/admin/user-management",
       title: "User Management",
       description: "Add, edit, and manage user accounts across all roles.",
-      useCases: ["Create new users", "Edit user permissions", "Deactivate accounts"]
+      useCases: ["Create new users", "Edit user permissions", "Deactivate accounts"],
+      imgSrc: admin_user_mgt
     },
     {
       path: "/admin/gallery",
       title: "Admin Gallery",
       description: "Approve, export, and manage all bean data submissions.",
-      useCases: ["Review submissions", "Export datasets", "Quality control"]
+      useCases: ["Review submissions", "Export datasets", "Quality control"],
+      imgSrc: admin_gallery
     },
     {
       path: "/admin/metadata",
       title: "Beans Metadata",
       description: "Bulk-edit and validate morphological data records.",
-      useCases: ["Edit metadata", "Validate records", "Data cleanup"]
+      useCases: ["Edit metadata", "Validate records", "Data cleanup"],
+      imgSrc: admin_metadata
     },
     {
       path: "/admin/farm-map",
       title: "Admin Farm Map",
       description: "Geographic visualization of all farm locations and submissions.",
-      useCases: ["View farm locations", "Analyze geographic data", "Regional insights"]
+      useCases: ["View farm locations", "Analyze geographic data", "Regional insights"],
+      imgSrc: admin_farm_map
     },
     {
       path: "/admin/monitoring",
       title: "System Monitoring",
       description: "Monitor system performance, server health, and resource usage.",
-      useCases: ["Check server status", "Monitor performance", "Resource management"]
+      useCases: ["Check server status", "Monitor performance", "Resource management"],
+      imgSrc: admin_dashboard //to change
     },
     {
       path: "/admin/activity-logs",
       title: "Activity Logs",
       description: "Track all system activities and user actions for auditing.",
-      useCases: ["Audit trails", "Security monitoring", "User behavior analysis"]
+      useCases: ["Audit trails", "Security monitoring", "User behavior analysis"],
+      imgSrc: admin_activity_logs
     },
     {
       path: "/admin/settings",
       title: "System Settings",
       description: "Configure system-wide settings and application parameters.",
-      useCases: ["Update configurations", "Manage settings", "System maintenance"]
+      useCases: ["Update configurations", "Manage settings", "System maintenance"],
+      imgSrc: admin_dashboard //to change
     }
   ];
 
@@ -210,49 +247,43 @@ function UserManualSection({ onBack }: { onBack: () => void }) {
       path: "/researcher/dashboard",
       title: "Researcher Dashboard",
       description: "Access analytics, visualizations, and research insights.",
-      useCases: ["View research data", "Access analytics", "Generate reports"]
+      useCases: ["View research data", "Access analytics", "Generate reports"],
+      imgSrc: rschr_dashboard 
     },
     {
       path: "/researcher/gallery",
       title: "Beans Gallery",
       description: "Validate, annotate, and analyze coffee bean datasets.",
-      useCases: ["Validate submissions", "Add annotations", "Research analysis"]
+      useCases: ["Validate submissions", "Add annotations", "Research analysis"],
+      imgSrc: rschr_gallery
     },
     {
       path: "/researcher/upload-image",
       title: "Upload Samples",
       description: "Upload coffee bean images for research purposes.",
-      useCases: ["Upload research samples", "Add calibration data", "Submit annotations"]
-    },
-    {
-      path: "/researcher/test-enhanced",
-      title: "Enhanced Gallery Test",
-      description: "Test enhanced gallery features and functionalities.",
-      useCases: ["Test new features", "Gallery enhancements", "UI improvements"]
+      useCases: ["Upload research samples", "Add calibration data", "Submit annotations"],
+      imgSrc: rschr_upload
     },
     {
       path: "/researcher/annotations",
       title: "Annotations",
       description: "Create and manage morphological annotations for bean samples.",
-      useCases: ["Add annotations", "Edit measurements", "Research notes"]
-    },
-    {
-      path: "/researcher/validation",
-      title: "Validation Queue",
-      description: "Review and validate submitted coffee bean samples.",
-      useCases: ["Validate submissions", "Quality assurance", "Data verification"]
+      useCases: ["Add annotations", "Edit measurements", "Research notes"],
+      imgSrc: rschr_annotation
     },
     {
       path: "/researcher/analytics",
       title: "Analytics",
       description: "Generate morphological reports and statistical analysis.",
-      useCases: ["Generate reports", "Statistical analysis", "Research insights"]
+      useCases: ["Generate reports", "Statistical analysis", "Research insights"],
+      imgSrc: rschr_analytics
     },
     {
       path: "/researcher/farm-map",
       title: "Farm Map",
       description: "Geographic visualization of farm locations and sample origins.",
-      useCases: ["View sample origins", "Geographic analysis", "Location insights"]
+      useCases: ["View sample origins", "Geographic analysis", "Location insights"],
+      imgSrc: rschr_farm_map
     }
   ];
 
@@ -261,25 +292,29 @@ function UserManualSection({ onBack }: { onBack: () => void }) {
       path: "/farmer/dashboard",
       title: "Farmer Dashboard",
       description: "View farm submissions summary and personal analytics.",
-      useCases: ["Track submissions", "View personal stats", "Farm overview"]
+      useCases: ["Track submissions", "View personal stats", "Farm overview"],
+      imgSrc: frmr_dashboard
     },
     {
       path: "/farmer/upload-image",
       title: "Upload Images",
       description: "Submit coffee bean photos with calibration frames.",
-      useCases: ["Upload bean photos", "Add farm details", "Submit samples"]
+      useCases: ["Upload bean photos", "Add farm details", "Submit samples"],
+      imgSrc: frmr_upload
     },
     {
       path: "/farmer/gallery",
       title: "Farmer Gallery",
       description: "Review and manage your uploaded coffee bean samples.",
-      useCases: ["View submissions", "Edit details", "Track status"]
+      useCases: ["View submissions", "Edit details", "Track status"],
+      imgSrc: frmr_gallery
     },
     {
       path: "/farmer/farm-map",
       title: "Farm Map",
       description: "View your farm location and submitted sample locations.",
-      useCases: ["View farm location", "Track samples", "Geographic data"]
+      useCases: ["View farm location", "Track samples", "Geographic data"],
+      imgSrc: frmr_farm_map
     }
   ];
 
@@ -292,10 +327,10 @@ function UserManualSection({ onBack }: { onBack: () => void }) {
             {/* Image */}
             <div className="md:col-span-1">
               <img
-                src={testImg}
+                src={route.imgSrc}
                 alt={route.title}
                 className="w-full h-32 object-cover rounded-xl border border-white/30 cursor-pointer hover:scale-105 transition-transform duration-300"
-                onClick={() => setModalImage({ src: testImg, title: route.title })}
+                onClick={() => setModalImage({ src: route.imgSrc, title: route.title })}
               />
             </div>
             
@@ -334,19 +369,39 @@ function UserManualSection({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Glassmorphism Navbar */}
-      <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-6xl bg-white/20 backdrop-blur-xl border border-white/30 rounded-2xl px-8 py-4 z-40 shadow-2xl">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-extrabold text-[#3c2715]">☕ BaraKollect Manual</h1>
-          <button
-            onClick={onBack}
-            className="px-6 py-2 bg-[#4b2f1a] text-white rounded-xl shadow-lg hover:opacity-90 hover:scale-105 transition-all duration-300"
-          >
-            ← Back to Home
-          </button>
-        </div>
-      </nav>
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-6xl z-40">
+        <GlassSurface
+          width="100%" 
+          backgroundOpacity={0.5}
+          borderRadius={16} 
+          displace={5}
+          redOffset={40}
+          blueOffset={10}
+          greenOffset={20}
+          blur={20}
+          brightness={50}
+          saturation={1.3}
+          distortionScale={-200}
+        >
+          <nav className="px-8 py-4 w-full">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                  <img src="/src/assets/images/barakollect_logo.svg" alt="BaraKollect" className="h-12" />
+                  <h1 className="text-2xl !font-normal text-[var(--gray)]">Manual</h1>
+              </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-24 relative z-10 space-y-12">
+              <button
+                onClick={onBack}
+                className="px-6 py-2 bg-[#4b2f1a] text-white rounded-xl shadow-lg hover:opacity-90 hover:scale-105 transition-all duration-300"
+              >
+                Back to Home
+              </button>
+            </div>
+          </nav>
+        </GlassSurface>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-40 relative z-10 space-y-12">
         <div className="text-center space-y-4 mb-16">
           <h2 className="text-5xl font-bold text-[#3c2715]">User Manual & Routes Guide</h2>
           <p className="text-xl text-[#4b382a] max-w-3xl mx-auto">
@@ -354,7 +409,7 @@ function UserManualSection({ onBack }: { onBack: () => void }) {
           </p>
         </div>
 
-              {/* Features */}
+      {/* Features */}
       <section id="features" className="max-w-6xl mx-auto px-8 py-20 grid md:grid-cols-3 gap-8 text-[#3c2715]">
         {[
           {
