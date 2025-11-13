@@ -26,7 +26,7 @@ const UploadSamples: React.FC = () => {
   const handleDownloadCalibration = () => {
     // Create a temporary link to download the AURCO PDF
     const link = document.createElement('a');
-    link.href = '/src/assets/AURCO-Calibration-Tool.pdf';
+    link.href = '/AURCO-Calibration-Tool.pdf';
     link.download = 'AURCO-Calibration-Tool.pdf';
     document.body.appendChild(link);
     link.click();
