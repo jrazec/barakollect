@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCachedAdminService } from '@/hooks/useCachedServices';
 import { useCache } from '@/contexts/CacheContext';
 import useNotification from '@/hooks/useNotification';
@@ -27,6 +28,7 @@ const AdminBeansMetadata: React.FC = () => {
         hasNext: false,
         hasPrevious: false
     });
+    const navigate = useNavigate();
     const [locations, setLocations] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState<AdminPredictedImage | null>(null);
@@ -152,6 +154,10 @@ const AdminBeansMetadata: React.FC = () => {
                 await loadImages();
                 setShowDeleteModal(false);
                 setImageToDelete(null);
+                // show success adn pause and reload navigate
+                showSuccess('Delete Successful', 'Image deleted successfully.');
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Pause for 2 seconds
+                navigate(0); // Reload the current page
             } catch (error) {
                 console.error('Error deleting image:', error);
                 showError('Delete Failed', 'Failed to delete image. Please try again.');
@@ -633,6 +639,9 @@ const AdminBeansMetadata: React.FC = () => {
                 // Refresh only the table data after successful validation
                 await loadImages();
                 console.log('Bean validated successfully');
+                showSuccess('Validation Successful', 'Bean validated successfully.');
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Pause for 2 seconds
+                navigate(0); // Reload the current page
             } else {
                 console.error('Failed to validate bean');
                 console.log('Response status:', response.status);

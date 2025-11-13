@@ -149,6 +149,8 @@ def render_farmer_dashboard(request, uiid):
             JOIN extracted_features ef ON bd.extracted_features_id = ef.id
             JOIN predictions p ON ef.prediction_id = p.id
             JOIN images i ON p.image_id = i.id
+            JOIN annotations a ON i.id = a.image_id
+            WHERE a.label->>'is_validated' = 'true'
         """)
         thresholds = cursor.fetchone()
         
@@ -176,7 +178,9 @@ def render_farmer_dashboard(request, uiid):
                 JOIN extracted_features ef ON bd.extracted_features_id = ef.id
                 JOIN predictions p ON ef.prediction_id = p.id
                 JOIN images i ON p.image_id = i.id
+                JOIN annotations a ON i.id = a.image_id
                 WHERE i.location_id = %s
+                  AND a.label->>'is_validated' = 'true'
             ) AS categorized
             GROUP BY size_category
             ORDER BY 
@@ -203,6 +207,8 @@ def render_farmer_dashboard(request, uiid):
                 JOIN extracted_features ef ON bd.extracted_features_id = ef.id
                 JOIN predictions p ON ef.prediction_id = p.id
                 JOIN images i ON p.image_id = i.id
+                JOIN annotations a ON i.id = a.image_id
+                WHERE a.label->>'is_validated' = 'true'
             ) AS categorized
             GROUP BY size_category
             ORDER BY 
@@ -423,13 +429,18 @@ def render_admin_dashboard(request):
         """
 
         beans_features = """
-        SELECT ef.major_axis_length, ef.minor_axis_length, ef.perimeter, ef.area, ef.solidity, ef.extent, ef.eccentricity, ef.mean_intensity
+        SELECT DISTINCT ef.major_axis_length, ef.minor_axis_length, ef.perimeter, ef.area, ef.solidity, ef.extent, ef.eccentricity, ef.mean_intensity
         FROM extracted_features ef TABLESAMPLE SYSTEM (100)
         JOIN predictions p ON ef.prediction_id = p.id
         JOIN images ON p.image_id = images.id
+        JOIN annotations ON annotations.image_id = images.id
         JOIN users ON images.location_id = users.location_id
         JOIN user_roles ON users.id = user_roles.user_id
         JOIN roles ON user_roles.role_id = roles.id
+        
+        JOIN annotations a ON images.id=a.image_id
+        WHERE a.label->>'is_validated' = 'true'
+        
         """
         if location_id or role or year:
             count_bean_types += " WHERE"
@@ -594,6 +605,9 @@ def render_admin_dashboard(request):
         JOIN users ON images.location_id = users.location_id
         JOIN user_roles ON users.id = user_roles.user_id
         JOIN roles ON user_roles.role_id = roles.id
+
+        JOIN annotations a ON images.id=a.image_id
+
         """
         
         # Apply filters if needed
@@ -618,6 +632,12 @@ def render_admin_dashboard(request):
             total_predictions_query += condition_str
             confidence_stats_query += condition_str
             features_stats_query += condition_str
+
+            # Add a.label->>'is_validated' = 'true' in where condition in features_stats_query 
+            if "WHERE" in features_stats_query:
+                features_stats_query += " AND a.label->>'is_validated' = 'true'"
+            else:
+                features_stats_query += " WHERE a.label->>'is_validated' = 'true'"
             
             cursor.execute(total_predictions_query, params)
             total_predictions = cursor.fetchone()
@@ -626,6 +646,11 @@ def render_admin_dashboard(request):
             cursor.execute(features_stats_query + " GROUP BY images.location_id, l.name", params)
             features_stats = cursor.fetchall()
         else:
+            # Add a.label->>'is_validated' = 'true' in wherse condition in features_stats_query 
+            if "WHERE" in features_stats_query:
+                features_stats_query += " AND a.label->>'is_validated' = 'true'"
+            else:
+                features_stats_query += " WHERE a.label->>'is_validated' = 'true'"
             cursor.execute(total_predictions_query)
             total_predictions = cursor.fetchone()
             cursor.execute(confidence_stats_query)
@@ -781,6 +806,12 @@ def render_admin_dashboard(request):
         else:
             cursor.execute(raw_features_query)
         
+        # a.label->>'is_validated' = 'true' in where condition in raw_features_query
+        if "WHERE" in raw_features_query:
+            raw_features_query += " AND a.label->>'is_validated' = 'true'"
+        else:
+            raw_features_query += " WHERE a.label->>'is_validated' = 'true'"
+        
         raw_features = cursor.fetchall()
         
         # Structure raw features for boxplot grouped by farm
@@ -839,6 +870,7 @@ def render_admin_dashboard(request):
         # Size classification based on area
         shape_size_dist_query = """
         SELECT 
+            DISTINCT
             l.name as farm_name,
             CASE 
                 WHEN ef.area < %s THEN 'Small'
@@ -857,6 +889,7 @@ def render_admin_dashboard(request):
         JOIN images ON p.image_id = images.id
         JOIN locations l ON images.location_id = l.id
         JOIN users ON images.location_id = users.location_id
+        
         JOIN user_roles ON users.id = user_roles.user_id
         JOIN roles ON user_roles.role_id = roles.id
         WHERE ef.major_axis_length IS NOT NULL 

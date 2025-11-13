@@ -1350,7 +1350,7 @@ def get_all_beans(request):
                 
                 # Process predictions using pre-extracted data
                 bean_type = img_data['bean_type'] or "Unknown"
-                confidence = float(img_data['confidence']) if img_data['confidence'] else 0.0
+                
                 extracted_features_data = {}
                 for row in all_rows:
                     extracted_features_data[row[23]] = { # per ef id
@@ -1369,12 +1369,17 @@ def get_all_beans(request):
                     }
 
                 for detection in bean_detections:
-                    confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence']) if extracted_features_data[detection['extracted_feature_id']] else 0.8
+                    if extracted_features_data[detection['extracted_feature_id']]['confidence']:
+                        confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence'])
+                    else:
+                        confidence = 0.8
+                    # print confidence if it is None or other non-float
+                    print(f"DEBUG: Bean detection {detection['bean_id']} confidence: {confidence}")
                     predictions.append({
                         "bean_id": detection['bean_id'],
                         "is_validated": is_validated,
                         "bean_type": bean_type,
-                        "confidence": confidence,
+                        "confidence": confidence if confidence is None or isinstance(confidence, float) else 0.8,
                         "length_mm": detection['length_mm'],
                         "width_mm": detection['width_mm'],
                         "bbox": [detection['bbox_x'], detection['bbox_y'], 
@@ -1490,9 +1495,12 @@ def validate_beans(request):
     bean_type = data.get('bean_type')
     extracted_feature_id = data.get('extracted_feature_id')
     features = data.get('features', {})
+    confidence = data.get('confidence', None)
     is_validated = data.get('is_validated', False)
     annotated_by = data.get('annotated_by', {})  # New field for annotator information
-    
+
+    #print features and confidence
+    print(f"DEBUG: validate_beans called with image_id={image_id}, bean_id={bean_id}, bean_type={bean_type}, extracted_feature_id={extracted_feature_id}, features={features}, confidence={confidence}, is_validated={is_validated}, annotated_by={annotated_by}")
     if not bean_id or not bean_type or not features:
         return Response({"error": "bean_id, bean_type, and features are required"}, status=400)
     
@@ -1545,7 +1553,8 @@ def validate_beans(request):
             prediction_update_data = {
                 "predicted_label": {
                     "bean_number": bean_id,
-                    "bean_type": bean_type
+                    "bean_type": bean_type,
+                    "confidence": confidence
                 }
             }
             

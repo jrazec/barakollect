@@ -242,6 +242,7 @@ export interface AdminPredictedImage {
     mean_intensity: number;
     equivalent_diameter: number;
     bean_type: string;
+    confidence?: number;
   } | BeanDetection[]; // Can be either legacy format or new multi-bean format
 }
 

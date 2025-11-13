@@ -4,6 +4,8 @@ import type { TableColumn } from '@/components/TableComponent';
 import AdminService from '@/services/adminService';
 import type { UserManagementUser, PaginationData } from '@/interfaces/global';
 import PageHeader from '@/components/PageHeader';
+import { useNavigate } from 'react-router-dom';
+import useNotification from '@/hooks/useNotification';
 
 
 
@@ -21,8 +23,9 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]); 
-
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const navigate = useNavigate();
+  const { showSuccess } = useNotification();
   // Search and filters
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'farmer' | 'researcher' | 'admin'>('all');
@@ -74,19 +77,19 @@ const UserManagement: React.FC<UserManagementProps> = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      
+
       // Build search parameters
       const searchParams: any = {};
       if (searchTerm.trim()) searchParams.search_username = searchTerm.trim();
       if (roleFilter !== 'all') searchParams.role = roleFilter;
       if (locationFilter !== 'all') searchParams.location = locationFilter;
-      
+
       const result = await AdminService.getUsers(
         pagination.currentPage,
         pagination.itemsPerPage,
         Object.keys(searchParams).length > 0 ? searchParams : undefined
       );
-      
+
       setUsers(result.data);
       setPagination(result.pagination);
     } catch (err) {
@@ -180,8 +183,8 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       }
 
       // Update user in local state
-      const updatedUsers = users.map(user => 
-        user.id === selectedUser.id 
+      const updatedUsers = users.map(user =>
+        user.id === selectedUser.id
           ? { ...user, is_deleted: !user.is_deleted }
           : user
       );
@@ -205,6 +208,9 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       setShowDeleteModal(false);
       setSelectedUser(null);
       setDeleteConfirmUsername('');
+      showSuccess('Delete Successful', 'User deleted successfully.');
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Pause for 2 seconds
+      navigate(0); // Reload the current page
     } catch (err) {
       console.error('Error deleting user:', err);
       setError('Failed to delete user. Please try again.');
@@ -304,7 +310,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
       label: '',
       width: 'w-1/6',
       render: (_, row) => (
-        <button 
+        <button
           onClick={() => openViewModal(row)}
           className="button-secondary hover:text-opacity-80 font-accent text-sm"
         >
@@ -319,11 +325,10 @@ const UserManagement: React.FC<UserManagementProps> = () => {
           <span>Actions</span>
           <button
             onClick={() => setDeleteMode(!deleteMode)}
-            className={`px-2 py-1 rounded text-xs font-accent transition-colors ${
-              deleteMode 
-                ? '!bg-red-500 text-red-700 hover:bg-red-200' 
+            className={`px-2 py-1 rounded text-xs font-accent transition-colors ${deleteMode
+                ? '!bg-red-500 text-red-700 hover:bg-red-200'
                 : '!bg-gray-500 text-gray-700 hover:bg-gray-200'
-            }`}
+              }`}
             title={deleteMode ? 'Switch to Deactivate mode' : 'Switch to Delete mode'}
           >
             {deleteMode ? 'Delete Mode' : 'Disable Mode'}
@@ -349,11 +354,10 @@ const UserManagement: React.FC<UserManagementProps> = () => {
           ) : (
             <button
               onClick={() => openDeactivateModal(row)}
-              className={`font-accent text-sm min-w-30 ${
-                row.is_deleted 
-                  ? 'text-green-600 hover:text-green-800' 
+              className={`font-accent text-sm min-w-30 ${row.is_deleted
+                  ? 'text-green-600 hover:text-green-800'
                   : 'text-orange-600 hover:text-orange-800'
-              }`}
+                }`}
             >
               {row.is_deleted ? 'Activate' : 'Deactivate'}
             </button>
@@ -501,16 +505,16 @@ const UserManagement: React.FC<UserManagementProps> = () => {
               {/* TODO handle submiut here  */}
               <form onSubmit={handleSubmit} className="space-y-4">
                 {(showAddModal) && (
-                   <div>
-                  <label className="block text-sm font-accent text-gray-600 mb-2">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-accent text-gray-600 mb-2">Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)] focus:border-transparent"
+                    />
+                  </div>
                 )}
                 <div>
                   <label className="block text-sm font-accent text-gray-600 mb-2">First Name</label>
@@ -645,11 +649,10 @@ const UserManagement: React.FC<UserManagementProps> = () => {
               <div className="flex gap-3">
                 <button
                   onClick={handleActivateDeactivate}
-                  className={`flex-1 px-4 py-2 rounded-lg font-accent transition-colors text-white ${
-                    selectedUser.is_deleted
+                  className={`flex-1 px-4 py-2 rounded-lg font-accent transition-colors text-white ${selectedUser.is_deleted
                       ? 'bg-green-600 hover:bg-green-700'
                       : 'bg-orange-600 hover:bg-orange-700'
-                  }`}
+                    }`}
                 >
                   {selectedUser.is_deleted ? 'Activate' : 'Deactivate'}
                 </button>
@@ -696,7 +699,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                 <p className="text-red-600 font-accent font-semibold mb-4">
                   This action cannot be undone!
                 </p>
-                
+
                 <div>
                   <label className="block text-sm font-accent text-gray-600 mb-2">
                     Type the username "<strong>{selectedUser.username}</strong>" to confirm deletion:
@@ -764,11 +767,10 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                 <div>
                   <label className="block text-sm font-accent text-gray-600 mb-1">Role</label>
                   <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-accent ${
-                      selectedUser.role === 'admin' ? 'bg-red-100 text-red-800' :
-                      selectedUser.role === 'researcher' ? 'bg-blue-100 text-blue-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-accent ${selectedUser.role === 'admin' ? 'bg-red-100 text-red-800' :
+                        selectedUser.role === 'researcher' ? 'bg-blue-100 text-blue-800' :
+                          'bg-green-100 text-green-800'
+                      }`}>
                       {selectedUser.role}
                     </span>
                   </div>
@@ -806,11 +808,10 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                 <div>
                   <label className="block text-sm font-accent text-gray-600 mb-1">Account Status</label>
                   <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-accent ${
-                      selectedUser.is_deleted 
-                        ? 'bg-red-100 text-red-800' 
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-accent ${selectedUser.is_deleted
+                        ? 'bg-red-100 text-red-800'
                         : 'bg-green-100 text-green-800'
-                    }`}>
+                      }`}>
                       {selectedUser.is_deleted ? 'Deactivated' : 'Active'}
                     </span>
                   </div>
@@ -848,7 +849,7 @@ const UserManagement: React.FC<UserManagementProps> = () => {
                 )}
               </div>
 
-              
+
             </div>
           </div>
         )}
