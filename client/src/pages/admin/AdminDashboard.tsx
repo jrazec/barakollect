@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import StatCard from '@/components/StatCard';
 import CardComponent from '@/components/CardComponent';
-import UserActivityChart from '@/components/admin/UserActivityChart';
 import ScatterRatioRoundnessChart from '@/components/admin/ScatterRatioRoundnessChart';
-import BeanSubmissionsChart from '@/components/admin/BeanSubmissionsChart';
-import UserLogsComponent from '@/components/admin/UserLogsComponent';
 import SystemStatusComponent from '@/components/admin/SystemStatusComponent';
 import UploadStatisticsChart from '@/components/admin/UploadStatisticsChart';
 import CorrelationMatrixChart from '@/components/admin/CorrelationMatrixChart';
@@ -14,9 +11,6 @@ import { useCachedAdminService } from '@/hooks/useCachedServices';
 import { useCache } from '@/contexts/CacheContext';
 import type {
   AdminStats,
-  UserActivity,
-  BeanSubmission,
-  UserLog,
   SystemStatus
 } from '@/interfaces/global';
 import DashboardHeader from '@/components/DashboardHeader';
@@ -26,9 +20,6 @@ import BoxPlotChart from '@/components/admin/BoxPlotChart';
 
 export default function AdminDashboard() {
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
-  const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
-  const [beanSubmissions, setBeanSubmissions] = useState<BeanSubmission[]>([]);
-  const [userLogs, setUserLogs] = useState<UserLog[]>([]);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [boxPlotData, setBoxPlotData] = useState<Array<{ 
     group: string; 
@@ -62,18 +53,12 @@ export default function AdminDashboard() {
         setError(null);
 
         // Fetch all dashboard data in parallel with caching
-        const [stats, activity, submissions, logs, status] = await Promise.all([
+        const [stats, status] = await Promise.all([
           cachedAdminService.getAdminStats(),
-          cachedAdminService.getUserActivity(),
-          cachedAdminService.getBeanSubmissions(),
-          cachedAdminService.getUserLogs(),
           cachedAdminService.getSystemStatus()
         ]);
 
         setAdminStats(stats);
-        setUserActivity(activity);
-        setBeanSubmissions(submissions);
-        setUserLogs(logs);
         setSystemStatus(status);
 
         // Prepare boxplot data from boxplot_features
@@ -124,18 +109,12 @@ export default function AdminDashboard() {
 
     setLoading(true);
     try {
-      const [stats, activity, submissions, logs, status] = await Promise.all([
+      const [stats, status] = await Promise.all([
         cachedAdminService.getAdminStats(),
-        cachedAdminService.getUserActivity(),
-        cachedAdminService.getBeanSubmissions(),
-        cachedAdminService.getUserLogs(),
         cachedAdminService.getSystemStatus()
       ]);
 
       setAdminStats(stats);
-      setUserActivity(activity);
-      setBeanSubmissions(submissions);
-      setUserLogs(logs);
       setSystemStatus(status);
 
       // Prepare boxplot data from boxplot_features
@@ -424,18 +403,18 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        {/* Morphology & Bean Insights Section */}
+        {/* Dataset Verification Section */}
         <section className="space-y-6 sm:space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <BarChart className="h-6 w-6 text-[var(--arabica-brown)]" />
             <div>
-              <h2 className="text-xl font-semibold text-[#3c2715]">Morphology &amp; Bean Insights</h2>
-              <p className="text-sm text-gray-500">Analyze prediction quality, correlations, and geometry trends.</p>
+              <h2 className="text-xl font-semibold text-[#3c2715]">Dataset Verification</h2>
+              <p className="text-sm text-gray-500">Validate prediction quality, audit uploads, and surface anomalies for review.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-            <div className="xl:col-span-2 min-h-[500px]">
+          <div className="space-y-6">
+            <div className="min-h-[520px]">
               <BeanAnalyticsChart
                 totalPredictions={adminStats.total_predictions}
                 avgConfidence={adminStats.avg_confidence}
@@ -446,7 +425,73 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <div className="min-h-[400px]">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+              <div className="min-h-[460px]">
+                <CardComponent
+                  item={{
+                    title: "Upload Statistics",
+                    subtitle: "Farm activity, top contributors, and bean type mix",
+                    content: (
+                      <div className="w-full">
+                        <UploadStatisticsChart
+                          farmData={adminStats.farms}
+                          topUploaderData={adminStats.top_uploaders}
+                          beanTypeData={adminStats.bean_types}
+                        />
+                      </div>
+                    ),
+                    description: "Monitor upload distribution across farms and roles"
+                  }}
+                />
+              </div>
+
+              <div className="min-h-[460px]">
+                {loading ? (
+                  <div className="bg-[var(--parchment)] rounded-lg shadow p-6 h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
+                      <p className="text-gray-600 font-accent">Loading outlier analysis...</p>
+                    </div>
+                  </div>
+                ) : boxPlotData && boxPlotData.length > 0 ? (
+                  <CardComponent
+                    item={{
+                      title: "Outlier Detection - Bean Feature Analysis",
+                      subtitle: "Boxplot distribution showing quartiles, whiskers, and outliers",
+                      content: (
+                        <div className="w-full">
+                          <BoxPlotChart
+                            data={boxPlotData}
+                            yAxisLabel="Feature Value"
+                          />
+                        </div>
+                      )
+                    }}
+                  />
+                ) : (
+                  <div className="bg-[var(--parchment)] rounded-lg shadow p-6 h-full flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <p>No feature data available for outlier analysis</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Shape & Pattern Analysis Section */}
+        <section className="space-y-6 sm:space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <BarChart className="h-6 w-6 text-[var(--arabica-brown)]" />
+            <div>
+              <h2 className="text-xl font-semibold text-[#3c2715]">Shape &amp; Pattern Analysis</h2>
+              <p className="text-sm text-gray-500">Track geometric trends, feature relationships, and distribution shifts by farm.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+            <div className="min-h-[420px]">
               <CardComponent
                 item={{
                   title: "Feature Correlation Matrix",
@@ -457,67 +502,12 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <div className="min-h-[400px]">
-              <CardComponent
-                item={{
-                  title: "Upload Statistics",
-                  subtitle: "Farm data, top uploaders, and bean type distribution",
-                  content: <UploadStatisticsChart
-                    farmData={adminStats.farms}
-                    topUploaderData={adminStats.top_uploaders}
-                    beanTypeData={adminStats.bean_types}
-                  />,
-                  description: "Comprehensive upload analytics across farms and users"
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-            <div className="min-h-[400px]">
+            <div className="min-h-[420px]">
               {loading ? (
-                <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
-                  <div className="flex items-center justify-center h-[400px]">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
-                      <p className="text-gray-600 font-accent">Loading outlier analysis...</p>
-                    </div>
-                  </div>
-                </div>
-              ) : boxPlotData && boxPlotData.length > 0 ? (
-                <CardComponent
-                  item={{
-                    title: "Outlier Detection - Bean Feature Analysis",
-                    subtitle: "Boxplot distribution showing quartiles, whiskers, and outliers",
-                    content: (
-                      <div className="w-full">
-                        <BoxPlotChart
-                          data={boxPlotData}
-                          yAxisLabel="Feature Value"
-                        />
-                      </div>
-                    )
-                  }}
-                />
-              ) : (
-                <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
-                  <div className="flex items-center justify-center h-[300px] text-gray-500">
-                    <div className="text-center">
-                      <p>No feature data available for outlier analysis</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="min-h-[400px]">
-              {loading ? (
-                <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
-                  <div className="flex items-center justify-center h-[400px]">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
-                      <p className="text-gray-600 font-accent">Loading shape analysis...</p>
-                    </div>
+                <div className="bg-[var(--parchment)] rounded-lg shadow p-6 h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
+                    <p className="text-gray-600 font-accent">Loading shape analysis...</p>
                   </div>
                 </div>
               ) : adminStats && adminStats.shape_size_distribution && Object.keys(adminStats.shape_size_distribution).length > 0 ? (
@@ -537,18 +527,16 @@ export default function AdminDashboard() {
                   }}
                 />
               ) : (
-                <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
-                  <div className="flex items-center justify-center h-[300px] text-gray-500">
-                    <div className="text-center">
-                      <p>No shape-size distribution data available</p>
-                    </div>
+                <div className="bg-[var(--parchment)] rounded-lg shadow p-6 h-full flex items-center justify-center text-gray-500">
+                  <div className="text-center">
+                    <p>No shape-size distribution data available</p>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="min-h-[400px]">
+          <div className="min-h-[420px]">
             <CardComponent
               item={{
                 title: "Scatter Ratio and Roundness",

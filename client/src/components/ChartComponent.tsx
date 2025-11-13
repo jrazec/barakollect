@@ -104,18 +104,36 @@ const LinearProgressBar = ({ data }: { data: { total_size: number, size: string 
     );
 }
 
-const HorizontalBarChartComponent = ({ data }: { data: { name: string; uv: number; }[] }) => (
+interface HorizontalBarChartProps {
+    data: { name: string; uv: number; }[];
+    barColor?: string;
+    gridColor?: string;
+    axisColor?: string;
+}
+
+const HorizontalBarChartComponent = ({
+    data,
+    barColor = '#8C4A2F',
+    gridColor = '#f0f0f0',
+    axisColor = '#666666'
+}: HorizontalBarChartProps) => (
     <ResponsiveContainer width="100%" height="100%">
         <BarChart
             layout="vertical"
             data={[...data].sort((a, b) => b.uv - a.uv)}
-            margin={{ top: 1, right: 0, left: -5, bottom: 0 }}
+            margin={{ top: 8, right: 16, left: 16, bottom: 8 }}
         >
-            <XAxis type="number" />
-            <YAxis type="category" dataKey="name" />
-            <CartesianGrid strokeDasharray="3 3" />
-            <Tooltip />
-            <Bar dataKey="uv" fill="#8884d8" />
+            <XAxis type="number" stroke={axisColor} tickLine={false} fontSize={12} />
+            <YAxis type="category" dataKey="name" stroke={axisColor} tickLine={false} fontSize={12} width={120} />
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+            <Tooltip
+                contentStyle={{
+                    backgroundColor: 'var(--parchment)',
+                    border: '1px solid rgba(92, 59, 44, 0.15)',
+                    borderRadius: '8px'
+                }}
+            />
+            <Bar dataKey="uv" fill={barColor} radius={[6, 6, 6, 6]} />
         </BarChart>
     </ResponsiveContainer>
 );

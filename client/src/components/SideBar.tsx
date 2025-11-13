@@ -211,8 +211,8 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
 
             {/* Logout Confirmation Modal */}
             {showLogoutModal && (
-                <div className="fixed inset-0 z-1001 flex items-center justify-center bg-black/65">
-                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 relative z-51">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
                                 <LogOutIcon className="w-6 h-6 text-red-600" />
@@ -240,6 +240,7 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                     </div>
                 </div>
             )}
+
         </>
     );
 };
