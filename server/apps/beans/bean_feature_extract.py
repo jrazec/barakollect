@@ -181,7 +181,7 @@ class BeanFeatureExtractor:
         return debug_img
 
     # ---------- Feature extraction ----------
-    def extract_features_for_all_beans(self, mask, gray, bean_bboxes):
+    def extract_features_for_all_beans(self, mask, gray, bean_bboxes,predictions):
         all_beans = []
         labeled = label(mask)
         props = regionprops(labeled, intensity_image=gray)
@@ -197,7 +197,8 @@ class BeanFeatureExtractor:
                     "length_mm": features["major_axis_length_mm"],
                     "width_mm": features["minor_axis_length_mm"],
                     "bbox": bbox,
-                    "features": features
+                    "features": features,
+                    "confidence": predictions[i]["confidence"] if i < len(predictions) else None
                 })
         return all_beans
 

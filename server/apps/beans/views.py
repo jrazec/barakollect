@@ -232,6 +232,7 @@ def get_user_beans(request, user_id):
                     'solidity': row[20],
                     'mean_intensity': row[21],
                     'equivalent_diameter': row[22],
+                    'confidence': row[12],
                 }
         
         for img_data in images_data.values():
@@ -257,11 +258,11 @@ def get_user_beans(request, user_id):
                 
                 # Process predictions using pre-extracted data
                 bean_type = img_data['bean_type']
-                confidence = float(img_data['confidence']) if img_data['confidence'] else None
+                
 
                 for detection in bean_detections:
                     features = extracted_features_data.get(detection['extracted_feature_id'], {})
-                    
+                    confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence']) if extracted_features_data[detection['extracted_feature_id']] else 0.0
                     predictions.append({
                         "bean_id": detection['bean_id'],
                         "is_validated": is_validated,
@@ -444,7 +445,7 @@ def process_bean(request):
             black_bg, mask, gray, bean_bboxes, predictions = extractor.preprocess_image(img)
             
             # Step 3: Extract features for all beans
-            all_beans = extractor.extract_features_for_all_beans(mask, gray, bean_bboxes)
+            all_beans = extractor.extract_features_for_all_beans(mask, gray, bean_bboxes, predictions)
             
             # Add comment to each bean if provided
             for bean in all_beans:
@@ -518,7 +519,7 @@ def process_bean(request):
                     print(f"DEBUG: Saving {len(all_beans)} beans")
                     for bean_index, bean in enumerate(all_beans):
                         # Generate random confidence for demo purposes
-                        confidence = round(random.uniform(0.75, 0.95), 2)
+                        confidence = bean.get('confidence', random.uniform(0.5, 1.0))
                         
                         # Create Prediction record
                         prediction = Prediction.objects.create(
@@ -532,7 +533,7 @@ def process_bean(request):
                                 "confidence": confidence
                             }
                         )
-                        print(f"DEBUG: Created Prediction {prediction.id} for bean {bean['bean_id']}")
+                        print(f"DEBUG: Created Prediction {prediction.id} for bean {bean['bean_id']}, confidence={confidence}")
                         
                         # Extract features for ExtractedFeature table
                         features = bean['features']
@@ -992,6 +993,7 @@ def get_annotations(request):
                     'solidity': row[20],
                     'mean_intensity': row[21],
                     'equivalent_diameter': row[22],
+                    'confidence': row[12],
                 }
         
         for img_data in images_data.values():
@@ -1017,11 +1019,11 @@ def get_annotations(request):
                 
                 # Process predictions using pre-extracted data
                 bean_type = img_data['bean_type'] or "Unknown"
-                confidence = float(img_data['confidence']) if img_data['confidence'] else 0.0
+                
 
                 for detection in bean_detections:
                     features = extracted_features_data.get(detection['extracted_feature_id'], {})
-                    
+                    confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence']) if extracted_features_data[detection['extracted_feature_id']] else 0.0
                     predictions.append({
                         "bean_id": detection['bean_id'],
                         "is_validated": is_validated,
