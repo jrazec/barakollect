@@ -232,6 +232,7 @@ def get_user_beans(request, user_id):
                     'solidity': row[20],
                     'mean_intensity': row[21],
                     'equivalent_diameter': row[22],
+                    'confidence': row[12],
                 }
         
         for img_data in images_data.values():
@@ -257,11 +258,10 @@ def get_user_beans(request, user_id):
                 
                 # Process predictions using pre-extracted data
                 bean_type = img_data['bean_type']
-                confidence = float(img_data['confidence']) if img_data['confidence'] else None
 
                 for detection in bean_detections:
                     features = extracted_features_data.get(detection['extracted_feature_id'], {})
-                    
+                    confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence']) if img_data['confidence'] else 0.8
                     predictions.append({
                         "bean_id": detection['bean_id'],
                         "is_validated": is_validated,
@@ -315,8 +315,6 @@ def get_user_beans(request, user_id):
         print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
         return JsonResponse({"error": str(e)}, status=500)
 
-
-
 extractor = BeanFeatureExtractor()
 
 @api_view(['POST'])
@@ -325,6 +323,34 @@ def process_bean(request):
     """
     Process single or multiple images for bean detection and feature extraction
     """
+    system_settings = {}
+
+    # Fetch system settings from the database
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT save_image, accept_predictions, image_accepted_count
+            FROM public.plans
+            LIMIT 1
+        """)
+        row = cursor.fetchone()
+        if row:
+            system_settings = {
+                'save_images': row[0],
+                'accept_predictions': row[1],
+                'max_images': row[2]
+            }
+        else:
+            system_settings = {
+                'save_images': True,
+                'accept_predictions': True,
+                'max_images': 5
+            }
+
+    if system_settings['accept_predictions'] is False:
+        return Response({"error": "System is not accepting predictions at this time."}, status=403)
+
+    
+
     # Handle both single image and multiple images
     images = []
     
@@ -416,7 +442,7 @@ def process_bean(request):
             black_bg, mask, gray, bean_bboxes, predictions = extractor.preprocess_image(img)
             
             # Step 3: Extract features for all beans
-            all_beans = extractor.extract_features_for_all_beans(mask, gray, bean_bboxes)
+            all_beans = extractor.extract_features_for_all_beans(mask, gray, bean_bboxes, predictions)
             
             # Add comment to each bean if provided
             for bean in all_beans:
@@ -460,14 +486,14 @@ def process_bean(request):
                     file_obj.seek(0)  # Reset file pointer
                     
                     print(f"DEBUG: Uploading to Supabase: {original_filename}")
-                    try:
+
+                    # THIS
+                    if system_settings['save_images']: 
                         supabase_upload = supabase.storage.from_("Beans").upload(original_filename, file_obj.read())
                         print(f"DEBUG: Supabase upload result: {supabase_upload}")
-                        # Check if upload was successful by checking if we got a valid response
-                        if not hasattr(supabase_upload, 'path') or not supabase_upload.path:
-                            raise Exception(f"Supabase upload failed: Invalid response")
-                    except Exception as upload_error:
-                        raise Exception(f"Failed to upload to Supabase: {str(upload_error)}")
+                    else:
+                        print(f"DEBUG: Skipping Supabase upload as per system settings")
+
                     
                     # Create Image record with Supabase storage URL
                     print(f"DEBUG: Creating Image record")
@@ -490,7 +516,7 @@ def process_bean(request):
                     print(f"DEBUG: Saving {len(all_beans)} beans")
                     for bean_index, bean in enumerate(all_beans):
                         # Generate random confidence for demo purposes
-                        confidence = round(random.uniform(0.75, 0.95), 2)
+                        confidence = bean.get('confidence', random.uniform(0.5, 1.0))
                         
                         # Create Prediction record
                         prediction = Prediction.objects.create(
@@ -504,7 +530,7 @@ def process_bean(request):
                                 "confidence": confidence
                             }
                         )
-                        print(f"DEBUG: Created Prediction {prediction.id} for bean {bean['bean_id']}")
+                        print(f"DEBUG: Created Prediction {prediction.id} for bean {bean['bean_id']}, confidence={confidence}")
                         
                         # Extract features for ExtractedFeature table
                         features = bean['features']
@@ -1076,7 +1102,7 @@ def get_annotations(request):
         import traceback
         print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
         return Response({"error": str(e)}, status=500)
-
+    
 @api_view(['GET'])
 def get_all_beans(request):
     try:
@@ -1324,7 +1350,7 @@ def get_all_beans(request):
                 
                 # Process predictions using pre-extracted data
                 bean_type = img_data['bean_type'] or "Unknown"
-                confidence = float(img_data['confidence']) if img_data['confidence'] else 0.0
+                
                 extracted_features_data = {}
                 for row in all_rows:
                     extracted_features_data[row[23]] = { # per ef id
@@ -1338,16 +1364,22 @@ def get_all_beans(request):
                         'solidity': row[20],
                         'mean_intensity': row[21],
                         'equivalent_diameter': row[22],
-                        'extracted_feature_id': row[23]
+                        'extracted_feature_id': row[23],
+                        'confidence': row[12],
                     }
 
                 for detection in bean_detections:
-                    
+                    if extracted_features_data[detection['extracted_feature_id']]['confidence']:
+                        confidence = float(extracted_features_data[detection['extracted_feature_id']]['confidence'])
+                    else:
+                        confidence = 0.8
+                    # print confidence if it is None or other non-float
+                    print(f"DEBUG: Bean detection {detection['bean_id']} confidence: {confidence}")
                     predictions.append({
                         "bean_id": detection['bean_id'],
                         "is_validated": is_validated,
                         "bean_type": bean_type,
-                        "confidence": confidence,
+                        "confidence": confidence if confidence is None or isinstance(confidence, float) else 0.8,
                         "length_mm": detection['length_mm'],
                         "width_mm": detection['width_mm'],
                         "bbox": [detection['bbox_x'], detection['bbox_y'], 
@@ -1444,7 +1476,7 @@ def get_all_beans(request):
         import traceback
         print(f"DEBUG: FULL TRACEBACK: {traceback.format_exc()}")
         return Response({"error": str(e)}, status=500)
-
+    
 @api_view(['POST'])
 def validate_beans(request):
     """
@@ -1463,9 +1495,12 @@ def validate_beans(request):
     bean_type = data.get('bean_type')
     extracted_feature_id = data.get('extracted_feature_id')
     features = data.get('features', {})
+    confidence = data.get('confidence', None)
     is_validated = data.get('is_validated', False)
     annotated_by = data.get('annotated_by', {})  # New field for annotator information
-    
+
+    #print features and confidence
+    print(f"DEBUG: validate_beans called with image_id={image_id}, bean_id={bean_id}, bean_type={bean_type}, extracted_feature_id={extracted_feature_id}, features={features}, confidence={confidence}, is_validated={is_validated}, annotated_by={annotated_by}")
     if not bean_id or not bean_type or not features:
         return Response({"error": "bean_id, bean_type, and features are required"}, status=400)
     
@@ -1519,10 +1554,8 @@ def validate_beans(request):
                 "predicted_label": {
                     "bean_number": bean_id,
                     "bean_type": bean_type,
-                    "confidence": 1.0  # Set confidence to 1.0 for validated beans
-                },
-                "confidence_score": 1.0,
-                "model_used": "human_validated"
+                    "confidence": confidence
+                }
             }
             
             # Add annotated_by information if available
@@ -1834,3 +1867,29 @@ def upload_records(request):
         print(f"DEBUG: Error in upload_records: {str(e)}")
         print(f"DEBUG: Full traceback: {traceback.format_exc()}")
         return Response({"error": f"Upload failed: {str(e)}"}, status=500)
+    
+@api_view(['GET'])
+def get_max_upload_images(request):
+    """
+    Return the maximum number of images allowed per upload from system settings
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT image_accepted_count FROM plans")
+            row = cursor.fetchone()
+            if not row:
+                return Response({"error": "System settings not found"}, status=500)
+
+            max_images = row[0]  # Assuming the count is stored in the first column
+
+        
+        print(f"DEBUG: Max upload images limit: {max_images}")
+        
+        return Response({
+            "max_upload_images": max_images
+        }, status=200)
+        
+    except Exception as e:
+        print(f"DEBUG: Error in get_max_upload_images: {str(e)}")
+        print(f"DEBUG: Full traceback: {traceback.format_exc()}")
+        return Response({"error": f"Failed to retrieve max upload images: {str(e)}"}, status=500)

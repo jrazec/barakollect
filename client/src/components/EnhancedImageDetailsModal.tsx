@@ -1,12 +1,38 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import BeanDetectionCanvas from './BeanDetectionCanvas';
 import BeanImageExtractor from './BeanImageExtractor';
-import { 
-  calculateBeanMetrics, 
-  findLargestBean, 
-  findSmallestBean, 
-  getBeanCardStyling 
+import {
+  calculateBeanMetrics,
+  findLargestBean,
+  findSmallestBean,
+  getBeanCardStyling
 } from '../utils/beanAnalysisUtils';
+
+const chipBase = 'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium';
+const MorphologyTags: React.FC<{ classification?: BeanClassification | null }> = ({ classification }) => {
+  if (!classification) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      <span className={`${chipBase} bg-blue-100 text-blue-700`}>
+        <span className="h-2 w-2 rounded-full bg-blue-500" />
+        Shape: {classification.shape}
+      </span>
+      <span className={`${chipBase} bg-amber-100 text-amber-700`}>
+        <span className="h-2 w-2 rounded-full bg-amber-500" />
+        Size: {classification.size}
+      </span>
+    </div>
+  );
+};
+const ConfidenceBadge: React.FC<{ value?: string | null }> = ({ value }) => {
+  if (!value) return null;
+  return (
+    <span className={`${chipBase} bg-emerald-100 text-emerald-700`}>
+      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+      Confidence: {value}
+    </span>
+  );
+};
 
 interface BeanDetection {
   bean_id: number;
@@ -42,6 +68,38 @@ interface EnhancedImageDetailsModalProps {
   onDeleteImage?: (id: string) => void;
 }
 
+type BeanClassification = {
+  size: string;
+  shape: string;
+  confidence: number | null;
+};
+
+const DEFAULT_SMALL_MAX = 200;
+const DEFAULT_MEDIUM_MAX = 400;
+
+const formatConfidence = (confidence?: number | null) => {
+  if (confidence === undefined || confidence === null || Number.isNaN(confidence)) {
+    return null;
+  }
+  const normalized = confidence > 1 ? confidence : confidence * 100;
+  const bounded = Math.min(Math.max(normalized, 0), 100);
+  return `${Math.round(bounded)}%`;
+};
+
+const calculatePercentile = (sortedValues: number[], percentile: number) => {
+  if (!sortedValues.length) {
+    return 0;
+  }
+  const index = (sortedValues.length - 1) * percentile;
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+  if (lower === upper) {
+    return sortedValues[lower];
+  }
+  const fraction = index - lower;
+  return sortedValues[lower] + fraction * (sortedValues[upper] - sortedValues[lower]);
+};
+
 const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
   isOpen,
   onClose,
@@ -59,12 +117,104 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
   if (!isOpen) return null;
 
   const beans = image.predictions || [];
+
+  const beanClassifications = useMemo(() => {
+    if (!beans.length) {
+      return {};
+    }
+
+    const areaValues = beans
+      .map((bean) => {
+        const area = bean.features?.area_mm2 ?? (bean.length_mm && bean.width_mm ? bean.length_mm * bean.width_mm : null);
+        return typeof area === 'number' && !Number.isNaN(area) && area > 0 ? area : null;
+      })
+      .filter((value): value is number => value !== null);
+
+    let smallMax = DEFAULT_SMALL_MAX;
+    let mediumMax = DEFAULT_MEDIUM_MAX;
+
+    if (areaValues.length >= 3) {
+      const sorted = [...areaValues].sort((a, b) => a - b);
+      smallMax = calculatePercentile(sorted, 0.33);
+      mediumMax = calculatePercentile(sorted, 0.67);
+    }
+
+    const classifySize = (area?: number | null) => {
+      if (!area || Number.isNaN(area) || area <= 0) {
+        return 'Unclassified';
+      }
+      if (area < smallMax) {
+        return 'Small';
+      }
+      if (area <= mediumMax) {
+        return 'Medium';
+      }
+      return 'Large';
+    };
+
+    const classifyShape = (bean: BeanDetection) => {
+      const features = bean.features || {};
+      const majorAxis = typeof features.major_axis_length_mm === 'number' ? features.major_axis_length_mm : bean.length_mm;
+      const minorAxis = typeof features.minor_axis_length_mm === 'number' ? features.minor_axis_length_mm : bean.width_mm;
+      const extent = typeof features.extent === 'number' ? features.extent : null;
+      const eccentricity = typeof features.eccentricity === 'number' ? features.eccentricity : null;
+
+      if (!minorAxis || minorAxis <= 0) {
+        return 'Unclassified';
+      }
+
+      const aspectRatio = majorAxis / minorAxis;
+      if (extent === null || eccentricity === null) {
+        return aspectRatio < 1.3 ? 'Round' : 'Teardrop';
+      }
+
+      const isRound = aspectRatio < 1.5 && eccentricity < 0.8 && extent > 0.75;
+      return isRound ? 'Round' : 'Teardrop';
+    };
+
+    const normalizeConfidence = (confidence?: number | null) => {
+      if (confidence === undefined || confidence === null || Number.isNaN(confidence)) {
+        return null;
+      }
+      const raw = confidence > 1 ? confidence / 100 : confidence;
+      return Math.min(Math.max(raw, 0), 1);
+    };
+
+    return beans.reduce<Record<number, BeanClassification>>((acc, bean) => {
+      const area = typeof bean.features?.area_mm2 === 'number'
+        ? bean.features.area_mm2
+        : (bean.length_mm && bean.width_mm ? bean.length_mm * bean.width_mm : null);
+
+      acc[bean.bean_id] = {
+        size: classifySize(area),
+        shape: classifyShape(bean),
+        confidence: normalizeConfidence(bean.confidence)
+      };
+      return acc;
+    }, {});
+  }, [beans]);
+
+  const getBeanClassification = (beanId: number): BeanClassification =>
+    beanClassifications[beanId] || { size: 'Unclassified', shape: 'Unclassified', confidence: null };
+
   const selectedBean = beans.find(bean => bean.bean_id === selectedBeanId);
+  const selectedBeanClassification = selectedBean ? getBeanClassification(selectedBean.bean_id) : null;
+  const selectedBeanConfidence = selectedBean
+    ? formatConfidence(
+      selectedBeanClassification?.confidence ?? selectedBean.confidence
+    )
+    : null;
 
   // Find best candidate (largest bean)
   const bestCandidate = beans.length > 0
     ? beans.reduce((prev, current) =>
       (prev.features?.area_mm2 > current.features?.area_mm2) ? prev : current
+    )
+    : null;
+  const bestCandidateClassification = bestCandidate ? getBeanClassification(bestCandidate.bean_id) : null;
+  const bestCandidateConfidence = bestCandidate
+    ? formatConfidence(
+      bestCandidateClassification?.confidence ?? bestCandidate.confidence
     )
     : null;
 
@@ -122,31 +272,28 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
             <div className="flex space-x-5 justify-end">
               <button
                 onClick={() => setActiveTab('overview')}
-                className={`py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'overview'
+                className={`py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview'
                     ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
                     : 'button-secondary'
-                }`}
+                  }`}
               >
                 Overview
               </button>
               <button
                 onClick={() => setActiveTab('beans')}
-                className={`py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'beans'
+                className={`py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'beans'
                     ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
                     : 'button-secondary'
-                }`}
+                  }`}
               >
                 Bean Details ({beans.length})
               </button>
               <button
                 onClick={() => setActiveTab('analysis')}
-                className={`py-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'analysis'
+                className={`py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'analysis'
                     ? 'border-[var(--espresso-black)] text-[var(--espresso-black)]'
                     : 'button-secondary'
-                }`}
+                  }`}
               >
                 Analysis
               </button>
@@ -187,42 +334,42 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         Image Information
-                    </h6>
-                    <div className="text-sm text-gray-600 space-y-2">
-                      {image.userName && (
-                        <div className="flex justify-between">
-                          <span className="font-medium">Submitted by:</span>
-                          <span>{image.userName}</span>
-                        </div>
-                      )}
-                      {image.userRole && (
-                        <div className="flex justify-between">
-                          <span className="font-medium">Role:</span>
-                          <span className="capitalize">{image.userRole}</span>
-                        </div>
-                      )}
-                      {image.location && (
-                        <div className="flex justify-between">
-                          <span className="font-medium">Location:</span>
-                          <span>{image.location}</span>
-                        </div>
-                      )}
-                      {(image.upload_date || image.submissionDate) && (
-                        <div className="flex justify-between">
-                          <span className="font-medium">Date:</span>
-                          <span>{new Date(image.upload_date || image.submissionDate || '').toLocaleDateString()}</span>
-                        </div>
-                      )}
-                      {image.allegedVariety && (
-                        <div className="flex justify-between">
-                          <span className="font-medium">Alleged Variety:</span>
-                          <span>{image.allegedVariety}</span>
-                        </div>
-                      )}
-                    </div>
+                      </h6>
+                      <div className="text-sm text-gray-600 space-y-2">
+                        {image.userName && (
+                          <div className="flex justify-between">
+                            <span className="font-medium">Submitted by:</span>
+                            <span>{image.userName}</span>
+                          </div>
+                        )}
+                        {image.userRole && (
+                          <div className="flex justify-between">
+                            <span className="font-medium">Role:</span>
+                            <span className="capitalize">{image.userRole}</span>
+                          </div>
+                        )}
+                        {image.location && (
+                          <div className="flex justify-between">
+                            <span className="font-medium">Location:</span>
+                            <span>{image.location}</span>
+                          </div>
+                        )}
+                        {(image.upload_date || image.submissionDate) && (
+                          <div className="flex justify-between">
+                            <span className="font-medium">Date:</span>
+                            <span>{new Date(image.upload_date || image.submissionDate || '').toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        {image.allegedVariety && (
+                          <div className="flex justify-between">
+                            <span className="font-medium">Alleged Variety:</span>
+                            <span>{image.allegedVariety}</span>
+                          </div>
+                        )}
+                      </div>
 
-                  </div>
-                                      )}
+                    </div>
+                  )}
 
                   {/* Detection Summary */}
                   <div className="bg-green-50 rounded-lg p-4">
@@ -282,6 +429,10 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                             <span>{bestCandidate.bean_type}</span>
                           </div>
                         )}
+                        <div className="pt-2 space-y-2">
+                          <MorphologyTags classification={bestCandidateClassification} />
+                          <ConfidenceBadge value={bestCandidateConfidence} />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -294,7 +445,7 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                 <div className="grid lg:grid-cols-3 gap-6">
                   {/* Bean Visualization - Takes up more space */}
                   <div className="lg:col-span-2 ">
-                    
+
                     {/* Controls */}
                     <div className="flex items-center space-x-4 justify-between mb-2">
                       <h3 className="text-lg font-semibold">Bean Visualization</h3>
@@ -302,14 +453,12 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                         <label className="text-sm font-medium text-gray-700">Show Bean Boxes:</label>
                         <button
                           onClick={() => setShowBeanBoxes(!showBeanBoxes)}
-                          className={`mini-glass !border-[var(--fadin-mocha)] relative inline-flex h-6 w-14 items-center rounded-full transition-colors hover:!shadow-none ${
-                            showBeanBoxes ? '!bg-green-200' : '!bg-gray-300'
-                          }`}
+                          className={`mini-glass !border-[var(--fadin-mocha)] relative inline-flex h-6 w-14 items-center rounded-full transition-colors hover:!shadow-none ${showBeanBoxes ? '!bg-green-200' : '!bg-gray-300'
+                            }`}
                         >
                           <span
-                            className={`button-accent !bg-white inline-block h-1 w-1 transform rounded-full transition-transform ${
-                              showBeanBoxes ? 'translate-x-1' : '-translate-x-3.5'
-                            }`}
+                            className={`button-accent !bg-white inline-block h-1 w-1 transform rounded-full transition-transform ${showBeanBoxes ? 'translate-x-1' : '-translate-x-3.5'
+                              }`}
                           />
                         </button>
                       </div>
@@ -342,13 +491,18 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                         className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                       >
                         <option value="">Select a bean...</option>
-                        {beans.map((bean) => (
-                          <option key={bean.bean_id} value={bean.bean_id}>
-                            Bean #{bean.bean_id} - {bean.length_mm.toFixed(1)}×{bean.width_mm.toFixed(1)}mm
-                            {bean.bean_id === bestCandidate?.bean_id && userRole === 'farmer' ? ' (BEST)' : ''}
-                            {bean.is_validated === true ? ' ✓' : bean.is_validated === false ? ' ⏳' : ''}
-                          </option>
-                        ))}
+                        {beans.map((bean) => {
+                          const classification = getBeanClassification(bean.bean_id);
+                          const confidenceLabel = formatConfidence(classification.confidence ?? bean.confidence);
+                          return (
+                            <option key={bean.bean_id} value={bean.bean_id}>
+                              Bean #{bean.bean_id} - {bean.length_mm.toFixed(1)}×{bean.width_mm.toFixed(1)}mm
+                              {bean.bean_id === bestCandidate?.bean_id && userRole === 'farmer' ? ' (BEST)' : ''}
+                              {confidenceLabel ? ` • ${confidenceLabel}` : ''}
+                              {bean.is_validated === true ? ' ✓' : bean.is_validated === false ? ' ⏳' : ''}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                     {selectedBean ? (
@@ -399,12 +553,18 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                             <div className="text-sm font-medium text-gray-700">Bean Type</div>
                             <div className="text-lg font-semibold text-gray-900">
                               {selectedBean.bean_type}
-                              {selectedBean.confidence && (
-                                <span className="text-sm text-gray-500 ml-2">
-                                  ({(selectedBean.confidence * 100).toFixed(0)}% confidence)
-                                </span>
-                              )}
                             </div>
+                            <div className="mt-3 space-y-2">
+                              <MorphologyTags classification={selectedBeanClassification} />
+                              <ConfidenceBadge value={selectedBeanConfidence} />
+                            </div>
+                          </div>
+                        )}
+                        {!selectedBean.bean_type && (
+                          <div className="space-y-2">
+                            <div className="text-sm font-medium text-gray-700">Morphological Classification</div>
+                            <MorphologyTags classification={selectedBeanClassification} />
+                            <ConfidenceBadge value={selectedBeanConfidence} />
                           </div>
                         )}
 
@@ -567,7 +727,7 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                           {beans.length} beans detected
                         </span>
                       </h4>
-                      
+
                       <div className="grid lg:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
                         {(() => {
                           // Use utility functions for finding largest/smallest beans
@@ -579,7 +739,9 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                           return beans.map((bean) => {
                             // Calculate metrics using utility functions
                             const metrics = calculateBeanMetrics(bean);
-                            
+                            const classification = getBeanClassification(bean.bean_id);
+                            const confidenceLabel = formatConfidence(classification.confidence ?? bean.confidence);
+
                             // Get styling based on bean status
                             const styling = getBeanCardStyling(bean, largestBeanId, smallestBeanId);
 
@@ -588,7 +750,7 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                                 <div className="flex items-center justify-between mb-3">
                                   <h5 className={`font-semibold ${styling.headerColor} flex items-center text-sm`}>
                                     <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                                     </svg>
                                     Bean #{bean.bean_id}
                                   </h5>
@@ -596,11 +758,11 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                                     {styling.badgeText}
                                   </span>
                                 </div>
-                                
+
                                 <div className="bg-gray-100 rounded-lg p-2 mb-3 h-24 flex items-center justify-center">
                                   <BeanImageExtractor bean={bean} imageSrc={image.src} />
                                 </div>
-                                
+
                                 {/* Basic measurements */}
                                 <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                                   <div className="text-center">
@@ -660,6 +822,10 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                                     )}
                                   </div>
                                 </div>
+                                <div className="mt-3 border-t border-gray-200 pt-2 text-xs text-gray-600 space-y-2">
+                                  <MorphologyTags classification={classification} />
+                                  <ConfidenceBadge value={confidenceLabel} />
+                                </div>
                               </div>
                             );
                           });
@@ -713,7 +879,7 @@ const EnhancedImageDetailsModal: React.FC<EnhancedImageDetailsModalProps> = ({
                   <p className="text-sm text-gray-600">Are you sure you want to delete this image?</p>
                 </div>
               </div>
-              
+
               <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
                 <p className="text-sm text-red-800">
                   <strong>Warning:</strong> This action cannot be undone.

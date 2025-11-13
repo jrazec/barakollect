@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import { supabase } from "@/lib/supabaseClient";
 
 interface User {
@@ -103,11 +104,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const navigate = useNavigate();
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setRole("");
-    window.location.href = "/login";
+    navigate('/login');
   };
 
   return (

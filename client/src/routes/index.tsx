@@ -20,6 +20,8 @@ import UserManagement from "@/pages/admin/UserManagement";
 import SystemMonitoring from "@/pages/admin/SystemMonitoring";
 import ActivityLogs from "@/pages/admin/ActivityLogs";
 import Settings from "@/pages/admin/Settings";
+import FarmerSettings from "@/pages/farmer/Settings";
+import ResearcherSettings from "@/pages/researcher/Settings";
 import AdminBeansGallery from "../components/AdminBeansGallery";
 import AdminBeansMetadata from "@/components/AdminBeansMetadata";
 import AdminFarmMap from "@/pages/admin/AdminFarmMap";
@@ -46,6 +48,7 @@ export default function AppRoute() {
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="farm-map" element={<FarmMap />} />
                 <Route path="notifications" element={<Notifications />} />
+                <Route path="settings" element={<ResearcherSettings />} />
             </Route>
             <Route path="/farmer" element={<ClientLayout />}> 
                 <Route path="dashboard" element={<FarmerDashboard />} />
@@ -53,6 +56,7 @@ export default function AppRoute() {
                 <Route path="gallery" element={<FarmerBeansGallery />} />
                 <Route path="farm-map" element={<FarmMap />} />
                 <Route path="notifications" element={<Notifications />} />
+                <Route path="settings" element={<FarmerSettings />} />
             </Route>
             <Route path="/admin" element={<AdminLayout />}> 
                 <Route path="dashboard" element={<AdminDashboard />} />

@@ -7,6 +7,7 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import GalleryComponent from './GalleryComponent';
 import PageHeader from './PageHeader';
+import { useNavigate } from 'react-router-dom';
 
 const AdminBeansGallery: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<'verified' | 'pending' | 'all'>('all');
@@ -18,6 +19,7 @@ const AdminBeansGallery: React.FC = () => {
         totalItems: 0,
         itemsPerPage: 2000
     });
+    const navigate = useNavigate();
     const [locations, setLocations] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -71,15 +73,18 @@ const AdminBeansGallery: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (window.confirm('Are you sure you want to delete this image?')) {
-            try {
-                await cachedAdminService.deleteImage(id);
-                loadImages(); // Refresh the list
-            } catch (error) {
-                console.error('Error deleting image:', error);
-                showError('Delete Failed', 'Failed to delete image. Please try again.');
-            }
+
+        try {
+            await cachedAdminService.deleteImage(id);
+            loadImages(); // Refresh the list
+            showSuccess('Delete Successful', 'Image deleted successfully.');
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Pause for 2 seconds
+            navigate(0); // Reload the current page
+        } catch (error) {
+            console.error('Error deleting image:', error);
+            showError('Delete Failed', 'Failed to delete image. Please try again.');
         }
+        
     };
 
     // Download functionality

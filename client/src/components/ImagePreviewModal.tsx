@@ -25,7 +25,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
         <div className='flex flex-col h-full justify-between'>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-[var(--espresso-black)]">
-              Preview Images ({images.length}/5)
+              Preview Images ({images.length})
             </h3>
             <button
               onClick={onClose}

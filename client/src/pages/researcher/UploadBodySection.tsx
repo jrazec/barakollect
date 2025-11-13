@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { storageService } from '../../services/storageService';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
 import PredictionResultModal from '../../components/PredictionResultModal';
@@ -17,6 +17,7 @@ interface UploadBodySectionProps {
 
 const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFilesSelected: _ }) => {
   const [uploadMode, setUploadMode] = useState<'camera' | 'file'>('file');
+  const [maxImages, setMaxImages] = useState<number | undefined>(undefined);
   const [capturedImages, setCapturedImages] = useState<File[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -33,24 +34,36 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
   const [comment, setComment] = useState('');
   const { notification, showSuccess, showError, hideNotification } = useNotification();
 
+  // set max images supabase service
+  useEffect(() => {
+    const fetchMaxImages = async () => {
+      try {
+        const limit = await storageService.getMaxUploadImages();
+        setMaxImages(limit);
+      } catch (error) {
+        console.error('Error fetching max upload images:', error);
+      }
+    };
+    fetchMaxImages();
+  }, []);
   const handleFileSelect = (files: FileList) => {
-    const newFiles = Array.from(files).slice(0, 5 - selectedFiles.length);
-    const updatedFiles = [...selectedFiles, ...newFiles].slice(0, 5);
+    const newFiles = Array.from(files).slice(0, (maxImages ?? 5) - selectedFiles.length);
+    const updatedFiles = [...selectedFiles, ...newFiles].slice(0, maxImages ?? 5);
     setSelectedFiles(updatedFiles);
-    
-    // Auto-trigger modal when 5 images are reached
-    if (updatedFiles.length === 5) {
+
+    // Auto-trigger modal when maxImages are reached
+    if (updatedFiles.length === maxImages) {
       setShowPreviewModal(true);
     }
   };
 
   const handleCameraCapture = (file: File) => {
-    if (capturedImages.length < 5) {
+    if (capturedImages.length < (maxImages ?? 5)) {
       const updatedImages = [...capturedImages, file];
       setCapturedImages(updatedImages);
-      
-      // Auto-trigger modal when 5 images are reached
-      if (updatedImages.length === 5) {
+
+      // Auto-trigger modal when maxImages are reached
+      if (updatedImages.length === (maxImages ?? 5)) {
         setShowPreviewModal(true);
       }
     }
@@ -204,7 +217,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
               />
               <span className="text-6xl !text-[var(--arabica-brown)] mb-2">&#8682;</span>
               <span className="text-sm text-[var(--espresso-black)] font-accent">
-                Drop your images here or click to browse (Max 5 images) - {selectedFiles.length}/5 selected
+                Drop your images here or click to browse (Max {maxImages} images) - {selectedFiles.length}/{maxImages} selected
               </span>
             </div>
             {selectedFiles.length > 0 && (
@@ -240,14 +253,14 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
             <div className="w-full min-h-[20rem] bg-white border-dashed border-[var(--mocha-beige)] rounded flex flex-col items-center justify-center cursor-pointer mb-2 hover:border-[var(--arabica-brown)] border-2 transition-colors">
               <span className="text-4xl text-[var(--espresso-black)] mb-2">📷</span>
               <span className="text-xs text-[var(--espresso-black)] font-accent mb-3">
-                Take up to 5 photos with your camera
+                Take up to {maxImages} photos with your camera
               </span>
               <button
                 onClick={() => setShowCamera(true)}
                 className="bg-[var(--espresso-black)] text-white px-4 py-2 rounded font-medium"
-                disabled={capturedImages.length >= 5}
+                disabled={capturedImages.length >= (maxImages ?? 5)}
               >
-                {capturedImages.length >= 5 ? 'Max Photos Reached' : `Open Camera (${capturedImages.length}/5)`}
+                {capturedImages.length >= (maxImages ?? 5) ? 'Max Photos Reached' : `Open Camera (${capturedImages.length}/${maxImages ?? 5})`}
               </button>
             </div>
             
@@ -282,7 +295,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         {showCamera && (
           <CameraCapture
             onCapture={handleCameraCapture}
-            maxPhotos={5}
+            maxPhotos={(maxImages ?? 5)}
             currentCount={capturedImages.length}
             onClose={() => setShowCamera(false)}
           />

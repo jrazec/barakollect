@@ -1,144 +1,253 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CardComponent from '@/components/CardComponent';
 import { 
-  Bell, 
-  Shield, 
-  Database, 
-  Mail, 
+  User, 
   Globe,
-  Save,
-  RefreshCw,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Edit,
+  X,
+  Check,
+  Mail,
+  Lock,
+  Database,
+  HardDrive
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
-
-interface SystemSettings {
-  general: {
-    siteName: string;
-    siteDescription: string;
-    timezone: string;
-    language: string;
-    maintenanceMode: boolean;
-    debugMode: boolean;
-  };
-  notifications: {
-    emailNotifications: boolean;
-    smsNotifications: boolean;
-    pushNotifications: boolean;
-    systemAlerts: boolean;
-    userRegistration: boolean;
-    dataValidation: boolean;
-  };
-  security: {
-    sessionTimeout: number;
-    maxLoginAttempts: number;
-    passwordExpiry: number;
-    twoFactorAuth: boolean;
-    ipWhitelist: string;
-    encryptionEnabled: boolean;
-  };
-  email: {
-    smtpServer: string;
-    smtpPort: string;
-    smtpUsername: string;
-    smtpPassword: string;
-    fromEmail: string;
-    fromName: string;
-  };
-  storage: {
-    maxFileSize: number;
-    allowedFormats: string;
-    storageQuota: number;
-    autoBackup: boolean;
-    backupFrequency: string;
-    retentionPeriod: number;
-  };
-}
-
-// Temporary data service
-const getSystemSettings = (): SystemSettings => ({
-  general: {
-    siteName: 'BaraKollect',
-    siteDescription: 'Advanced Bean Classification and Collection System',
-    timezone: 'UTC+8',
-    language: 'en',
-    maintenanceMode: false,
-    debugMode: false
-  },
-  notifications: {
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
-    systemAlerts: true,
-    userRegistration: true,
-    dataValidation: true
-  },
-  security: {
-    sessionTimeout: 30,
-    maxLoginAttempts: 5,
-    passwordExpiry: 90,
-    twoFactorAuth: false,
-    ipWhitelist: '',
-    encryptionEnabled: true
-  },
-  email: {
-    smtpServer: 'smtp.gmail.com',
-    smtpPort: '587',
-    smtpUsername: 'admin@barakollect.com',
-    smtpPassword: '••••••••',
-    fromEmail: 'noreply@barakollect.com',
-    fromName: 'BaraKollect System'
-  },
-  storage: {
-    maxFileSize: 10,
-    allowedFormats: 'jpg,jpeg,png,tiff',
-    storageQuota: 100,
-    autoBackup: true,
-    backupFrequency: 'daily',
-    retentionPeriod: 30
-  }
-});
+import { useAuth } from '@/contexts/AuthContext';
+import { LinearProgressBar } from '@/components/ChartComponent';
+import useNotification from '@/hooks/useNotification';
+import { supabase } from '@/lib/supabaseClient';
 
 type SaveStatus = 'success' | 'reset' | null;
 
+interface Location {
+  id: number;
+  name: string;
+}
+
+interface Profile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  username: string;
+  email: string;
+  role: string;
+  location_id?: number;
+  location__name?: string;
+  locations: Location[];
+  system_settings: {
+    save_images: boolean;
+    accept_predictions: boolean;
+    max_images: number;
+  };
+}
+
+interface SystemInfo {
+  database: {
+    total_size: string;
+    tables: Array<{
+      table_name: string;
+      size: string;
+      estimated_rows: number;
+    }>;
+  };
+  storage: {
+    buckets: Array<{
+      bucket_id: string;
+      file_count: number;
+      total_bytes: number;
+      total_size: string;
+    }>;
+  };
+}
+
 export default function Settings() {
-  const [settings, setSettings] = useState<SystemSettings>(getSystemSettings());
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState('profile');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const { showSuccess, showError } = useNotification();
 
-  const updateSetting = <T extends keyof SystemSettings>(
-    category: T, 
-    key: keyof SystemSettings[T], 
-    value: SystemSettings[T][keyof SystemSettings[T]]
-  ) => {
-    setSettings(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [key]: value
-      }
-    }));
+  // Profile state
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProfile, setEditedProfile] = useState<Partial<Profile>>({});
+  
+  // System info state
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [systemInfoLoading, setSystemInfoLoading] = useState(false);
+
+  // Modal states
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showPasswordConfirmModal, setShowPasswordConfirmModal] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+
+  // Load profile from backend
+  const fetchProfile = async () => {
+    if (!user?.id) return;
+    try {
+      setProfileLoading(true);
+      const res = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/profile?userId=${user.id}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load profile');
+      setProfile(data.data);
+      setEditedProfile(data.data);
+    } catch (e) {
+      console.error('Failed to fetch profile', e);
+    } finally {
+      setProfileLoading(false);
+    }
   };
 
-  const saveSettings = async () => {
+  // Load system info
+  const fetchSystemInfo = async () => {
+    try {
+      setSystemInfoLoading(true);
+      const res = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/system-info/`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load system info');
+      setSystemInfo(data.data);
+    } catch (e) {
+      console.error('Failed to fetch system info', e);
+    } finally {
+      setSystemInfoLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'profile') fetchProfile();
+    if (activeTab === 'general' && user?.role === 'admin') fetchSystemInfo();
+  }, [activeTab, user?.id, user?.role]);
+
+  const handleSaveProfile = async () => {
+    if (!profile || !editedProfile) return;
+    
     setIsLoading(true);
     setSaveStatus(null);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const payload = {
+        id: profile.id,
+        first_name: editedProfile.first_name,
+        last_name: editedProfile.last_name,
+        username: editedProfile.username,
+        location_id: editedProfile.location_id,
+      };
+
+      const res = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/update-profile/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to update profile');
+      
       setSaveStatus('success');
+      setIsEditing(false);
+      await fetchProfile(); // Refresh profile
+    } catch (e: any) {
+      setSaveStatus('reset');
+      console.error(e);
+    } finally {
       setIsLoading(false);
       setTimeout(() => setSaveStatus(null), 3000);
-    }, 1000);
+    }
   };
 
-  const resetToDefaults = () => {
-    if (window.confirm('Are you sure you want to reset all settings to default values?')) {
-      setSettings(getSystemSettings());
-      setSaveStatus('reset');
-      setTimeout(() => setSaveStatus(null), 3000);
+  const handleChangeEmail = async () => {
+    if (!profile || !newEmail) return;
+    
+    setIsLoading(true);
+    
+    try {
+      const payload = {
+        id: profile.id,
+        email: newEmail,
+      };
+
+      const res = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/update-profile/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        if (result.error.includes('taken') || result.error.includes('exists')) {
+          throw new Error('Email is already taken');
+        }
+        throw new Error(result.error || 'Failed to update email');
+      }
+      
+      setSaveStatus('success');
+      setShowEmailModal(false);
+      setNewEmail('');
+      await fetchProfile();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!profile?.email) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // Use Supabase directly like in Login component
+      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+      
+      if (error) {
+        showError("Password reset failed", error.message);
+        return;
+      }
+      
+      showSuccess("Password reset email sent", `Reset link sent to ${profile.email}`);
+      setSaveStatus('success');
+      setShowPasswordConfirmModal(false);
+    } catch (e: any) {
+      showError("Password reset failed", e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordResetClick = () => {
+    setShowPasswordConfirmModal(true);
+  };
+
+  const handleSystemSetting = async (setting: string, value: boolean | number) => {
+    if (!profile) return;
+    
+    const confirmed = window.confirm(`Do you really want to ${setting === 'save_images' ? 'toggle image saving' : setting === 'accept_predictions' ? 'toggle prediction acceptance' : 'change max images'}?`);
+    if (!confirmed) return;
+
+    try {
+      const payload = {
+        id: profile.id,
+        [setting]: value,
+      };
+
+      const res = await fetch(`${import.meta.env.VITE_HOST_BE}/api/users/update-profile/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to update setting');
+      
+      setSaveStatus('success');
+      await fetchProfile();
+    } catch (e: any) {
+      alert(e.message);
     }
   };
 
@@ -165,27 +274,97 @@ export default function Settings() {
     </div>
   );
 
+  // Email Modal
+  const EmailModal = () => (
+    showEmailModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg w-96">
+          <h3 className="text-lg font-semibold mb-4">Change Email</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Current Email</label>
+              <input
+                type="text"
+                value={profile?.email || ''}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">New Email</label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
+                placeholder="Enter new email"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2 mt-6">
+            <button
+              onClick={() => {setShowEmailModal(false); setNewEmail('');}}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleChangeEmail}
+              disabled={!newEmail || isLoading}
+              className="px-4 py-2 bg-[var(--arabica-brown)] text-white rounded-md hover:bg-[var(--espresso-black)] disabled:opacity-50"
+            >
+              {isLoading ? 'Updating...' : 'Update Email'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  );
+
+  // Password Confirmation Modal
+  const PasswordConfirmModal = () => (
+    showPasswordConfirmModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg w-96">
+          <h3 className="text-lg font-semibold mb-4">Send Password Reset Link</h3>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              We will send a password reset link to your email address:
+            </p>
+            <div className="p-3 bg-gray-50 rounded-md">
+              <span className="font-medium">{profile?.email}</span>
+            </div>
+            <p className="text-sm text-gray-500">
+              You will receive an email with instructions to reset your password.
+            </p>
+          </div>
+          <div className="flex justify-end space-x-2 mt-6">
+            <button
+              onClick={() => setShowPasswordConfirmModal(false)}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleChangePassword}
+              disabled={isLoading}
+              className="px-4 py-2 bg-[var(--arabica-brown)] text-white rounded-md hover:bg-[var(--espresso-black)] disabled:opacity-50"
+            >
+              {isLoading ? 'Sending...' : 'Send Reset Link'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  );
+
   return (
     <div className="space-y-6 p-6 bg-gray-50">
+      <EmailModal />
+      <PasswordConfirmModal />
+      
       <div className="flex justify-between items-center">
-        <PageHeader title="System Settings" subtitle={''} />
-        <div className="flex space-x-2">
-          <button 
-            onClick={resetToDefaults}
-            className="flex items-center space-x-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <RefreshCw className="h-4 w-4" />
-            <span>Reset</span>
-          </button>
-          <button 
-            onClick={saveSettings} 
-            disabled={isLoading}
-            className="flex items-center space-x-2 bg-[var(--arabica-brown)] text-[var(--parchment)] px-4 py-2 rounded-lg hover:bg-[var(--espresso-black)] transition-colors disabled:opacity-50"
-          >
-            <Save className="h-4 w-4" />
-            <span>{isLoading ? 'Saving...' : 'Save Changes'}</span>
-          </button>
-        </div>
+        <PageHeader title="Settings" subtitle="" />
       </div>
 
       {saveStatus && (
@@ -199,7 +378,7 @@ export default function Settings() {
           )}
           <span className="text-sm">
             {saveStatus === 'success' 
-              ? 'Settings saved successfully!' 
+              ? 'Settings updated successfully!' 
               : 'Settings reset to default values.'}
           </span>
         </div>
@@ -209,11 +388,8 @@ export default function Settings() {
       <div className="space-y-4">
         <div className="flex space-x-2 border-b">
           {[
-            { key: 'general', label: 'General', icon: Globe },
-            { key: 'notifications', label: 'Notifications', icon: Bell },
-            { key: 'security', label: 'Security', icon: Shield },
-            { key: 'email', label: 'Email', icon: Mail },
-            { key: 'storage', label: 'Storage', icon: Database }
+            { key: 'profile', label: 'Profile', icon: User },
+            ...(user?.role === 'admin' ? [{ key: 'general', label: 'General', icon: Globe }] : [])
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -233,240 +409,280 @@ export default function Settings() {
           })}
         </div>
 
-        {activeTab === 'general' && (
+        {/* Profile Tab */}
+        {activeTab === 'profile' && (
           <CardComponent
             item={{
-              title: "General Settings",
-              subtitle: "",
+              title: "Profile",
+              subtitle: "View and edit your user profile",
               content: (
-                <div className="space-y-4 w-full">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--espresso-black)]">Site Name</label>
-                      <input
-                        type="text"
-                        value={settings.general.siteName}
-                        onChange={(e) => updateSetting('general', 'siteName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--espresso-black)]">Timezone</label>
-                      <select
-                        value={settings.general.timezone}
-                        onChange={(e) => updateSetting('general', 'timezone', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                      >
-                        <option value="UTC+8">UTC+8 (Philippines)</option>
-                        <option value="UTC+0">UTC+0 (GMT)</option>
-                        <option value="UTC-5">UTC-5 (EST)</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--espresso-black)]">Site Description</label>
-                    <textarea
-                      value={settings.general.siteDescription}
-                      onChange={(e) => updateSetting('general', 'siteDescription', e.target.value)}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                    />
-                  </div>
-                  <ToggleSwitch
-                    checked={settings.general.maintenanceMode}
-                    onChange={(checked) => updateSetting('general', 'maintenanceMode', checked)}
-                    label="Maintenance Mode"
-                    description="Enable to prevent user access during updates"
-                  />
-                  <ToggleSwitch
-                    checked={settings.general.debugMode}
-                    onChange={(checked) => updateSetting('general', 'debugMode', checked)}
-                    label="Debug Mode"
-                    description="Enable detailed logging for troubleshooting"
-                  />
+                <div className="space-y-6 w-full">
+                  {!profileLoading && profile ? (
+                    <>
+                      {/* Profile Fields */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-lg font-medium">Personal Information</h4>
+                          {!isEditing ? (
+                            <button
+                              onClick={() => setIsEditing(true)}
+                              className="flex items-center space-x-2 text-[var(--arabica-brown)] hover:text-[var(--espresso-black)]"
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span>Edit</span>
+                            </button>
+                          ) : (
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => {
+                                  setIsEditing(false);
+                                  setEditedProfile(profile);
+                                }}
+                                className="flex items-center space-x-1 text-gray-600 hover:text-gray-800"
+                              >
+                                <X className="h-4 w-4" />
+                                <span>Cancel</span>
+                              </button>
+                              <button
+                                onClick={handleSaveProfile}
+                                disabled={isLoading}
+                                className="flex items-center space-x-1 text-[var(--arabica-brown)] hover:text-[var(--espresso-black)] disabled:opacity-50"
+                              >
+                                <Check className="h-4 w-4" />
+                                <span>{isLoading ? 'Saving...' : 'Save'}</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--espresso-black)]">First Name</label>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={editedProfile.first_name || ''}
+                                onChange={(e) => setEditedProfile(prev => ({ ...prev, first_name: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
+                              />
+                            ) : (
+                              <div className="px-3 py-2 bg-gray-50 rounded-md">{profile.first_name}</div>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--espresso-black)]">Last Name</label>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={editedProfile.last_name || ''}
+                                onChange={(e) => setEditedProfile(prev => ({ ...prev, last_name: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
+                              />
+                            ) : (
+                              <div className="px-3 py-2 bg-gray-50 rounded-md">{profile.last_name}</div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--espresso-black)]">Username</label>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={editedProfile.username || ''}
+                                onChange={(e) => setEditedProfile(prev => ({ ...prev, username: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
+                              />
+                            ) : (
+                              <div className="px-3 py-2 bg-gray-50 rounded-md">{profile.username}</div>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--espresso-black)]">Location</label>
+                            {isEditing ? (
+                              <select
+                                value={editedProfile.location_id || ''}
+                                onChange={(e) => setEditedProfile(prev => ({ ...prev, location_id: parseInt(e.target.value) }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
+                              >
+                                <option value="">Select Location</option>
+                                {profile.locations?.map((location) => (
+                                  <option key={location.id} value={location.id}>
+                                    {location.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className="px-3 py-2 bg-gray-50 rounded-md">{profile.location__name || 'No location'}</div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--espresso-black)]">Role</label>
+                            <div className="px-3 py-2 bg-gray-50 rounded-md">{profile.role}</div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--espresso-black)]">Email</label>
+                            <div className="flex items-center space-x-2">
+                              <div className="flex-1 px-3 py-2 bg-gray-50 rounded-md">{profile.email}</div>
+                              <button
+                                onClick={() => {setShowEmailModal(true); setNewEmail(profile.email);}}
+                                className="flex items-center space-x-1 px-3 py-2 text-[var(--arabica-brown)] border border-[var(--arabica-brown)] rounded-md hover:bg-[var(--arabica-brown)] hover:text-white"
+                              >
+                                <Mail className="h-4 w-4" />
+                                <span>Change</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Password Change */}
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[var(--espresso-black)]">Password</label>
+                          <button
+                            onClick={handlePasswordResetClick}
+                            disabled={isLoading}
+                            className="flex items-center space-x-2 px-4 py-2 text-[var(--arabica-brown)] border border-[var(--arabica-brown)] rounded-md hover:bg-[var(--arabica-brown)] hover:text-white disabled:opacity-50"
+                          >
+                            <Lock className="h-4 w-4" />
+                            <span>{isLoading ? 'Sending...' : 'Send Password Reset Link'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-gray-600">{profileLoading ? 'Loading profile...' : 'No profile loaded.'}</div>
+                  )}
                 </div>
               )
             }}
           />
         )}
 
-        {activeTab === 'notifications' && (
-          <CardComponent
-            item={{
-              title: "Notification Settings",
-              subtitle: "",
-              content: (
-                <div className="space-y-4 w-full">
-                  {Object.entries(settings.notifications).map(([key, value]) => (
-                    <ToggleSwitch
-                      key={key}
-                      checked={value}
-                      onChange={(checked) => updateSetting('notifications', key as keyof SystemSettings['notifications'], checked)}
-                      label={key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                      description={
-                        key === 'emailNotifications' ? 'Send notifications via email' :
-                        key === 'smsNotifications' ? 'Send notifications via SMS' :
-                        key === 'pushNotifications' ? 'Send browser push notifications' :
-                        key === 'systemAlerts' ? 'Alert administrators of system issues' :
-                        key === 'userRegistration' ? 'Notify when new users register' :
-                        'Notify when data validation is complete'
-                      }
-                    />
-                  ))}
-                </div>
-              )
-            }}
-          />
-        )}
+        {/* General Tab (Admin Only) */}
+        {activeTab === 'general' && user?.role === 'admin' && (
+          <div className="space-y-6">
+            {/* System Settings */}
+            <CardComponent
+              item={{
+                title: "System Settings",
+                subtitle: "Configure system-wide settings",
+                content: (
+                  <div className="space-y-4 w-full">
+                    {profile && (
+                      <>
+                        <ToggleSwitch
+                          checked={profile.system_settings?.save_images || false}
+                          onChange={(checked) => handleSystemSetting('save_images', checked)}
+                          label="Save Images"
+                          description="Enable or disable automatic image saving"
+                        />
+                        <ToggleSwitch
+                          checked={profile.system_settings?.accept_predictions || false}
+                          onChange={(checked) => handleSystemSetting('accept_predictions', checked)}
+                          label="Accept Predictions"
+                          description="Enable or disable automatic prediction acceptance"
+                        />
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[var(--espresso-black)]">Max Images Accepted</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={profile.system_settings?.max_images || 5}
+                            onChange={(e) => handleSystemSetting('max_images', parseInt(e.target.value) || 5)}
+                            className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              }}
+            />
 
-        {activeTab === 'security' && (
-          <CardComponent
-            item={{
-              title: "Security Settings",
-              subtitle: "",
-              content: (
-                <div className="space-y-4 w-full">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--espresso-black)]">Session Timeout (minutes)</label>
-                      <input
-                        type="number"
-                        value={settings.security.sessionTimeout}
-                        onChange={(e) => updateSetting('security', 'sessionTimeout', parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--espresso-black)]">Max Login Attempts</label>
-                      <input
-                        type="number"
-                        value={settings.security.maxLoginAttempts}
-                        onChange={(e) => updateSetting('security', 'maxLoginAttempts', parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--espresso-black)]">Password Expiry (days)</label>
-                    <input
-                      type="number"
-                      value={settings.security.passwordExpiry}
-                      onChange={(e) => updateSetting('security', 'passwordExpiry', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                    />
-                  </div>
-                  <ToggleSwitch
-                    checked={settings.security.twoFactorAuth}
-                    onChange={(checked) => updateSetting('security', 'twoFactorAuth', checked)}
-                    label="Two-Factor Authentication"
-                    description="Require 2FA for all admin accounts"
-                  />
-                </div>
-              )
-            }}
-          />
-        )}
+            {/* System Information */}
+            <CardComponent
+              item={{
+                title: "System Information",
+                subtitle: "Database and storage statistics",
+                content: (
+                  <div className="space-y-6 w-full">
+                    {!systemInfoLoading && systemInfo ? (
+                      <>
+                        {/* Database Statistics */}
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <Database className="h-5 w-5 text-[var(--arabica-brown)]" />
+                            <h4 className="text-lg font-medium">Database Usage</h4>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-sm text-gray-600">Total Database Size: {systemInfo.database.total_size}</p>
+                          </div>
+                          
+                          {/* Table Progress Bars */}
+                          <div className="space-y-3">
+                            {systemInfo.database.tables.map((table, index) => {
+                              // Assume 8GB total for progress calculation (8192 MB)
+                              const totalSizeMB = 8192;
 
-        {activeTab === 'email' && (
-          <CardComponent
-            item={{
-              title: "Email Configuration",
-              subtitle: "",
-              content: (
-                <div className="space-y-4 w-full">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--espresso-black)]">SMTP Server</label>
-                      <input
-                        type="text"
-                        value={settings.email.smtpServer}
-                        onChange={(e) => updateSetting('email', 'smtpServer', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--espresso-black)]">SMTP Port</label>
-                      <input
-                        type="text"
-                        value={settings.email.smtpPort}
-                        onChange={(e) => updateSetting('email', 'smtpPort', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--espresso-black)]">From Email</label>
-                      <input
-                        type="email"
-                        value={settings.email.fromEmail}
-                        onChange={(e) => updateSetting('email', 'fromEmail', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--espresso-black)]">From Name</label>
-                      <input
-                        type="text"
-                        value={settings.email.fromName}
-                        onChange={(e) => updateSetting('email', 'fromName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )
-            }}
-          />
-        )}
+                              return (
+                                <div key={index} className="space-y-1">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium">{table.table_name}</span>
+                                    <span className="text-xs text-gray-500">{table.estimated_rows} rows</span>
+                                  </div>
+                                  <LinearProgressBar 
+                                    data={{ 
+                                      total_size: totalSizeMB, 
+                                      size: table.size 
+                                    }} 
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
 
-        {activeTab === 'storage' && (
-          <CardComponent
-            item={{
-              title: "Storage Settings",
-              subtitle: "",
-              content: (
-                <div className="space-y-4 w-full">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--espresso-black)]">Max File Size (MB)</label>
-                      <input
-                        type="number"
-                        value={settings.storage.maxFileSize}
-                        onChange={(e) => updateSetting('storage', 'maxFileSize', parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--espresso-black)]">Storage Quota (GB)</label>
-                      <input
-                        type="number"
-                        value={settings.storage.storageQuota}
-                        onChange={(e) => updateSetting('storage', 'storageQuota', parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                      />
-                    </div>
+                        {/* Storage Statistics */}
+                        {systemInfo.storage.buckets.length > 0 && (
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                              <HardDrive className="h-5 w-5 text-[var(--arabica-brown)]" />
+                              <h4 className="text-lg font-medium">Storage Usage</h4>
+                            </div>
+                            <div className="space-y-3">
+                              {systemInfo.storage.buckets.map((bucket, index) => (
+                                <div key={index} className="space-y-1">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium">{bucket.bucket_id}</span>
+                                    <span className="text-xs text-gray-500">{bucket.file_count} files</span>
+                                  </div>
+                                  <LinearProgressBar 
+                                    data={{ 
+                                      total_size: 102400, // 100GB in MB
+                                      size: bucket.total_size 
+                                    }} 
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-sm text-gray-600">
+                        {systemInfoLoading ? 'Loading system information...' : 'No system information available.'}
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--espresso-black)]">Allowed File Formats</label>
-                    <input
-                      type="text"
-                      value={settings.storage.allowedFormats}
-                      onChange={(e) => updateSetting('storage', 'allowedFormats', e.target.value)}
-                      placeholder="jpg,jpeg,png,tiff"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--arabica-brown)]"
-                    />
-                  </div>
-                  <ToggleSwitch
-                    checked={settings.storage.autoBackup}
-                    onChange={(checked) => updateSetting('storage', 'autoBackup', checked)}
-                    label="Auto Backup"
-                    description="Automatically backup data"
-                  />
-                </div>
-              )
-            }}
-          />
+                )
+              }}
+            />
+          </div>
         )}
       </div>
     </div>

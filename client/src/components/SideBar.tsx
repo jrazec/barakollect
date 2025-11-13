@@ -32,6 +32,11 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 icon: (<MapPin />),
                 label: "Farm Map",
                 route: "/farmer/farm-map"
+            },
+            {
+                icon: (<Settings />),
+                label: "Settings",
+                route: "/farmer/settings"
             }
         ],
         researcher: [
@@ -66,6 +71,11 @@ const SideBar = ({ show, role, user }: { show: boolean, role: string, user: User
                 icon: (<MapPin />),
                 label: "Farm Map",
                 route: "/researcher/farm-map"
+            },
+            {
+                icon: (<Settings />),
+                label: "Settings",
+                route: "/researcher/settings"
             }
         ],
         admin: [

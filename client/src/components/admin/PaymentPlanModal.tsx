@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Check, CreditCard, Calendar } from 'lucide-react';
 
 interface PaymentPlanModalProps {
@@ -18,6 +19,7 @@ const PaymentPlanModal: React.FC<PaymentPlanModalProps> = ({
   const [isUpdating, setIsUpdating] = useState(false);
   const [endDate, setEndDate] = useState<string>('');
   const [dateError, setDateError] = useState<string>('');
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -64,7 +66,7 @@ const PaymentPlanModal: React.FC<PaymentPlanModalProps> = ({
     } finally {
       setIsUpdating(false);
       // Reload page to reflect changes TEMP
-        window.location.reload();
+      navigate(0);
     }
   };
 

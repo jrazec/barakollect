@@ -60,7 +60,6 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
   
   // Debug log for initial data
   useEffect(() => {
-    console.log('Initial image.predictions:', image.predictions);
     console.log('Initial beans state:', beans);
     if (beans.length > 0) {
       console.log('Sample bean features:', beans[0].features);
@@ -101,10 +100,12 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
         solidity: bean.features.solidity,
         mean_intensity: bean.features.mean_intensity,
         equivalent_diameter_mm: bean.features.equivalent_diameter,
+        confidence_level: bean.features.confidence,
         // Keep original names as fallback
         ...bean.features
       } : {};
       
+      // Will add confidence level for each bean
       const editingBeanData = {
         ...bean,
         bean_type: bean.bean_type || 'Others',
