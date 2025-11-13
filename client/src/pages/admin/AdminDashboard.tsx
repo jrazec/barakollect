@@ -20,7 +20,7 @@ import type {
   SystemStatus
 } from '@/interfaces/global';
 import DashboardHeader from '@/components/DashboardHeader';
-import { BarChart, DatabaseIcon, Pi, HardDrive as StorageIcon } from 'lucide-react';
+import { BarChart, DatabaseIcon, HardDrive as StorageIcon } from 'lucide-react';
 import ShapeSizeDistribution from '@/components/admin/ShapeSizeDistribution';
 import BoxPlotChart from '@/components/admin/BoxPlotChart';
 
@@ -265,294 +265,289 @@ export default function AdminDashboard() {
 
         </div>
 
-        {/* System Status and Storage Usage - 2 Column Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {/* Left Column: System Status */}
-          <div className="w-full min-h-[400px]">
-            <CardComponent
-              item={{
-                title: "System Status",
-                subtitle: "Database uptime, Supabase status, and payment plan",
-                content: (
-                  <SystemStatusComponent
-                    data={systemStatus}
-                    onPlanUpdate={handlePlanUpdate}
-                  />
-                ),
-                description: "Monitor system health and manage subscription"
-              }}
-            />
+        {/* System & Infrastructure Section */}
+        <section className="space-y-6 sm:space-y-8 mb-8 sm:mb-12">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <DatabaseIcon className="h-6 w-6 text-[var(--arabica-brown)]" />
+            <div>
+              <h2 className="text-xl font-semibold text-[#3c2715]">System &amp; Infrastructure</h2>
+              <p className="text-sm text-gray-500">Monitor platform health, storage quotas, and table distribution.</p>
+            </div>
           </div>
 
-          {/* Right Column: Storage Usage */}
-          <div className="w-full min-h-[400px] space-y-4">
-            {/* Database Storage */}
-            <div className="min-h-[200px]">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+            <div className="w-full min-h-[400px]">
               <CardComponent
                 item={{
-                  side: (<DatabaseIcon className="text-[var(--arabica-brown)]" />),
-                  title: "Database Storage",
-                  subtitle: `${sizeDb.database} MB limit`,
+                  title: "System Status",
+                  subtitle: "Database uptime, Supabase status, and payment plan",
                   content: (
-                    <LinearProgressBar
-                      data={{
-                        total_size: sizeDb.database,
-                        size: adminStats.db_size.total
-                      }}
+                    <SystemStatusComponent
+                      data={systemStatus}
+                      onPlanUpdate={handlePlanUpdate}
                     />
                   ),
-                  description: "Database storage usage"
+                  description: "Monitor system health and manage subscription"
                 }}
               />
             </div>
 
-            {/* Image Bucket Storage */}
-            <div className="min-h-[200px]">
+            <div className="w-full min-h-[400px] space-y-4">
+              <div className="min-h-[200px]">
+                <CardComponent
+                  item={{
+                    side: (<DatabaseIcon className="text-[var(--arabica-brown)]" />),
+                    title: "Database Storage",
+                    subtitle: `${sizeDb.database} MB limit`,
+                    content: (
+                      <LinearProgressBar
+                        data={{
+                          total_size: sizeDb.database,
+                          size: adminStats.db_size.total
+                        }}
+                      />
+                    ),
+                    description: "Database storage usage"
+                  }}
+                />
+              </div>
+
+              <div className="min-h-[200px]">
+                <CardComponent
+                  item={{
+                    side: (<StorageIcon className="text-[var(--arabica-brown)]" />),
+                    title: "Image Bucket Storage",
+                    subtitle: `${sizeDb.bucket} MB limit`,
+                    content: (
+                      <LinearProgressBar
+                        data={{
+                          total_size: sizeDb.bucket,
+                          size: adminStats.img_bucket[0].total_size
+                        }}
+                      />
+                    ),
+                    description: "Image storage usage"
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+            <div className="min-h-[400px] xl:col-span-1">
               <CardComponent
                 item={{
-                  side: (<StorageIcon className="text-[var(--arabica-brown)]" />),
-                  title: "Image Bucket Storage",
-                  subtitle: `${sizeDb.bucket} MB limit`,
+                  title: "Database Tables Distribution",
+                  subtitle: "Storage usage by table",
                   content: (
-                    <LinearProgressBar
-                      data={{
-                        total_size: sizeDb.bucket,
-                        size: adminStats.img_bucket[0].total_size
-                      }}
+                    <PieChartComponent
+                      data={adminStats.db_size.tables.filter(table => {
+                        const publicTables = [
+                          'spatial_ref_sys',
+                          'activity_logs',
+                          'extracted_features',
+                          'annotations',
+                          'roles',
+                          'user_roles',
+                          'users',
+                          'predictions',
+                          'user_images',
+                          'role_permissions',
+                          'notifications',
+                          'locations',
+                          'bean_detections',
+                          'images',
+                          'permissions'
+                        ];
+                        return publicTables.includes(table.table_name);
+                      }).map(table => {
+                        const sizeStr = table.total_size;
+                        let sizeInMB = 0;
+
+                        if (sizeStr.includes('bytes')) {
+                          sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, '')) / (1024 * 1024);
+                        } else if (sizeStr.includes('kB')) {
+                          sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, '')) / 1024;
+                        } else if (sizeStr.includes('MB')) {
+                          sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, ''));
+                        } else if (sizeStr.includes('GB')) {
+                          sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, '')) * 1024;
+                        }
+
+                        return {
+                          name: table.table_name,
+                          uv: sizeInMB
+                        };
+                      })}
                     />
                   ),
-                  description: "Image storage usage"
+                  description: "Overview of database storage distribution by table"
                 }}
               />
             </div>
-          </div>
-        </div>
-
-        {/* Database Tables Distribution */}
-        <div className="grid grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <div className="min-h-[400px] col-span-1">
-            <CardComponent
-              item={{
-                title: "Database Tables Distribution",
-                subtitle: "Storage usage by table",
-                content: (
-                  <PieChartComponent
-                    data={adminStats.db_size.tables.filter(table => {
-                      const publicTables = [
-                        'spatial_ref_sys',
-                        'activity_logs',
-                        'extracted_features',
-                        'annotations',
-                        'roles',
-                        'user_roles',
-                        'users',
-                        'predictions',
-                        'user_images',
-                        'role_permissions',
-                        'notifications',
-                        'locations',
-                        'bean_detections',
-                        'images',
-                        'permissions'
-                      ];
-                      return publicTables.includes(table.table_name);
-                    }).map(table => {
-                      const sizeStr = table.total_size;
-                      let sizeInMB = 0;
-
-                      if (sizeStr.includes('bytes')) {
-                        sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, '')) / (1024 * 1024);
-                      } else if (sizeStr.includes('kB')) {
-                        sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, '')) / 1024;
-                      } else if (sizeStr.includes('MB')) {
-                        sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, ''));
-                      } else if (sizeStr.includes('GB')) {
-                        sizeInMB = parseFloat(sizeStr.replace(/[^\d.]/g, '')) * 1024;
-                      }
-
-
-
-
-                      return {
-                        name: table.table_name,
-                        uv: sizeInMB
-                      };
-                    })}
-                  />
-                ),
-                description: "Overview of database storage distribution by table"
-              }}
-            />
-          </div>
-          <div className="min-h-[400px] col-span-2">
-            <CardComponent
-              item={{
-                title: " ",
-                subtitle: " ",
-                content: (
-                  <HorizontalBarChartComponent
-                    data={adminStats.db_size.tables.filter(table => {
-                      const publicTables = [
-                        'spatial_ref_sys',
-                        'activity_logs',
-                        'extracted_features',
-                        'annotations',
-                        'roles',
-                        'user_roles',
-                        'users',
-                        'predictions',
-                        'user_images',
-                        'role_permissions',
-                        'notifications',
-                        'locations',
-                        'bean_detections',
-                        'images',
-                        'permissions'
-                      ];
-                      return publicTables.includes(table.table_name);
-                    }).map(table => {
-
-
-                      return {
+            <div className="min-h-[400px] xl:col-span-2">
+              <CardComponent
+                item={{
+                  title: " ",
+                  subtitle: " ",
+                  content: (
+                    <HorizontalBarChartComponent
+                      data={adminStats.db_size.tables.filter(table => {
+                        const publicTables = [
+                          'spatial_ref_sys',
+                          'activity_logs',
+                          'extracted_features',
+                          'annotations',
+                          'roles',
+                          'user_roles',
+                          'users',
+                          'predictions',
+                          'user_images',
+                          'role_permissions',
+                          'notifications',
+                          'locations',
+                          'bean_detections',
+                          'images',
+                          'permissions'
+                        ];
+                        return publicTables.includes(table.table_name);
+                      }).map(table => ({
                         name: table.table_name,
                         uv: table.estimated_rows
-                      };
-                    })}
-                  />
-                ),
-                description: " "
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Bean Analytics Section */}
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <div className="min-h-[500px]">
-            <BeanAnalyticsChart
-              totalPredictions={adminStats.total_predictions}
-              avgConfidence={adminStats.avg_confidence}
-              minConfidence={adminStats.min_confidence}
-              maxConfidence={adminStats.max_confidence}
-              featureStats={adminStats.feature_stats}
-              boxplotFeatures={adminStats.boxplot_features}
-            />
-          </div>
-        </div>
-
-        {/* Correlation Matrix */}
-        <div className='grid grid-cols-1 mb-6'>
-          <div className="min-h-[400px]">
-            <CardComponent
-              item={{
-                title: "Feature Correlation Matrix",
-                subtitle: "Correlation analysis of bean features",
-                content: <CorrelationMatrixChart data={adminStats.corr_feats} />,
-                description: "Heat map showing correlations between different bean features"
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Upload Statistics Grid */}
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <div className="min-h-[400px]">
-            <CardComponent
-              item={{
-                title: "Upload Statistics",
-                subtitle: "Farm data, top uploaders, and bean type distribution",
-                content: <UploadStatisticsChart
-                  farmData={adminStats.farms}
-                  topUploaderData={adminStats.top_uploaders}
-                  beanTypeData={adminStats.bean_types}
-                />,
-                description: "Comprehensive upload analytics across farms and users"
-              }}
-            />
-          </div>
-        </div>
-
-
-
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          
-                  {/* Outlier Detection - Boxplots Section */}
-        <div className="mt-6 mb-6">
-          {loading ? (
-            <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
-              <div className="flex items-center justify-center h-[500px]">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
-                  <p className="text-gray-600 font-accent">Loading outlier analysis...</p>
-                </div>
-              </div>
-            </div>
-          ) : boxPlotData && boxPlotData.length > 0 ? (
-            <CardComponent
-              item={{
-                title: "Outlier Detection - Bean Feature Analysis",
-                subtitle: "Boxplot distribution showing quartiles, whiskers, and outliers",
-                content: (
-                  <div className="w-full">
-                    <BoxPlotChart
-                      data={boxPlotData}
-                      yAxisLabel="Feature Value"
+                      }))}
                     />
+                  ),
+                  description: " "
+                }}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Morphology & Bean Insights Section */}
+        <section className="space-y-6 sm:space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <BarChart className="h-6 w-6 text-[var(--arabica-brown)]" />
+            <div>
+              <h2 className="text-xl font-semibold text-[#3c2715]">Morphology &amp; Bean Insights</h2>
+              <p className="text-sm text-gray-500">Analyze prediction quality, correlations, and geometry trends.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+            <div className="xl:col-span-2 min-h-[500px]">
+              <BeanAnalyticsChart
+                totalPredictions={adminStats.total_predictions}
+                avgConfidence={adminStats.avg_confidence}
+                minConfidence={adminStats.min_confidence}
+                maxConfidence={adminStats.max_confidence}
+                featureStats={adminStats.feature_stats}
+                boxplotFeatures={adminStats.boxplot_features}
+              />
+            </div>
+
+            <div className="min-h-[400px]">
+              <CardComponent
+                item={{
+                  title: "Feature Correlation Matrix",
+                  subtitle: "Correlation analysis of bean features",
+                  content: <CorrelationMatrixChart data={adminStats.corr_feats} />,
+                  description: "Heat map showing correlations between different bean features"
+                }}
+              />
+            </div>
+
+            <div className="min-h-[400px]">
+              <CardComponent
+                item={{
+                  title: "Upload Statistics",
+                  subtitle: "Farm data, top uploaders, and bean type distribution",
+                  content: <UploadStatisticsChart
+                    farmData={adminStats.farms}
+                    topUploaderData={adminStats.top_uploaders}
+                    beanTypeData={adminStats.bean_types}
+                  />,
+                  description: "Comprehensive upload analytics across farms and users"
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+            <div className="min-h-[400px]">
+              {loading ? (
+                <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+                  <div className="flex items-center justify-center h-[400px]">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
+                      <p className="text-gray-600 font-accent">Loading outlier analysis...</p>
+                    </div>
                   </div>
-                )
-              }}
-            />
-          ) : (
-            <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
-              <div className="flex items-center justify-center h-[400px] text-gray-500">
-                <div className="text-center">
-                  <p>No feature data available for outlier analysis</p>
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Shape-Size Distribution Section */}
-        <div className="mt-6 mb-6">
-          {loading ? (
-            <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
-              <div className="flex items-center justify-center h-[500px]">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
-                  <p className="text-gray-600 font-accent">Loading shape analysis...</p>
-                </div>
-              </div>
-            </div>
-          ) : adminStats && adminStats.shape_size_distribution && Object.keys(adminStats.shape_size_distribution).length > 0 ? (
-            <CardComponent
-              item={{
-                title: "Bean Shape & Size Distribution",
-                subtitle: "Comparison of round vs teardrop beans across size categories",
-                content: (
-                  <div className="w-full">
-                    <ShapeSizeDistribution
-                      data={adminStats.shape_size_distribution}
-                      farmNames={adminStats.shape_size_farm_names || []}
-                      thresholds={adminStats.size_thresholds}
-                    />
+              ) : boxPlotData && boxPlotData.length > 0 ? (
+                <CardComponent
+                  item={{
+                    title: "Outlier Detection - Bean Feature Analysis",
+                    subtitle: "Boxplot distribution showing quartiles, whiskers, and outliers",
+                    content: (
+                      <div className="w-full">
+                        <BoxPlotChart
+                          data={boxPlotData}
+                          yAxisLabel="Feature Value"
+                        />
+                      </div>
+                    )
+                  }}
+                />
+              ) : (
+                <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+                  <div className="flex items-center justify-center h-[300px] text-gray-500">
+                    <div className="text-center">
+                      <p>No feature data available for outlier analysis</p>
+                    </div>
                   </div>
-                )
-              }}
-            />
-          ) : (
-            <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
-              <div className="flex items-center justify-center h-[400px] text-gray-500">
-                <div className="text-center">
-                  <p>No shape-size distribution data available</p>
                 </div>
-              </div>
+              )}
             </div>
-          )}
-        </div>
 
+            <div className="min-h-[400px]">
+              {loading ? (
+                <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+                  <div className="flex items-center justify-center h-[400px]">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--arabica-brown)] mx-auto mb-4"></div>
+                      <p className="text-gray-600 font-accent">Loading shape analysis...</p>
+                    </div>
+                  </div>
+                </div>
+              ) : adminStats && adminStats.shape_size_distribution && Object.keys(adminStats.shape_size_distribution).length > 0 ? (
+                <CardComponent
+                  item={{
+                    title: "Bean Shape &amp; Size Distribution",
+                    subtitle: "Comparison of round vs teardrop beans across size categories",
+                    content: (
+                      <div className="w-full">
+                        <ShapeSizeDistribution
+                          data={adminStats.shape_size_distribution}
+                          farmNames={adminStats.shape_size_farm_names || []}
+                          thresholds={adminStats.size_thresholds}
+                        />
+                      </div>
+                    )
+                  }}
+                />
+              ) : (
+                <div className="bg-[var(--parchment)] rounded-lg shadow p-6">
+                  <div className="flex items-center justify-center h-[300px] text-gray-500">
+                    <div className="text-center">
+                      <p>No shape-size distribution data available</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
-          {/* Scatter Ratio and Roundness */}
           <div className="min-h-[400px]">
             <CardComponent
               item={{
@@ -563,11 +558,7 @@ export default function AdminDashboard() {
               }}
             />
           </div>
-        </div>
-
-
-
-
+        </section>
 
       </div>
     </div>
