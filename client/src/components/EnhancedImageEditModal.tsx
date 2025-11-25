@@ -209,9 +209,11 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
   };
 
   const beanTypeOptions = [
+    'Please Select a Type', // Making this the first and default option but not selectable
     'Alleged Liberica',
     'Alleged Excelsa',
-    'Others'
+    'Not Coffee Bean',
+    'Others',
   ];
 
   // Utility functions for bean analysis
@@ -437,15 +439,25 @@ const EnhancedImageEditModal: React.FC<EnhancedImageEditModalProps> = ({
                             Bean Type
                           </label>
                           <select
-                            value={editingBean.bean_type || 'Others'}
+                            value={editingBean.bean_type || ''}
                             onChange={(e) => handleFieldChange('bean_type', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
-                            {beanTypeOptions.map(option => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
+                            {beanTypeOptions.map(option => {
+                              if (option === 'Please Select a Type') {
+                                return (
+                                  <option key={option} value="" >
+                                    {option}
+                                  </option>
+                                );
+                              }
+
+                              return (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              );
+                            })}
                           </select>
                         </div>
 
