@@ -196,7 +196,7 @@ const UploadBodySection: React.FC<UploadBodySectionProps> = ({ activeTab, onFile
         </div>
 
         <p className="text-xs text-gray-600 mb-4">
-          Warning, won't be able to delete your image once you upload. If you'd want it removed, kindly email <a href="mailto:barakollect@gmail.com" className="text-[var(--arabica-brown)] underline">barakollect@gmail.com</a> after submission to request deletion.
+          Warning, you won't be able to delete your image once you upload. If you'd want it removed, kindly email <a href="mailto:barakollect@gmail.com" className="text-[var(--arabica-brown)] underline">barakollect@gmail.com</a> after submission to request deletion.
         </p>
 
         {/* File Upload Mode */}

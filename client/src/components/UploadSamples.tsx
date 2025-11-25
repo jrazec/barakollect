@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import UploadBodySection from '../pages/researcher/UploadBodySection';
 import PageHeader from '@/components/PageHeader';
 import TabComponent from '@/components/TabComponent';
+import arucoPDF from '@/assets/AURCO-Calibration-Tool.pdf';
 import { useAuth } from '@/contexts/AuthContext';
 import { Download, HelpCircle, X, Camera, Upload, Send, Clock, CheckCircle } from 'lucide-react';
 
@@ -26,8 +27,8 @@ const UploadSamples: React.FC = () => {
   const handleDownloadCalibration = () => {
     // Create a temporary link to download the AURCO PDF
     const link = document.createElement('a');
-    link.href = '/AURCO-Calibration-Tool.pdf';
-    link.download = 'AURCO-Calibration-Tool.pdf';
+    link.href = arucoPDF;
+    link.download = 'ARUCO-Calibration-Tool.pdf';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
